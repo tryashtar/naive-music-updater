@@ -93,7 +93,8 @@ namespace CSharpFiddle
 
                     foreach (var song in Directory.GetFiles(album, "*.mp3"))
                     {
-                        string currentname = Path.GetFileNameWithoutExtension(song);
+                        string location = song;
+                        string currentname = Path.GetFileNameWithoutExtension(location);
                         Console.WriteLine("SONG:\t" + currentname);
                         string songname = MakeTitleCase(currentname);
                         if (leavealone.Contains(currentname))
@@ -101,9 +102,10 @@ namespace CSharpFiddle
                         if (currentname != songname)
                         {
                             Console.WriteLine($"Changing to title case: {songname}");
-                            File.Move(Path.Combine(Path.GetDirectoryName(song)), songname + Path.GetExtension(song));
+                            location = Path.Combine(Path.GetDirectoryName(location), songname + Path.GetExtension(location));
+                            File.Move(song, location);
                         }
-                        TagLib.File file = TagLib.File.Create(song);
+                        TagLib.File file = TagLib.File.Create(location);
                         using (file)
                         {
                             bool changed = false;
@@ -111,7 +113,7 @@ namespace CSharpFiddle
                             string filetitle = file.Tag.Title == null ? songname : string.Join("_", file.Tag.Title.Split(Path.GetInvalidFileNameChars()));
                             if (filetitle != songname)
                             {
-                                file.Tag.Title = Path.GetFileNameWithoutExtension(song);
+                                file.Tag.Title = songname;
                                 changed = true;
                                 Console.WriteLine($"New title: {file.Tag.Title}");
                             }
@@ -270,7 +272,8 @@ namespace CSharpFiddle
             int right = input.IndexOf(')');
             if (left != -1 && right != -1)
             {
-                input = input.Substring(0, left) + "(" +
+                // a bit naive, but hey...
+                return input.Substring(0, left) + "(" +
                     MakeTitleCase(input.Substring(left + 1, right - left - 1)) + ")" +
                     input.Substring(right + 1, input.Length - right - 1);
             }
@@ -286,7 +289,9 @@ namespace CSharpFiddle
                 {
                     titles[i] = MakeTitleCase(titles[i]);
                 }
-                input = String.Join(spaced, titles);
+
+                // all internal titles have already been processed, we are done
+                return String.Join(spaced, titles);
             }
 
             string[] words = input.Split(' ');
