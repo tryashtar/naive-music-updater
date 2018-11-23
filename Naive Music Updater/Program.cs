@@ -2,13 +2,10 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.IO.Compression;
 using System.Drawing.Imaging;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace CSharpFiddle
 {
@@ -17,10 +14,22 @@ namespace CSharpFiddle
         [STAThread]
         private static void Main()
         {
-            NaiveSongUpdate(Directory.GetCurrentDirectory(), true);
+#if DEBUG
+            NaiveSongUpdate(@"D:\Music");
+            Console.ReadLine();
+#else
+            NaiveSongUpdate(Directory.GetCurrentDirectory());
+#endif
         }
 
-        private static void NaiveSongUpdate(string folder, bool usecache)
+        // maybe make this a class or something, with settings for stuff like
+        // - location of music cache
+        // - "realnames" dictionary
+        // - rename exceptions location
+        // - whether to wipe certain properties
+        // then main can load those from a file instead and pass them in
+        // then just do NaiveUpdater.Start(string folder)
+        private static void NaiveSongUpdate(string folder)
         {
             TagLib.Id3v2.Tag.DefaultVersion = 3;
             TagLib.Id3v2.Tag.ForceDefaultVersion = true;
@@ -49,6 +58,8 @@ namespace CSharpFiddle
                     pictures.Add(Path.GetFileNameWithoutExtension(png), new TagLib.Picture(new TagLib.ByteVector((byte[])new ImageConverter().ConvertTo(image, typeof(byte[])))));
                 }
             }
+
+            string[] leavealone = File.ReadAllLines(Path.Combine(cache, "exceptions.txt"));
 
             foreach (var artist in Directory.GetDirectories(folder))
             {
@@ -82,14 +93,22 @@ namespace CSharpFiddle
 
                     foreach (var song in Directory.GetFiles(album, "*.mp3"))
                     {
-                        string songname = Path.GetFileNameWithoutExtension(song);
-                        Console.WriteLine("SONG:\t" + songname);
+                        string currentname = Path.GetFileNameWithoutExtension(song);
+                        Console.WriteLine("SONG:\t" + currentname);
+                        string songname = MakeTitleCase(currentname);
+                        if (leavealone.Contains(currentname))
+                            songname = currentname;
+                        if (currentname != songname)
+                        {
+                            Console.WriteLine($"Changing to title case: {songname}");
+                            File.Move(Path.Combine(Path.GetDirectoryName(song)), songname + Path.GetExtension(song));
+                        }
                         TagLib.File file = TagLib.File.Create(song);
                         using (file)
                         {
                             bool changed = false;
                             // don't ruin existing titles with non-file characters like slashes
-                            string filetitle = string.Join("_", file.Tag.Title.Split(Path.GetInvalidFileNameChars()));
+                            string filetitle = file.Tag.Title == null ? songname : string.Join("_", file.Tag.Title.Split(Path.GetInvalidFileNameChars()));
                             if (filetitle != songname)
                             {
                                 file.Tag.Title = Path.GetFileNameWithoutExtension(song);
@@ -125,11 +144,16 @@ namespace CSharpFiddle
                             {
                                 // delete any existing pictures, or insert new picture
                                 if (picture == null)
+                                {
+                                    Console.WriteLine("Deleted embedded album art");
                                     file.Tag.Pictures = new TagLib.IPicture[0];
+                                }
                                 else
+                                {
                                     file.Tag.Pictures = new TagLib.IPicture[] { picture };
+                                    Console.WriteLine("New embedded album art");
+                                }
                                 changed = true;
-                                Console.WriteLine($"New embedded album art");
                             }
                             if (file.Tag.AmazonId != null)
                             {
@@ -230,6 +254,90 @@ namespace CSharpFiddle
                         }
                     }
                 }
+            }
+        }
+
+        private static string MakeTitleCase(string input)
+        {
+            // remove whitespace from beginning and end
+            input = input.Trim();
+
+            // turn double-spaces into single spaces
+            input = Regex.Replace(input, @"\s+", " ");
+
+            // treat parenthesized phrases like a title
+            int left = input.IndexOf('(');
+            int right = input.IndexOf(')');
+            if (left != -1 && right != -1)
+            {
+                input = input.Substring(0, left) + "(" +
+                    MakeTitleCase(input.Substring(left + 1, right - left - 1)) + ")" +
+                    input.Substring(right + 1, input.Length - right - 1);
+            }
+
+            // treat "artist - title" style titles as two separate titles
+            foreach (var separator in new string[] { "-", "–", "—", "_", "/" })
+            {
+                string spaced = $" {separator} ";
+                string[] titles = input.Split(new[] { spaced }, StringSplitOptions.RemoveEmptyEntries);
+                if (titles.Length == 1)
+                    continue;
+                for (int i = 0; i < titles.Length; i++)
+                {
+                    titles[i] = MakeTitleCase(titles[i]);
+                }
+                input = String.Join(spaced, titles);
+            }
+
+            string[] words = input.Split(' ');
+            words[0] = Char.ToUpper(words[0][0]) + words[0].Substring(1);
+            words[words.Length - 1] = Char.ToUpper(words[words.Length - 1][0]) + words[words.Length - 1].Substring(1);
+            bool prevallcaps = false;
+            for (int i = 1; i < words.Length - 1; i++)
+            {
+                bool allcaps = words[i] == words[i].ToUpper();
+                if (!(allcaps && prevallcaps) && AlwaysLowercase(words[i]))
+                    words[i] = Char.ToLower(words[i][0]) + words[i].Substring(1);
+                else
+                    words[i] = Char.ToUpper(words[i][0]) + words[i].Substring(1);
+                prevallcaps = allcaps;
+            }
+            return String.Join(" ", words);
+        }
+
+        private static bool AlwaysLowercase(string word)
+        {
+            string nopunc = new String(word.Where(c => !Char.IsPunctuation(c)).ToArray());
+            switch (nopunc.ToLower())
+            {
+                case "to":
+                case "of":
+                case "the":
+                case "in":
+                case "at":
+                case "a":
+                case "an":
+                case "on":
+                case "and":
+                case "is":
+                case "for":
+                case "with":
+                case "or":
+                case "vs":
+                case "from":
+                case "by":
+                case "as":
+                case "isnt":
+                case "into":
+
+                // non-english haha
+                case "de":
+                case "von":
+                case "la":
+                case "pour":
+                    return true;
+                default:
+                    return false;
             }
         }
 
