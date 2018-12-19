@@ -134,9 +134,13 @@ namespace Naive_Music_Updater
         {
             IgnoreList = ignorelist;
         }
-        public static string GetName(string path, bool correctcase = false)
+        public static string GetName(string path, bool correctcase = false, bool isfile = true)
         {
-            string generic = Path.GetFileNameWithoutExtension(path);
+            string generic;
+            if (isfile)
+                generic = Path.GetFileNameWithoutExtension(path);
+            else
+                generic = Path.GetFileName(path);
             foreach (var ignore in IgnoreList)
             {
                 if (String.Equals(ignore, generic, StringComparison.OrdinalIgnoreCase))
@@ -271,7 +275,7 @@ namespace Naive_Music_Updater
         public Artist(string folder)
         {
             Folder = folder;
-            Name = NameRetriever.GetName(folder);
+            Name = NameRetriever.GetName(folder, isfile: false);
             Art = ArtRetriever.GetArt(GetHash());
             Albums = new List<Album>();
             foreach (var album in Directory.EnumerateDirectories(folder))
@@ -315,7 +319,7 @@ namespace Naive_Music_Updater
         {
             Parent = parent;
             Folder = folder;
-            Name = NameRetriever.GetName(folder);
+            Name = NameRetriever.GetName(folder, isfile: false);
             Art = ArtRetriever.GetArt(GetHash());
             SubAlbums = new List<SubAlbum>();
             foreach (var album in Directory.EnumerateDirectories(folder))
@@ -368,7 +372,7 @@ namespace Naive_Music_Updater
             ParentAlbum = parent;
             ParentArtist = parent.Parent;
             Folder = folder;
-            Name = NameRetriever.GetName(folder);
+            Name = NameRetriever.GetName(folder, isfile: false);
             Art = ArtRetriever.GetArt(GetHash());
             Songs = new List<Song>();
             foreach (var song in Directory.EnumerateFiles(folder, "*.mp3"))
@@ -423,7 +427,7 @@ namespace Naive_Music_Updater
         {
             Filepath = path;
             Name = Path.GetFileNameWithoutExtension(path);
-            IdealName = NameRetriever.GetName(path, true);
+            IdealName = NameRetriever.GetName(path, correctcase: true);
         }
 
         private TagLib.Picture[] GetPictures()
