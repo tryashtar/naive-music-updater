@@ -341,7 +341,7 @@ namespace Naive_Music_Updater
 
             string albumini = Path.Combine(Folder, "desktop.ini");
             File.Delete(albumini);
-            File.WriteAllText(albumini, "[.ShellClassInfo]\nIconResource = ..\\.music-cache\\" + GetHash() + ".ico, 0");
+            File.WriteAllText(albumini, "[.ShellClassInfo]\nIconResource = ..\\..\\.music-cache\\" + GetHash() + ".ico, 0");
             File.SetAttributes(albumini, FileAttributes.System | FileAttributes.Hidden);
 
             foreach (var subalbum in SubAlbums)
@@ -388,7 +388,7 @@ namespace Naive_Music_Updater
 
             string subalbumini = Path.Combine(Folder, "desktop.ini");
             File.Delete(subalbumini);
-            File.WriteAllText(subalbumini, "[.ShellClassInfo]\nIconResource = ..\\.music-cache\\" + GetHash() + ".ico, 0");
+            File.WriteAllText(subalbumini, "[.ShellClassInfo]\nIconResource = ..\\..\\..\\.music-cache\\" + GetHash() + ".ico, 0");
             File.SetAttributes(subalbumini, FileAttributes.System | FileAttributes.Hidden);
 
             foreach (var song in Songs)
