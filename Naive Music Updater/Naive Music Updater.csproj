@@ -7,7 +7,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{340A5435-D1E1-4893-9BB9-CACDB89BBD60}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Naive_Music_Updater</RootNamespace>
+    <RootNamespace>NaiveMusicUpdater</RootNamespace>
     <AssemblyName>Naive Music Updater</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

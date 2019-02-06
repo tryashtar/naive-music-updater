@@ -6,33 +6,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 
-namespace Naive_Music_Updater
+namespace NaiveMusicUpdater
 {
-    public static class Writer
-    {
-        private static DateTime StartTime;
-        private static StringBuilder Log;
-        static Writer()
-        {
-            Log = new StringBuilder();
-            StartTime = DateTime.Now;
-        }
-
-        public static void WriteLine(string text)
-        {
-            Console.WriteLine(text);
-            Log.AppendLine(text);
-        }
-
-        public static void Close(string folder)
-        {
-            File.AppendAllText(Path.Combine(folder, StartTime.ToString("yyyy-dd-M HH-mm-ss") + ".txt"), Log.ToString());
-            Log.Clear();
-        }
-    }
-
     public static class ArtRetriever
     {
         private static Dictionary<string, TagLib.Picture> Gallery;
@@ -119,38 +98,54 @@ namespace Naive_Music_Updater
 
     public static class NameRetriever
     {
+        private static List<string> SkipNames;
         private static Dictionary<string, string> NameMap;
-        private static List<string> IgnoreList;
+        private static string UnderscoreReplacement = "_";
         static NameRetriever()
         {
+            SkipNames = new List<string>();
             NameMap = new Dictionary<string, string>();
-            IgnoreList = new List<string>();
         }
-        public static void SetMap(Dictionary<string, string> namemap)
+        public static void LoadConfig(string configpath)
         {
-            NameMap = namemap;
-        }
-        public static void SetIgnoreList(List<string> ignorelist)
-        {
-            IgnoreList = ignorelist;
-        }
-        public static string GetName(string path, bool correctcase = false, bool isfile = true)
-        {
-            string generic;
-            if (isfile)
-                generic = Path.GetFileNameWithoutExtension(path);
-            else
-                generic = Path.GetFileName(path);
-            foreach (var ignore in IgnoreList)
+            JObject json = JObject.Parse(File.ReadAllText(configpath));
+            foreach (var skip in json["skip"])
             {
-                if (String.Equals(ignore, generic, StringComparison.OrdinalIgnoreCase))
-                    return ignore;
+                SkipNames.Add((string)skip);
             }
-            if (!NameMap.TryGetValue(generic, out string result))
-                result = generic;
+            foreach (var map in (JObject)json["map"])
+            {
+                NameMap.Add(map.Key, (string)map.Value);
+            }
+            UnderscoreReplacement = (string)json["underscore"]["default"];
+        }
+        public static string GetName(string name, bool correctcase = false)
+        {
+            if (name.Contains(" Of "))
+                Console.WriteLine();
+            // 1. configurations
+            foreach (var skip in SkipNames)
+            {
+                if (String.Equals(skip, name, StringComparison.OrdinalIgnoreCase))
+                    return skip;
+            }
+            if (NameMap.TryGetValue(name, out string result))
+                return result;
+            name = name.Replace("_", UnderscoreReplacement);
+
+            // 2. corrections
             if (correctcase)
-                result = CorrectCase(result);
-            return result;
+                name = CorrectCase(name);
+            return name;
+        }
+
+        public static string GetSafeFileName(string name)
+        {
+            foreach (var c in Path.GetInvalidFileNameChars())
+            {
+                name = name.Replace(c, '_');
+            }
+            return name;
         }
 
         // to do: after !, the next word must be capitalized
@@ -164,13 +159,15 @@ namespace Naive_Music_Updater
 
             // treat parenthesized phrases like a title
             int left = input.IndexOf('(');
+            string spacebefore = (left > 0 && input[left - 1] == ' ') ? " " : "";
             int right = input.IndexOf(')');
+            string spaceafter = (right < input.Length - 1 && input[right + 1] == ' ') ? " " : "";
             if (left != -1 && right != -1)
             {
                 // a bit naive, but hey...
-                return input.Substring(0, left) + "(" +
-                    CorrectCase(input.Substring(left + 1, right - left - 1)) + ")" +
-                    input.Substring(right + 1, input.Length - right - 1);
+                return CorrectCase(input.Substring(0, left)) + spacebefore + "(" +
+                    CorrectCase(input.Substring(left + 1, right - left - 1)) + ")" + spaceafter +
+                    CorrectCase(input.Substring(right + 1, input.Length - right - 1));
             }
 
             // treat "artist - title" style titles as two separate titles
@@ -257,11 +254,14 @@ namespace Naive_Music_Updater
             }
         }
 
-        public void Save()
+        public IEnumerable<string> Save()
         {
             foreach (var artist in Artists)
             {
-                artist.Save();
+                foreach (var message in artist.Save())
+                {
+                    yield return message;
+                }
             }
         }
     }
@@ -275,7 +275,7 @@ namespace Naive_Music_Updater
         public Artist(string folder)
         {
             Folder = folder;
-            Name = NameRetriever.GetName(folder, isfile: false);
+            Name = NameRetriever.GetName(Path.GetFileName(folder));
             Art = ArtRetriever.GetArt(GetHash());
             Albums = new List<Album>();
             foreach (var album in Directory.EnumerateDirectories(folder))
@@ -289,10 +289,10 @@ namespace Naive_Music_Updater
             return Name.GetHashCode().ToString();
         }
 
-        public void Save()
+        public IEnumerable<string> Save()
         {
-            Console.WriteLine($"ARTIST:\t {Name}");
-            Console.WriteLine($"HASH:\t {GetHash()}");
+            yield return $"ARTIST: {Name}";
+            yield return $"HASH: {GetHash()}";
 
             string artistini = Path.Combine(Folder, "desktop.ini");
             File.Delete(artistini);
@@ -301,7 +301,10 @@ namespace Naive_Music_Updater
 
             foreach (var album in Albums)
             {
-                album.Save();
+                foreach (var message in album.Save())
+                {
+                    yield return "\t" + message;
+                }
             }
         }
     }
@@ -319,7 +322,7 @@ namespace Naive_Music_Updater
         {
             Parent = parent;
             Folder = folder;
-            Name = NameRetriever.GetName(folder, isfile: false);
+            Name = NameRetriever.GetName(Path.GetFileName(folder));
             Art = ArtRetriever.GetArt(GetHash());
             SubAlbums = new List<SubAlbum>();
             foreach (var album in Directory.EnumerateDirectories(folder))
@@ -338,10 +341,10 @@ namespace Naive_Music_Updater
             return Tuple.Create(Parent.Name, Name).GetHashCode().ToString();
         }
 
-        public void Save()
+        public IEnumerable<string> Save()
         {
-            Console.WriteLine($"ALBUM:\t {Name}");
-            Console.WriteLine($"HASH:\t {GetHash()}");
+            yield return $"ALBUM: {Name}";
+            yield return $"HASH: {GetHash()}";
 
             string albumini = Path.Combine(Folder, "desktop.ini");
             File.Delete(albumini);
@@ -350,12 +353,23 @@ namespace Naive_Music_Updater
 
             foreach (var subalbum in SubAlbums)
             {
-                subalbum.Save();
+                foreach (var message in subalbum.Save())
+                {
+                    yield return "\t" + message;
+                }
             }
             foreach (var song in Songs)
             {
-                song.Save();
+                foreach (var message in song.Save())
+                {
+                    yield return "\t" + message;
+                }
             }
+        }
+
+        public IEnumerable<Song> AllSongs()
+        {
+            return Songs.Concat(SubAlbums.SelectMany(x => x.Songs));
         }
     }
 
@@ -372,7 +386,7 @@ namespace Naive_Music_Updater
             ParentAlbum = parent;
             ParentArtist = parent.Parent;
             Folder = folder;
-            Name = NameRetriever.GetName(folder, isfile: false);
+            Name = NameRetriever.GetName(Path.GetFileName(folder));
             Art = ArtRetriever.GetArt(GetHash());
             Songs = new List<Song>();
             foreach (var song in Directory.EnumerateFiles(folder, "*.mp3"))
@@ -386,9 +400,9 @@ namespace Naive_Music_Updater
             return Tuple.Create(ParentArtist.Name, ParentAlbum.Name, Name).GetHashCode().ToString();
         }
 
-        public void Save()
+        public IEnumerable<string> Save()
         {
-            Console.WriteLine($"SUBALBUM:\t {Name}");
+            yield return $"SUBALBUM: {Name}";
 
             string subalbumini = Path.Combine(Folder, "desktop.ini");
             File.Delete(subalbumini);
@@ -397,16 +411,19 @@ namespace Naive_Music_Updater
 
             foreach (var song in Songs)
             {
-                song.Save();
+                foreach (var message in song.Save())
+                {
+                    yield return "\t" + message;
+                }
             }
         }
     }
 
     public class Song
     {
+        // external read-only access to tag title (only accessible after calling Save)
+        public string Title;
         public string Filepath;
-        public string Name;
-        public string IdealName;
         // possibly null if direct child of real album
         public SubAlbum ParentSubAlbum;
         // direct parent or parent of subalbum
@@ -426,8 +443,50 @@ namespace Naive_Music_Updater
         private Song(string path)
         {
             Filepath = path;
-            Name = Path.GetFileNameWithoutExtension(path);
-            IdealName = NameRetriever.GetName(path, correctcase: true);
+        }
+
+        private string GetIdealName()
+        {
+            return NameRetriever.GetName(Path.GetFileNameWithoutExtension(Filepath), correctcase: true);
+        }
+
+        private string GetIdealFilename()
+        {
+            return NameRetriever.GetSafeFileName(GetIdealName()) + Path.GetExtension(Filepath);
+        }
+
+        // given a song with the proper title already, get what it should be saved as
+        private string GetIdealFilenameBAD(TagLib.File file)
+        {
+            string filename;
+            if (String.IsNullOrEmpty(file.Tag.Title))
+            {
+                filename = NameRetriever.GetSafeFileName(
+                    NameRetriever.GetName(
+                        Path.GetFileNameWithoutExtension(file.Name), correctcase: true));
+            }
+            else
+                filename = NameRetriever.GetSafeFileName(file.Tag.Title);
+            return filename + Path.GetExtension(file.Name);
+        }
+
+        private string GetIdealNameBAD(TagLib.File file)
+        {
+            string ideal;
+            if (String.IsNullOrEmpty(file.Tag.Title))
+            {
+                ideal = NameRetriever.GetName(
+                        Path.GetFileNameWithoutExtension(file.Name), correctcase: true);
+            }
+            else
+                ideal = NameRetriever.GetName(file.Tag.Title, correctcase: true);
+            if (ParentSubAlbum != null)
+            {
+                string prefix = $"{ParentSubAlbum.Name} - ";
+                if (!ideal.StartsWith(prefix))
+                    ideal = prefix + ideal;
+            }
+            return ideal;
         }
 
         private TagLib.Picture[] GetPictures()
@@ -455,60 +514,61 @@ namespace Naive_Music_Updater
         }
 
         // returns whether this changed anything
-        private bool WipeUselessProperties(TagLib.Tag filetag)
+        private Tuple<bool, IEnumerable<string>> WipeUselessProperties(TagLib.Tag filetag)
         {
+            List<string> messages = new List<string>();
             bool changed = false;
             if (filetag.AmazonId != null)
             {
-                Writer.WriteLine($"Wiped amazon ID {filetag.AmazonId}");
+                messages.Add($"Wiped amazon ID {filetag.AmazonId}");
                 filetag.AmazonId = null;
                 changed = true;
             }
             if (filetag.Comment != null)
             {
-                Writer.WriteLine($"Wiped comment {filetag.Comment}");
+                messages.Add($"Wiped comment {filetag.Comment}");
                 filetag.Comment = null;
                 changed = true;
             }
             if (filetag.Conductor != null)
             {
-                Writer.WriteLine($"Wiped conductor {filetag.Conductor}");
+                messages.Add($"Wiped conductor {filetag.Conductor}");
                 filetag.Conductor = null;
                 changed = true;
             }
             if (filetag.Copyright != null)
             {
-                Writer.WriteLine($"Wiped copyright {filetag.Copyright}");
+                messages.Add($"Wiped copyright {filetag.Copyright}");
                 filetag.Copyright = null;
                 changed = true;
             }
             if (filetag.Disc != 0)
             {
-                Writer.WriteLine($"Wiped disc number {filetag.Disc}");
+                messages.Add($"Wiped disc number {filetag.Disc}");
                 filetag.Disc = 0;
                 changed = true;
             }
             if (filetag.DiscCount != 0)
             {
-                Writer.WriteLine($"Wiped disc count {filetag.DiscCount}");
+                messages.Add($"Wiped disc count {filetag.DiscCount}");
                 filetag.DiscCount = 0;
                 changed = true;
             }
             if (filetag.FirstGenre != null)
             {
-                Writer.WriteLine($"Wiped genre {filetag.FirstGenre}");
+                messages.Add($"Wiped genre {filetag.FirstGenre}");
                 filetag.Genres = new string[0];
                 changed = true;
             }
             if (filetag.Lyrics != null)
             {
-                Writer.WriteLine($"Wiped lyrics {filetag.Lyrics}");
+                messages.Add($"Wiped lyrics {filetag.Lyrics}");
                 filetag.Lyrics = null;
                 changed = true;
             }
             if (filetag.MusicBrainzArtistId != null || filetag.MusicBrainzDiscId != null || filetag.MusicBrainzReleaseArtistId != null || filetag.MusicBrainzReleaseCountry != null || filetag.MusicBrainzReleaseId != null || filetag.MusicBrainzReleaseStatus != null || filetag.MusicBrainzReleaseType != null || filetag.MusicBrainzTrackId != null)
             {
-                Writer.WriteLine($"Wiped musicbrainz data");
+                messages.Add($"Wiped musicbrainz data");
                 filetag.MusicBrainzArtistId = null;
                 filetag.MusicBrainzDiscId = null;
                 filetag.MusicBrainzReleaseArtistId = null;
@@ -521,75 +581,81 @@ namespace Naive_Music_Updater
             }
             if (filetag.MusicIpId != null)
             {
-                Writer.WriteLine($"Wiped music IP ID {filetag.MusicIpId}");
+                messages.Add($"Wiped music IP ID {filetag.MusicIpId}");
                 filetag.MusicIpId = null;
                 changed = true;
             }
             if (filetag.Track != 0)
             {
-                Writer.WriteLine($"Wiped track number {filetag.Track}");
+                messages.Add($"Wiped track number {filetag.Track}");
                 filetag.Track = 0;
                 changed = true;
             }
             if (filetag.TrackCount != 0)
             {
-                Writer.WriteLine($"Wiped track count {filetag.TrackCount}");
+                messages.Add($"Wiped track count {filetag.TrackCount}");
                 filetag.TrackCount = 0;
                 changed = true;
             }
             if (filetag.Year != 0)
             {
-                Writer.WriteLine($"Wiped year {filetag.Year}");
+                messages.Add($"Wiped year {filetag.Year}");
                 filetag.Year = 0;
                 changed = true;
             }
-            return changed;
+            return Tuple.Create<bool, IEnumerable<string>>(changed, messages);
         }
 
-        public void Save()
+        public IEnumerable<string> Save()
         {
-            Writer.WriteLine("SONG:\t" + Name);
+            // file name (includes extension and placeholder chars like underscore)
+            string originalname = Path.GetFileName(Filepath);
+            string newname = originalname;
+            // the song TITLE should be this
+            yield return "SONG: " + originalname;
             using (TagLib.File file = TagLib.File.Create(Filepath))
             {
+                Title = file.Tag.Title;
                 bool changed = false;
                 // don't ruin existing titles with non-file characters like slashes
-                string filetitle = String.Join("_", (file.Tag.Title ?? "").Split(Path.GetInvalidFileNameChars()));
-                if (filetitle != IdealName)
+                string newtitle = GetIdealName();
+                if (file.Tag.Title != newtitle)
                 {
-                    file.Tag.Title = IdealName;
+                    file.Tag.Title = newtitle;
                     changed = true;
-                    Writer.WriteLine($"New title: {file.Tag.Title}");
+                    yield return $"New title: {file.Tag.Title}";
                 }
+                newname = GetIdealFilename();
                 if (file.Tag.Album != ParentAlbum.Name)
                 {
                     file.Tag.Album = ParentAlbum.Name;
                     changed = true;
-                    Writer.WriteLine($"New album: {ParentAlbum.Name}");
+                    yield return $"New album: {ParentAlbum.Name}";
                 }
                 if (file.Tag.FirstAlbumArtist != ParentArtist.Name)
                 {
                     file.Tag.AlbumArtists = new string[] { ParentArtist.Name };
                     changed = true;
-                    Writer.WriteLine($"New album artist: {ParentArtist.Name}");
+                    yield return $"New album artist: {ParentArtist.Name}";
                 }
                 if (file.Tag.FirstComposer != ParentArtist.Name)
                 {
                     file.Tag.Composers = new string[] { ParentArtist.Name };
                     changed = true;
-                    Writer.WriteLine($"New composer: {ParentArtist.Name}");
+                    yield return $"New composer: {ParentArtist.Name}";
                 }
                 if (file.Tag.FirstPerformer != ParentArtist.Name)
                 {
                     file.Tag.Performers = new string[] { ParentArtist.Name };
                     changed = true;
-                    Writer.WriteLine($"New performer: {ParentArtist.Name}");
+                    yield return $"New performer: {ParentArtist.Name}";
                 }
                 if (file.Tag.Grouping != ParentSubAlbum?.Name)
                 {
                     if (ParentSubAlbum?.Name == null)
-                        Writer.WriteLine($"Wiped subalbum {file.Tag.Grouping}");
+                        yield return $"Wiped subalbum {file.Tag.Grouping}";
                     else
-                        Writer.WriteLine($"New subalbum: {ParentSubAlbum?.Name}");
+                        yield return $"New subalbum: {ParentSubAlbum?.Name}";
                     file.Tag.Grouping = ParentSubAlbum?.Name;
                     changed = true;
                 }
@@ -600,32 +666,36 @@ namespace Naive_Music_Updater
                     // delete existing pictures if there are any, but subalbum/album/artist don't have one
                     if (pictures.Length == 0)
                     {
-                        Writer.WriteLine("No suitable album/artist art found, deleted embedded album art");
+                        yield return "No suitable album/artist art found, deleted embedded album art";
                         file.Tag.Pictures = new TagLib.IPicture[0];
                     }
                     else
                     {
                         file.Tag.Pictures = pictures;
-                        Writer.WriteLine($"New embedded album art *{pictures.Length}");
+                        yield return $"New embedded album art *{pictures.Length}";
                     }
                     changed = true;
                 }
                 // order matters here because the method must always run, even if we have already changed something
-                changed = WipeUselessProperties(file.Tag) || changed;
+                var wipe = WipeUselessProperties(file.Tag);
+                foreach (var message in wipe.Item2)
+                {
+                    yield return "\t" + message;
+                }
+                changed = wipe.Item1 || changed;
 
                 if (changed)
                 {
-                    Writer.WriteLine("Saving...");
+                    yield return "Saving...";
                     file.Save();
                 }
             }
-            if (Name != IdealName)
+            if (newname != originalname)
             {
-                Writer.WriteLine($"Changing to title case: \"{Name}\" to \"{IdealName}\"");
-                string newpath = Path.Combine(Path.GetDirectoryName(Filepath), IdealName + Path.GetExtension(Filepath));
+                yield return $"New name requires new file path: \"{originalname}\" to \"{newname}\"";
+                string newpath = Path.Combine(Path.GetDirectoryName(Filepath), newname);
                 File.Move(Filepath, newpath);
                 Filepath = newpath;
-                Name = IdealName;
             }
         }
     }
