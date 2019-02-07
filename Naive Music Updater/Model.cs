@@ -96,6 +96,40 @@ namespace NaiveMusicUpdater
         }
     }
 
+    public static class ModifiedOptimizer
+    {
+        private static Dictionary<string, DateTime> LastModified;
+        private static string CachePath;
+
+        // parse cache for last modified dates
+        public static void LoadCache(string filepath)
+        {
+            CachePath = filepath;
+            LastModified = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(File.ReadAllText(filepath));
+        }
+
+        // returns true if this file has changed since the last time we recorded it
+        public static bool FileDifferent(string filepath)
+        {
+            DateTime current = File.GetLastWriteTime(filepath);
+            if (LastModified.TryGetValue(filepath, out DateTime cached))
+                return current - TimeSpan.FromSeconds(5) > cached;
+            else
+                return true;
+        }
+
+        // mark this file as having been changed right now
+        public static void RecordChange(string filepath)
+        {
+            LastModified[filepath] = DateTime.Now;
+        }
+
+        public static void SaveCache()
+        {
+            File.WriteAllText(CachePath, JsonConvert.SerializeObject(LastModified));
+        }
+    }
+
     public static class NameRetriever
     {
         private static List<string> SkipNames;
@@ -121,8 +155,6 @@ namespace NaiveMusicUpdater
         }
         public static string GetName(string name, bool correctcase = false)
         {
-            if (name.Contains(" Of "))
-                Console.WriteLine();
             // 1. configurations
             foreach (var skip in SkipNames)
             {
@@ -231,6 +263,7 @@ namespace NaiveMusicUpdater
                 case "de":
                 case "von":
                 case "la":
+                case "ad":
                 case "pour":
                     return true;
                 default:
@@ -424,6 +457,7 @@ namespace NaiveMusicUpdater
         // external read-only access to tag title (only accessible after calling Save)
         public string Title;
         public string Filepath;
+        public string Filename => Path.GetFileNameWithoutExtension(Filepath);
         // possibly null if direct child of real album
         public SubAlbum ParentSubAlbum;
         // direct parent or parent of subalbum
@@ -453,40 +487,6 @@ namespace NaiveMusicUpdater
         private string GetIdealFilename()
         {
             return NameRetriever.GetSafeFileName(GetIdealName()) + Path.GetExtension(Filepath);
-        }
-
-        // given a song with the proper title already, get what it should be saved as
-        private string GetIdealFilenameBAD(TagLib.File file)
-        {
-            string filename;
-            if (String.IsNullOrEmpty(file.Tag.Title))
-            {
-                filename = NameRetriever.GetSafeFileName(
-                    NameRetriever.GetName(
-                        Path.GetFileNameWithoutExtension(file.Name), correctcase: true));
-            }
-            else
-                filename = NameRetriever.GetSafeFileName(file.Tag.Title);
-            return filename + Path.GetExtension(file.Name);
-        }
-
-        private string GetIdealNameBAD(TagLib.File file)
-        {
-            string ideal;
-            if (String.IsNullOrEmpty(file.Tag.Title))
-            {
-                ideal = NameRetriever.GetName(
-                        Path.GetFileNameWithoutExtension(file.Name), correctcase: true);
-            }
-            else
-                ideal = NameRetriever.GetName(file.Tag.Title, correctcase: true);
-            if (ParentSubAlbum != null)
-            {
-                string prefix = $"{ParentSubAlbum.Name} - ";
-                if (!ideal.StartsWith(prefix))
-                    ideal = prefix + ideal;
-            }
-            return ideal;
         }
 
         private TagLib.Picture[] GetPictures()
@@ -613,6 +613,10 @@ namespace NaiveMusicUpdater
             string newname = originalname;
             // the song TITLE should be this
             yield return "SONG: " + originalname;
+            if (!ModifiedOptimizer.FileDifferent(Filepath))
+                yield break;
+            yield return "(possible changes)";
+            ModifiedOptimizer.RecordChange(Filepath);
             using (TagLib.File file = TagLib.File.Create(Filepath))
             {
                 Title = file.Tag.Title;
@@ -686,8 +690,18 @@ namespace NaiveMusicUpdater
 
                 if (changed)
                 {
+                    bool savefail = false;
                     yield return "Saving...";
-                    file.Save();
+                    try
+                    {
+                        file.Save();
+                    }
+                    catch (IOException)
+                    {
+                        savefail = true;
+                    }
+                    if (savefail)
+                        yield return "Save failed! Skipping...";
                 }
             }
             if (newname != originalname)

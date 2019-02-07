@@ -15,6 +15,7 @@ namespace NaiveMusicUpdater
     public static class Program
     {
         private static string FolderPath;
+        private static StreamWriter Writer;
 
         [STAThread]
         private static void Main()
@@ -27,6 +28,22 @@ namespace NaiveMusicUpdater
             FolderPath = Directory.GetCurrentDirectory();
             NaiveSongUpdate(FolderPath);
 #endif
+        }
+
+        private static void OpenLogFile(string path)
+        {
+            Writer = new StreamWriter(path);
+        }
+
+        private static void CloseLogFile()
+        {
+            Writer.Close();
+        }
+
+        private static void PrintAndLog(string text)
+        {
+            Console.WriteLine(text);
+            Writer.WriteLine(text);
         }
 
         private static void NaiveSongUpdate(string folder)
@@ -46,19 +63,18 @@ namespace NaiveMusicUpdater
 
             NameRetriever.LoadConfig(Path.Combine(cache, "config.json"));
             ArtRetriever.SetArtSource(cache);
+            ModifiedOptimizer.LoadCache(Path.Combine(cache, "datecache.json"));
             Library library = new Library(folder);
-            string logfile = Path.Combine(cache, "logs", DateTime.Now.ToString("yyyy-MM-dd hh_mm_ss") + ".txt");
+            string logfile = Path.Combine(cache, "logs", DateTime.Now.ToString("yyyy-MM-dd HH_mm_ss") + ".txt");
             using (File.Create(logfile)) ;
-            using (StreamWriter logwriter = new StreamWriter(logfile))
+            OpenLogFile(logfile);
+            foreach (var message in library.Save())
             {
-                foreach (var message in library.Save())
-                {
-                    Console.WriteLine(message);
-                    logwriter.WriteLine(message);
-                }
+                PrintAndLog(message);
             }
+            ModifiedOptimizer.SaveCache();
 
-            Console.WriteLine();
+            PrintAndLog("");
             string sourcesjson = Path.Combine(folder, "sources.json");
             var sources = JObject.Parse(File.ReadAllText(sourcesjson));
 
@@ -81,21 +97,29 @@ namespace NaiveMusicUpdater
                     }
                 }
             }
-            Console.WriteLine("Sources update done");
+            PrintAndLog("Sources update done");
 
             // then do scan
+            // to do:
+            // for each album, notice all songs that aren't in "songs" JSON
+            // save "source" with this list
+            // if next time, list doesn't match what was saved next time, any new songs
+            // clearly came from a different source, so ask user to:
+            // (1) write source of new songs in "songs" JSON; or
+            // (2) confirm this new song exists in source (resave if so)
+            // the intent is to make sure all songs in the entire library are accounted for
             foreach (var jartist in sources)
             {
                 var artist = library.Artists.FirstOrDefault(x => x.Name == jartist.Key);
                 if (artist == null)
-                    Console.WriteLine($"Sources contains artist {jartist.Key} but library doesn't?");
+                    PrintAndLog($"Sources contains artist {jartist.Key} but library doesn't?");
                 else
                 {
                     foreach (var jalbum in (JObject)jartist.Value)
                     {
                         var album = artist.Albums.FirstOrDefault(x => x.Name == jalbum.Key);
                         if (album == null)
-                            Console.WriteLine($"Sources contains album {jartist.Key}/{jalbum.Key} but library doesn't?");
+                            PrintAndLog($"Sources contains album {jartist.Key}/{jalbum.Key} but library doesn't?");
                         else
                         {
                             var songs = album.AllSongs();
@@ -103,25 +127,26 @@ namespace NaiveMusicUpdater
                             if (extrasongs == null)
                             {
                                 if (jalbum.Value["source"] == null)
-                                    Console.WriteLine($"No source or song list for {jartist.Key}/{jalbum.Key}");
+                                    PrintAndLog($"No source or song list for {jartist.Key}/{jalbum.Key}");
                             }
                             else
                             {
                                 foreach (var jsong in extrasongs)
                                 {
-                                    var song = songs.FirstOrDefault(x => ((x.ParentSubAlbum == null ? x.Title : (x.ParentSubAlbum.Name + "/" + x.Title)) == jsong.Key));
+                                    var song = songs.FirstOrDefault(x => ((x.ParentSubAlbum == null ? x.Filename : (x.ParentSubAlbum.Name + "/" + x.Filename)) == jsong.Key));
                                     if (song == null)
-                                        Console.WriteLine($"Sources contains song {jartist.Key}/{jalbum.Key}/{jsong.Key} but library doesn't?");
+                                        PrintAndLog($"Sources contains song {jartist.Key}/{jalbum.Key}/{jsong.Key} but library doesn't?");
                                 }
                                 if (jalbum.Value["source"] == null && songs.Count() > extrasongs.Count)
-                                    Console.WriteLine($"Song list for {jartist.Key}/{jalbum.Key} doesn't include all songs (has {extrasongs.Count}, needs {songs.Count()})");
+                                    PrintAndLog($"Song list for {jartist.Key}/{jalbum.Key} doesn't include all songs (has {extrasongs.Count}, needs {songs.Count()})");
                             }
                         }
                     }
                 }
             }
             File.WriteAllText(sourcesjson, sources.ToString());
-            Console.WriteLine("Sources scan done");
+            PrintAndLog("Sources scan done");
+            CloseLogFile();
         }
     }
 }
