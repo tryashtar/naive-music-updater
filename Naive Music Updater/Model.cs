@@ -14,25 +14,41 @@ namespace NaiveMusicUpdater
 {
     public static class ArtRetriever
     {
+        private static string SourceFolder;
         private static Dictionary<string, TagLib.Picture> Gallery;
         static ArtRetriever()
         {
             Gallery = new Dictionary<string, TagLib.Picture>();
         }
 
-        public static void SetArtSource(string folder)
+        public static void SetArtSource(string folder, SearchOption search)
         {
+            SourceFolder = folder;
             Gallery.Clear();
-            foreach (var png in Directory.GetFiles(folder, "*.png"))
+            foreach (var png in Directory.GetFiles(folder, "*.png", search))
             {
                 string ico = Path.ChangeExtension(png, ".ico");
                 var image = Image.FromFile(png);
                 using (image)
                 {
                     if (!File.Exists(ico))
-                        File.WriteAllBytes(Path.ChangeExtension(png, ".ico"), ConvertToIcon(image));
-                    Gallery.Add(Path.GetFileNameWithoutExtension(png), new TagLib.Picture(new TagLib.ByteVector((byte[])new ImageConverter().ConvertTo(image, typeof(byte[])))));
+                        File.WriteAllBytes(Path.ChangeExtension(png, ".ico"), ConvertToIcon(image, true));
+                    Gallery.Add(Path.ChangeExtension(png.Substring(folder.Length + 1), null), new TagLib.Picture(new TagLib.ByteVector((byte[])new ImageConverter().ConvertTo(image, typeof(byte[])))));
                 }
+            }
+        }
+
+        public static string FullLocation(string artname)
+        {
+            return Path.Combine(SourceFolder, artname + ".png");
+        }
+
+        // run after scanning to declare that the current state of art has been updated in the songs
+        public static void MarkAllArtRead()
+        {
+            foreach (var artname in Gallery.Keys)
+            {
+                ModifiedOptimizer.RecordChange(FullLocation(artname));
             }
         }
 
@@ -96,6 +112,8 @@ namespace NaiveMusicUpdater
         }
     }
 
+    // decide whether or not to skip checking files
+    // by keeping track of the last time they were modified
     public static class ModifiedOptimizer
     {
         private static Dictionary<string, DateTime> LastModified;
@@ -109,8 +127,10 @@ namespace NaiveMusicUpdater
         }
 
         // returns true if this file has changed since the last time we recorded it
-        public static bool FileDifferent(string filepath)
+        public static bool FileDifferent(string filepath, bool result_if_no_exist)
         {
+            if (!File.Exists(filepath))
+                return result_if_no_exist;
             DateTime current = File.GetLastWriteTime(filepath);
             if (LastModified.TryGetValue(filepath, out DateTime cached))
                 return current - TimeSpan.FromSeconds(5) > cached;
@@ -272,6 +292,11 @@ namespace NaiveMusicUpdater
         }
     }
 
+    public interface IHaveArt
+    {
+        string GetArtLocation();
+    }
+
     public class Library
     {
         public List<Artist> Artists;
@@ -299,17 +324,19 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class Artist
+    public class Artist : IHaveArt
     {
         public List<Album> Albums;
         public string Folder;
+        public string FolderName;
         public string Name;
         public TagLib.Picture Art;
         public Artist(string folder)
         {
             Folder = folder;
-            Name = NameRetriever.GetName(Path.GetFileName(folder));
-            Art = ArtRetriever.GetArt(GetHash());
+            FolderName = Path.GetFileName(Folder);
+            Name = NameRetriever.GetName(FolderName);
+            Art = ArtRetriever.GetArt(GetArtLocation());
             Albums = new List<Album>();
             foreach (var album in Directory.EnumerateDirectories(folder))
             {
@@ -317,19 +344,19 @@ namespace NaiveMusicUpdater
             }
         }
 
-        private string GetHash()
+        public string GetArtLocation()
         {
-            return Name.GetHashCode().ToString();
+            return FolderName;
         }
 
         public IEnumerable<string> Save()
         {
             yield return $"ARTIST: {Name}";
-            yield return $"HASH: {GetHash()}";
+            yield return $"ART: {GetArtLocation()}";
 
             string artistini = Path.Combine(Folder, "desktop.ini");
             File.Delete(artistini);
-            File.WriteAllText(artistini, "[.ShellClassInfo]\nIconResource = ..\\.music-cache\\" + GetHash() + ".ico, 0");
+            File.WriteAllText(artistini, "[.ShellClassInfo]\nIconResource = ..\\.music-cache\\art\\" + GetArtLocation() + ".ico, 0");
             File.SetAttributes(artistini, FileAttributes.System | FileAttributes.Hidden);
 
             foreach (var album in Albums)
@@ -342,12 +369,13 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class Album
+    public class Album : IHaveArt
     {
         public List<SubAlbum> SubAlbums;
         // these are only songs directly inside this album, not those inside this album's subalbums
         public List<Song> Songs;
         public string Folder;
+        public string FolderName;
         public string Name;
         public Artist Parent;
         public TagLib.Picture Art;
@@ -355,8 +383,9 @@ namespace NaiveMusicUpdater
         {
             Parent = parent;
             Folder = folder;
-            Name = NameRetriever.GetName(Path.GetFileName(folder));
-            Art = ArtRetriever.GetArt(GetHash());
+            FolderName = Path.GetFileName(Folder);
+            Name = NameRetriever.GetName(FolderName);
+            Art = ArtRetriever.GetArt(GetArtLocation());
             SubAlbums = new List<SubAlbum>();
             foreach (var album in Directory.EnumerateDirectories(folder))
             {
@@ -369,19 +398,19 @@ namespace NaiveMusicUpdater
             }
         }
 
-        private string GetHash()
+        public string GetArtLocation()
         {
-            return Tuple.Create(Parent.Name, Name).GetHashCode().ToString();
+            return Path.Combine(Parent.FolderName, FolderName);
         }
 
         public IEnumerable<string> Save()
         {
             yield return $"ALBUM: {Name}";
-            yield return $"HASH: {GetHash()}";
+            yield return $"ART: {GetArtLocation()}";
 
             string albumini = Path.Combine(Folder, "desktop.ini");
             File.Delete(albumini);
-            File.WriteAllText(albumini, "[.ShellClassInfo]\nIconResource = ..\\..\\.music-cache\\" + GetHash() + ".ico, 0");
+            File.WriteAllText(albumini, "[.ShellClassInfo]\nIconResource = ..\\..\\.music-cache\\art\\" + GetArtLocation() + ".ico, 0");
             File.SetAttributes(albumini, FileAttributes.System | FileAttributes.Hidden);
 
             foreach (var subalbum in SubAlbums)
@@ -406,11 +435,12 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class SubAlbum
+    public class SubAlbum : IHaveArt
     {
         public List<Song> Songs;
         public string Folder;
         public string Name;
+        public string FolderName;
         public Album ParentAlbum;
         public Artist ParentArtist;
         public TagLib.Picture Art;
@@ -419,8 +449,9 @@ namespace NaiveMusicUpdater
             ParentAlbum = parent;
             ParentArtist = parent.Parent;
             Folder = folder;
-            Name = NameRetriever.GetName(Path.GetFileName(folder));
-            Art = ArtRetriever.GetArt(GetHash());
+            FolderName = Path.GetFileName(Folder);
+            Name = NameRetriever.GetName(FolderName);
+            Art = ArtRetriever.GetArt(GetArtLocation());
             Songs = new List<Song>();
             foreach (var song in Directory.EnumerateFiles(folder, "*.mp3"))
             {
@@ -428,18 +459,19 @@ namespace NaiveMusicUpdater
             }
         }
 
-        private string GetHash()
+        public string GetArtLocation()
         {
-            return Tuple.Create(ParentArtist.Name, ParentAlbum.Name, Name).GetHashCode().ToString();
+            return Path.Combine(ParentArtist.FolderName, ParentAlbum.FolderName, FolderName);
         }
 
         public IEnumerable<string> Save()
         {
             yield return $"SUBALBUM: {Name}";
+            yield return $"ART: {GetArtLocation()}";
 
             string subalbumini = Path.Combine(Folder, "desktop.ini");
             File.Delete(subalbumini);
-            File.WriteAllText(subalbumini, "[.ShellClassInfo]\nIconResource = ..\\..\\..\\.music-cache\\" + GetHash() + ".ico, 0");
+            File.WriteAllText(subalbumini, "[.ShellClassInfo]\nIconResource = ..\\..\\..\\.music-cache\\art\\" + GetArtLocation() + ".ico, 0");
             File.SetAttributes(subalbumini, FileAttributes.System | FileAttributes.Hidden);
 
             foreach (var song in Songs)
@@ -492,13 +524,23 @@ namespace NaiveMusicUpdater
         private TagLib.Picture[] GetPictures()
         {
             var pictures = new List<TagLib.Picture>();
-            if (ParentSubAlbum?.Art != null)
-                pictures.Add(ParentSubAlbum?.Art);
-            if (ParentAlbum.Art != null)
-                pictures.Add(ParentAlbum.Art);
-            if (ParentArtist.Art != null)
-                pictures.Add(ParentArtist.Art);
+            foreach (var artpath in GetAllArtLocations())
+            {
+                var art = ArtRetriever.GetArt(artpath);
+                if (art != null)
+                    pictures.Add(art);
+            }
             return pictures.ToArray();
+        }
+
+        private string[] GetAllArtLocations()
+        {
+            var paths = new List<string>();
+            if (ParentSubAlbum != null)
+                paths.Add(ParentSubAlbum.GetArtLocation());
+            paths.Add(ParentAlbum.GetArtLocation());
+            paths.Add(ParentArtist.GetArtLocation());
+            return paths.ToArray();
         }
 
         private static bool CompareArt(TagLib.IPicture[] pictures1, TagLib.IPicture[] pictures2)
@@ -613,9 +655,25 @@ namespace NaiveMusicUpdater
             string newname = originalname;
             // the song TITLE should be this
             yield return "SONG: " + originalname;
-            if (!ModifiedOptimizer.FileDifferent(Filepath))
+            bool check = false;
+            if (ModifiedOptimizer.FileDifferent(Filepath, true))
+            {
+                check = true;
+                yield return "(possible change to song)";
+            }
+            if (!check)
+            {
+                foreach (var image in GetAllArtLocations())
+                {
+                    if (ModifiedOptimizer.FileDifferent(ArtRetriever.FullLocation(image), false))
+                    {
+                        check = true;
+                        yield return "(possible change to art)";
+                    }
+                }
+            }
+            if (!check)
                 yield break;
-            yield return "(possible changes)";
             ModifiedOptimizer.RecordChange(Filepath);
             using (TagLib.File file = TagLib.File.Create(Filepath))
             {

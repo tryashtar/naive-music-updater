@@ -12,6 +12,11 @@ using NaiveMusicUpdater;
 
 namespace NaiveMusicUpdater
 {
+    // to do:
+    // if we change art that a song uses (artist/album/subalbum),
+    // it won't be applied because the song will be skipped
+    // we need a better function for naming arts, and the optimizer to keep track of arts
+    // songs whose art was changed recently are not skipped
     public static class Program
     {
         private static string FolderPath;
@@ -56,24 +61,28 @@ namespace NaiveMusicUpdater
             DirectoryInfo di = Directory.CreateDirectory(cache);
             di.Attributes |= FileAttributes.System | FileAttributes.Hidden;
 
-            string realnamesfile = Path.Combine(cache, "realnames.json");
-            var realnames = new Dictionary<string, string>();
-            if (File.Exists(realnamesfile))
-                realnames = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(realnamesfile));
-
+            // set up globals
             NameRetriever.LoadConfig(Path.Combine(cache, "config.json"));
-            ArtRetriever.SetArtSource(cache);
+            ArtRetriever.SetArtSource(Path.Combine(cache, "art"), SearchOption.AllDirectories);
             ModifiedOptimizer.LoadCache(Path.Combine(cache, "datecache.json"));
-            Library library = new Library(folder);
+
+            // prepare to log
             string logfile = Path.Combine(cache, "logs", DateTime.Now.ToString("yyyy-MM-dd HH_mm_ss") + ".txt");
             using (File.Create(logfile)) ;
             OpenLogFile(logfile);
+
+            // scan and save library
+            Library library = new Library(folder);
             foreach (var message in library.Save())
             {
                 PrintAndLog(message);
             }
+
+            // persist globals
+            ArtRetriever.MarkAllArtRead();
             ModifiedOptimizer.SaveCache();
 
+            // prepare to scan sources
             PrintAndLog("");
             string sourcesjson = Path.Combine(folder, "sources.json");
             var sources = JObject.Parse(File.ReadAllText(sourcesjson));
