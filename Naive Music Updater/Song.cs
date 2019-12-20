@@ -35,14 +35,9 @@ namespace NaiveMusicUpdater
             Filepath = path;
         }
 
-        private string GetIdealName()
-        {
-            return NameRetriever.GetName(Path.GetFileNameWithoutExtension(Filepath), correctcase: true);
-        }
-
         private string GetIdealFilename()
         {
-            return NameRetriever.GetSafeFileName(GetIdealName()) + Path.GetExtension(Filepath);
+            return NameRetriever.GetSafeFileName(NameRetriever.GetName(Path.GetFileNameWithoutExtension(this.Filepath), correctcase: true));
         }
 
         private TagLib.Picture[] GetPictures()
@@ -176,10 +171,9 @@ namespace NaiveMusicUpdater
         public void Save()
         {
             // file name (includes extension and placeholder chars like underscore)
-            string originalname = Path.GetFileName(Filepath);
-            string newname = originalname;
+            string current_file_name = Path.GetFileName(Filepath);
             // the song TITLE should be this
-            Logger.WriteLine("SONG: " + originalname);
+            Logger.WriteLine("SONG: " + current_file_name);
             bool check = false;
             if (ModifiedOptimizer.FileDifferent(Filepath, true))
             {
@@ -204,15 +198,24 @@ namespace NaiveMusicUpdater
             {
                 Title = file.Tag.Title;
                 bool changed = false;
-                // don't ruin existing titles with non-file characters like slashes
-                string newtitle = GetIdealName();
-                if (file.Tag.Title != newtitle)
+                string proper_file_name = GetIdealFilename() + Path.GetExtension(this.Filepath);
+                string proper_title = NameRetriever.GetName(Path.GetFileNameWithoutExtension(proper_file_name), correctcase: true);
+
+                if (proper_file_name != current_file_name)
                 {
-                    file.Tag.Title = newtitle;
+                    Logger.WriteLine($"New name requires new file path: \"{current_file_name}\" to \"{proper_file_name}\"");
+                    var test = GetIdealFilename();
+                    string newpath = Path.Combine(Path.GetDirectoryName(Filepath), proper_file_name);
+                    File.Move(Filepath, newpath);
+                    Filepath = newpath;
+                }
+
+                if (file.Tag.Title != proper_title)
+                {
+                    file.Tag.Title = proper_title;
                     changed = true;
                     Logger.WriteLine($"New title: {file.Tag.Title}");
                 }
-                newname = GetIdealFilename();
                 if (file.Tag.Album != ParentAlbum.Name)
                 {
                     file.Tag.Album = ParentAlbum.Name;
@@ -289,13 +292,6 @@ namespace NaiveMusicUpdater
                         Logger.WriteLine($"Save failed because {exc.Message}! Skipping...");
                     }
                 }
-            }
-            if (newname != originalname)
-            {
-                Logger.WriteLine($"New name requires new file path: \"{originalname}\" to \"{newname}\"");
-                string newpath = Path.Combine(Path.GetDirectoryName(Filepath), newname);
-                File.Move(Filepath, newpath);
-                Filepath = newpath;
             }
         }
     }

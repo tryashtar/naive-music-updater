@@ -28,8 +28,7 @@ namespace NaiveMusicUpdater
 #else
             FolderPath = Directory.GetCurrentDirectory();
 #endif
-            var library = new Library(FolderPath);
-            NaiveSongUpdate(library);
+            var library = NaiveSongUpdate(FolderPath);
             Logger.WriteLine("");
             SourcesUpdate(library);
             Logger.Close();
@@ -38,13 +37,13 @@ namespace NaiveMusicUpdater
 #endif
         }
 
-        private static void NaiveSongUpdate(Library library)
+        private static Library NaiveSongUpdate(string folder)
         {
             TagLib.Id3v2.Tag.DefaultVersion = 3;
             TagLib.Id3v2.Tag.ForceDefaultVersion = true;
 
             // create art folder if it's not already there
-            string cache = Path.Combine(library.Folder, ".music-cache");
+            string cache = Path.Combine(folder, ".music-cache");
             DirectoryInfo di = Directory.CreateDirectory(cache);
             di.Attributes |= FileAttributes.System | FileAttributes.Hidden;
 
@@ -58,11 +57,13 @@ namespace NaiveMusicUpdater
             Logger.Open(logfile);
 
             // scan and save library
+            var library = new Library(folder);
             library.Save();
 
             // persist globals
             ArtRetriever.MarkAllArtRead();
             ModifiedOptimizer.SaveCache();
+            return library;
         }
 
         private static void SourcesUpdate(Library library)

@@ -68,14 +68,13 @@ namespace NaiveMusicUpdater
             {
                 name = name.Replace(filenamechar.Key, filenamechar.Value);
             }
-
-            // 2. corrections
-            if (correctcase)
-                name = CorrectCase(name);
             foreach (var findrepl in FindReplace)
             {
                 name = name.Replace(findrepl.Key, findrepl.Value);
             }
+            // 2. corrections
+            if (correctcase)
+                name = CorrectCase(name);
             return name;
         }
 
@@ -88,9 +87,10 @@ namespace NaiveMusicUpdater
             return name;
         }
 
-        // to do: after !, the next word must be capitalized
         public static string CorrectCase(string input)
         {
+            if (input == "")
+                return input;
             // remove whitespace from beginning and end
             input = input.Trim();
 
@@ -113,22 +113,28 @@ namespace NaiveMusicUpdater
             // treat "artist - title" style titles as two separate titles
             foreach (var separator in new string[] { "-", "–", "—", "_", "/", "!", ":" })
             {
-                bool starts = input.StartsWith(separator);
-                if (starts)
-                    input = " " + input;
-                string spaced = $" {separator} ";
-                string[] titles = input.Split(new[] { spaced }, StringSplitOptions.RemoveEmptyEntries);
-                if (titles.Length == 1)
-                    continue;
-                for (int i = 0; i < titles.Length; i++)
+                string spaced;
+                if (separator == ":" || separator == "!")
+                    spaced = $"{separator} ";
+                else
                 {
-                    titles[i] = CorrectCase(titles[i]);
+                    spaced = $" {separator} ";
+                    if (input.StartsWith(separator))
+                        input = " " + input;
                 }
+                string[] titles = input.Split(new[] { spaced }, StringSplitOptions.None);
+                if (titles.Length > 1)
+                {
+                    for (int i = 0; i < titles.Length; i++)
+                    {
+                        titles[i] = CorrectCase(titles[i]);
+                    }
 
-                // all internal titles have already been processed, we are done
-                input = String.Join(spaced, titles);
-                if (starts)
-                    input = input.Substring(1);
+                    // all internal titles have already been processed, we are done
+                    input = String.Join(spaced, titles);
+                }
+                if (titles.Length > 1)
+                    return input.Trim();
             }
 
             string[] words = input.Split(' ');

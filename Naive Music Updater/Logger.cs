@@ -10,6 +10,7 @@ namespace NaiveMusicUpdater
     public static class Logger
     {
         private static StreamWriter Writer;
+        private static int TabCount = 0;
 
         public static void Open(string path)
         {
@@ -24,8 +25,12 @@ namespace NaiveMusicUpdater
 
         public static void WriteLine(string text)
         {
-            Console.WriteLine(text);
-            Writer.WriteLine(text);
+            string tabs = new string('\t', TabCount);
+            Console.WriteLine(tabs + text);
+            Writer.WriteLine(tabs + text);
         }
+
+        public static void TabIn() => TabCount++;
+        public static void TabOut() => TabCount--;
     }
 }

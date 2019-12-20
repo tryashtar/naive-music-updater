@@ -22,7 +22,7 @@ namespace NaiveMusicUpdater
             Parent = parent;
             Folder = folder;
             FolderName = Path.GetFileName(Folder);
-            Name = NameRetriever.GetName(FolderName);
+            Name = NameRetriever.GetName(FolderName, correctcase: true);
             Art = ArtRetriever.GetArt(GetArtLocation());
             SubAlbums = new List<SubAlbum>();
             foreach (var album in Directory.EnumerateDirectories(folder))
@@ -51,6 +51,7 @@ namespace NaiveMusicUpdater
             File.WriteAllText(albumini, "[.ShellClassInfo]\nIconResource = ..\\..\\.music-cache\\art\\" + GetArtLocation() + ".ico, 0");
             File.SetAttributes(albumini, FileAttributes.System | FileAttributes.Hidden);
 
+            Logger.TabIn();
             foreach (var subalbum in SubAlbums)
             {
                 subalbum.Save();
@@ -59,6 +60,7 @@ namespace NaiveMusicUpdater
             {
                 song.Save();
             }
+            Logger.TabOut();
         }
 
         public IEnumerable<Song> AllSongs()

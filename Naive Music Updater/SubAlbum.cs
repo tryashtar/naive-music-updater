@@ -22,7 +22,7 @@ namespace NaiveMusicUpdater
             ParentArtist = parent.Parent;
             Folder = folder;
             FolderName = Path.GetFileName(Folder);
-            Name = NameRetriever.GetName(FolderName);
+            Name = NameRetriever.GetName(FolderName, correctcase: true);
             Art = ArtRetriever.GetArt(GetArtLocation());
             Songs = new List<Song>();
             foreach (var song in Directory.EnumerateFiles(folder, "*.mp3"))
@@ -36,20 +36,22 @@ namespace NaiveMusicUpdater
             return Path.Combine(ParentArtist.FolderName, ParentAlbum.FolderName, FolderName);
         }
 
-        public IEnumerable<string> Save()
+        public void Save()
         {
-            yield return $"SUBALBUM: {Name}";
-            yield return $"ART: {GetArtLocation()}";
+            Logger.WriteLine($"SUBALBUM: {Name}");
+            Logger.WriteLine($"ART: {GetArtLocation()}");
 
             string subalbumini = Path.Combine(Folder, "desktop.ini");
             File.Delete(subalbumini);
             File.WriteAllText(subalbumini, "[.ShellClassInfo]\nIconResource = ..\\..\\..\\.music-cache\\art\\" + GetArtLocation() + ".ico, 0");
             File.SetAttributes(subalbumini, FileAttributes.System | FileAttributes.Hidden);
 
+            Logger.TabIn();
             foreach (var song in Songs)
             {
                 song.Save();
             }
+            Logger.TabOut();
         }
     }
 }

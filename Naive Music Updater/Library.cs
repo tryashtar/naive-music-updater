@@ -29,10 +29,12 @@ namespace NaiveMusicUpdater
 
         public void Save()
         {
+            Logger.TabIn();
             foreach (var artist in Artists)
             {
                 artist.Save();
             }
+            Logger.TabOut();
         }
     }
 }
