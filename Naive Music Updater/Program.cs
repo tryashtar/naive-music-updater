@@ -19,45 +19,32 @@ namespace NaiveMusicUpdater
     // songs whose art was changed recently are not skipped
     public static class Program
     {
-        private static string FolderPath;
-        private static StreamWriter Writer;
-
         [STAThread]
         private static void Main()
         {
+            string FolderPath;
 #if DEBUG
             FolderPath = @"D:\Music";
-            NaiveSongUpdate(FolderPath);
-            Console.ReadLine();
 #else
             FolderPath = Directory.GetCurrentDirectory();
-            NaiveSongUpdate(FolderPath);
+#endif
+            var library = new Library(FolderPath);
+            NaiveSongUpdate(library);
+            Logger.WriteLine("");
+            SourcesUpdate(library);
+            Logger.Close();
+#if DEBUG
+            Console.ReadLine();
 #endif
         }
 
-        private static void OpenLogFile(string path)
-        {
-            Writer = new StreamWriter(path);
-        }
-
-        private static void CloseLogFile()
-        {
-            Writer.Close();
-        }
-
-        private static void PrintAndLog(string text)
-        {
-            Console.WriteLine(text);
-            Writer.WriteLine(text);
-        }
-
-        private static void NaiveSongUpdate(string folder)
+        private static void NaiveSongUpdate(Library library)
         {
             TagLib.Id3v2.Tag.DefaultVersion = 3;
             TagLib.Id3v2.Tag.ForceDefaultVersion = true;
 
             // create art folder if it's not already there
-            string cache = Path.Combine(folder, ".music-cache");
+            string cache = Path.Combine(library.Folder, ".music-cache");
             DirectoryInfo di = Directory.CreateDirectory(cache);
             di.Attributes |= FileAttributes.System | FileAttributes.Hidden;
 
@@ -68,45 +55,42 @@ namespace NaiveMusicUpdater
 
             // prepare to log
             string logfile = Path.Combine(cache, "logs", DateTime.Now.ToString("yyyy-MM-dd HH_mm_ss") + ".txt");
-            using (File.Create(logfile)) ;
-            OpenLogFile(logfile);
+            Logger.Open(logfile);
 
             // scan and save library
-            Library library = new Library(folder);
-            foreach (var message in library.Save())
-            {
-                PrintAndLog(message);
-            }
+            library.Save();
 
             // persist globals
             ArtRetriever.MarkAllArtRead();
             ModifiedOptimizer.SaveCache();
+        }
 
+        private static void SourcesUpdate(Library library)
+        {
             // prepare to scan sources
-            PrintAndLog("");
-            string sourcesjson = Path.Combine(folder, "sources.json");
+            string sourcesjson = Path.Combine(library.Folder, "sources.json");
             var sources = JObject.Parse(File.ReadAllText(sourcesjson));
 
             // first add new blank templates
             foreach (var artist in library.Artists)
             {
-                var jartist = (JObject)sources[artist.Name];
+                var jartist = (JObject)sources[artist.FolderName];
                 if (jartist == null)
                 {
                     jartist = new JObject();
-                    sources.Add(artist.Name, jartist);
+                    sources.Add(artist.FolderName, jartist);
                 }
                 foreach (var album in artist.Albums)
                 {
-                    var jalbum = (JObject)jartist[album.Name];
+                    var jalbum = (JObject)jartist[album.FolderName];
                     if (jalbum == null)
                     {
                         jalbum = new JObject();
-                        jartist.Add(album.Name, jalbum);
+                        jartist.Add(album.FolderName, jalbum);
                     }
                 }
             }
-            PrintAndLog("Sources update done");
+            Logger.WriteLine("Sources update done");
 
             // then do scan
             // to do:
@@ -119,43 +103,49 @@ namespace NaiveMusicUpdater
             // the intent is to make sure all songs in the entire library are accounted for
             foreach (var jartist in sources)
             {
-                var artist = library.Artists.FirstOrDefault(x => x.Name == jartist.Key);
+                var artist = library.Artists.FirstOrDefault(x => x.FolderName == jartist.Key);
                 if (artist == null)
-                    PrintAndLog($"Sources contains artist {jartist.Key} but library doesn't?");
+                    Logger.WriteLine($"Sources contains artist {jartist.Key} but library doesn't?");
                 else
                 {
                     foreach (var jalbum in (JObject)jartist.Value)
                     {
-                        var album = artist.Albums.FirstOrDefault(x => x.Name == jalbum.Key);
+                        var album = artist.Albums.FirstOrDefault(x => x.FolderName == jalbum.Key);
                         if (album == null)
-                            PrintAndLog($"Sources contains album {jartist.Key}/{jalbum.Key} but library doesn't?");
+                            Logger.WriteLine($"Sources contains album {jartist.Key}/{jalbum.Key} but library doesn't?");
                         else
                         {
-                            var songs = album.AllSongs();
-                            var extrasongs = (JObject)jalbum.Value["songs"];
-                            if (extrasongs == null)
+                            var songs = album.AllSongs().Select(x => x.SubFilename).ToList();
+                            foreach (var source in (JObject)jalbum.Value)
                             {
-                                if (jalbum.Value["source"] == null)
-                                    PrintAndLog($"No source or song list for {jartist.Key}/{jalbum.Key}");
-                            }
-                            else
-                            {
-                                foreach (var jsong in extrasongs)
+                                if (source.Key == "")
+                                    continue;
+                                IEnumerable<string> sourced;
+                                if (source.Value is JArray j)
+                                    sourced = j.ToObject<string[]>();
+                                else
+                                    sourced = new string[] { (string)source.Value };
+                                foreach (string song in sourced)
                                 {
-                                    var song = songs.FirstOrDefault(x => ((x.ParentSubAlbum == null ? x.Filename : (x.ParentSubAlbum.Name + "/" + x.Filename)) == jsong.Key));
-                                    if (song == null)
-                                        PrintAndLog($"Sources contains song {jartist.Key}/{jalbum.Key}/{jsong.Key} but library doesn't?");
+                                    if (songs.Contains(song))
+                                        songs.Remove(song);
+                                    else
+                                        Logger.WriteLine($"Sources contains song {jartist.Key}/{jalbum.Key}/{song} but library doesn't?");
                                 }
-                                if (jalbum.Value["source"] == null && songs.Count() > extrasongs.Count)
-                                    PrintAndLog($"Song list for {jartist.Key}/{jalbum.Key} doesn't include all songs (has {extrasongs.Count}, needs {songs.Count()})");
+                            }
+                            if (songs.Any())
+                                jalbum.Value[""] = new JArray();
+                            foreach (var song in songs)
+                            {
+                                Logger.WriteLine($"No source for {jartist.Key}/{jalbum.Key}/{song}");
+                                ((JArray)jalbum.Value[""]).Add(song);
                             }
                         }
                     }
                 }
             }
             File.WriteAllText(sourcesjson, sources.ToString());
-            PrintAndLog("Sources scan done");
-            CloseLogFile();
+            Logger.WriteLine("Sources scan done");
         }
     }
 }
