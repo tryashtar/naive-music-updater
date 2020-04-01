@@ -9,6 +9,14 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
+    public class Override
+    {
+        public Override(JObject json)
+        {
+
+        }
+    }
+
     public static class NameRetriever
     {
         private static List<string> SkipNames;
@@ -17,6 +25,7 @@ namespace NaiveMusicUpdater
         private static Dictionary<string, string> FindReplace;
         private static Dictionary<string, string> FileToTitle;
         private static Dictionary<string, string> TitleToFile;
+        private static List<Override> Overrides;
         static NameRetriever()
         {
             SkipNames = new List<string>();
@@ -25,6 +34,7 @@ namespace NaiveMusicUpdater
             FindReplace = new Dictionary<string, string>();
             FileToTitle = new Dictionary<string, string>();
             TitleToFile = new Dictionary<string, string>();
+            Overrides = new List<Override>();
         }
         public static void LoadConfig(string configpath)
         {
@@ -52,6 +62,10 @@ namespace NaiveMusicUpdater
             foreach (var map in (JObject)json["title_to_filename"])
             {
                 TitleToFile.Add(map.Key, (string)map.Value);
+            }
+            foreach (JObject map in (JArray)json["overrides"])
+            {
+                Overrides.Add(new Override(map));
             }
         }
         public static string GetName(string name, bool correctcase = false)

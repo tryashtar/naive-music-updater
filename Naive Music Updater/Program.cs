@@ -58,7 +58,7 @@ namespace NaiveMusicUpdater
 
             // scan and save library
             var library = new Library(folder);
-            library.Save();
+            library.Save(cache);
 
             // persist globals
             ArtRetriever.MarkAllArtRead();

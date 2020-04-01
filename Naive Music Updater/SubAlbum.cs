@@ -36,7 +36,7 @@ namespace NaiveMusicUpdater
             return Path.Combine(ParentArtist.FolderName, ParentAlbum.FolderName, FolderName);
         }
 
-        public void Save()
+        public void Save(string cachefolder)
         {
             Logger.WriteLine($"SUBALBUM: {Name}");
             Logger.WriteLine($"ART: {GetArtLocation()}");
@@ -49,7 +49,7 @@ namespace NaiveMusicUpdater
             Logger.TabIn();
             foreach (var song in Songs)
             {
-                song.Save();
+                song.Save(cachefolder);
             }
             Logger.TabOut();
         }

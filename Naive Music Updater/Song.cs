@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TagLib.Id3v2;
 
 namespace NaiveMusicUpdater
 {
@@ -78,59 +80,55 @@ namespace NaiveMusicUpdater
         }
 
         // returns whether this changed anything
-        private Tuple<bool, IEnumerable<string>> WipeUselessProperties(TagLib.Tag filetag)
+        private bool WipeUselessProperties(TagLib.Tag filetag)
         {
-            List<string> messages = new List<string>();
+            Logger.TabIn();
             bool changed = false;
             if (filetag.AmazonId != null)
             {
-                messages.Add($"Wiped amazon ID {filetag.AmazonId}");
+                Logger.WriteLine($"Wiped amazon ID {filetag.AmazonId}");
                 filetag.AmazonId = null;
                 changed = true;
             }
             if (filetag.Comment != null)
             {
-                messages.Add($"Wiped comment {filetag.Comment}");
+                Logger.WriteLine($"Wiped comment {filetag.Comment}");
                 filetag.Comment = null;
                 changed = true;
             }
             if (filetag.Conductor != null)
             {
-                messages.Add($"Wiped conductor {filetag.Conductor}");
+                Logger.WriteLine($"Wiped conductor {filetag.Conductor}");
                 filetag.Conductor = null;
                 changed = true;
             }
             if (filetag.Copyright != null)
             {
-                messages.Add($"Wiped copyright {filetag.Copyright}");
+                Logger.WriteLine($"Wiped copyright {filetag.Copyright}");
                 filetag.Copyright = null;
                 changed = true;
             }
             if (filetag.Disc != 0)
             {
-                messages.Add($"Wiped disc number {filetag.Disc}");
+                Logger.WriteLine($"Wiped disc number {filetag.Disc}");
                 filetag.Disc = 0;
                 changed = true;
             }
             if (filetag.DiscCount != 0)
             {
-                messages.Add($"Wiped disc count {filetag.DiscCount}");
+                Logger.WriteLine($"Wiped disc count {filetag.DiscCount}");
                 filetag.DiscCount = 0;
                 changed = true;
             }
             if (filetag.FirstGenre != null)
             {
-                messages.Add($"Wiped genre {filetag.FirstGenre}");
+                Logger.WriteLine($"Wiped genre {filetag.FirstGenre}");
                 filetag.Genres = new string[0];
                 changed = true;
             }
-            if (filetag.Lyrics != null)
-            {
-                messages.Add($"FYI -- this song has lyrics");
-            }
             if (filetag.MusicBrainzArtistId != null || filetag.MusicBrainzDiscId != null || filetag.MusicBrainzReleaseArtistId != null || filetag.MusicBrainzReleaseCountry != null || filetag.MusicBrainzReleaseId != null || filetag.MusicBrainzReleaseStatus != null || filetag.MusicBrainzReleaseType != null || filetag.MusicBrainzTrackId != null)
             {
-                messages.Add($"Wiped musicbrainz data");
+                Logger.WriteLine($"Wiped musicbrainz data");
                 filetag.MusicBrainzArtistId = null;
                 filetag.MusicBrainzDiscId = null;
                 filetag.MusicBrainzReleaseArtistId = null;
@@ -143,32 +141,33 @@ namespace NaiveMusicUpdater
             }
             if (filetag.MusicIpId != null)
             {
-                messages.Add($"Wiped music IP ID {filetag.MusicIpId}");
+                Logger.WriteLine($"Wiped music IP ID {filetag.MusicIpId}");
                 filetag.MusicIpId = null;
                 changed = true;
             }
             if (filetag.Track != 0)
             {
-                messages.Add($"Wiped track number {filetag.Track}");
+                Logger.WriteLine($"Wiped track number {filetag.Track}");
                 filetag.Track = 0;
                 changed = true;
             }
             if (filetag.TrackCount != 0)
             {
-                messages.Add($"Wiped track count {filetag.TrackCount}");
+                Logger.WriteLine($"Wiped track count {filetag.TrackCount}");
                 filetag.TrackCount = 0;
                 changed = true;
             }
             if (filetag.Year != 0)
             {
-                messages.Add($"Wiped year {filetag.Year}");
+                Logger.WriteLine($"Wiped year {filetag.Year}");
                 filetag.Year = 0;
                 changed = true;
             }
-            return Tuple.Create<bool, IEnumerable<string>>(changed, messages);
+            Logger.TabOut();
+            return changed;
         }
 
-        public void Save()
+        public void Save(string cachefolder)
         {
             // file name (includes extension and placeholder chars like underscore)
             string current_file_name = Path.GetFileName(Filepath);
@@ -266,13 +265,34 @@ namespace NaiveMusicUpdater
                     }
                     changed = true;
                 }
+                if (!String.IsNullOrEmpty(file.Tag.Lyrics))
+                {
+                    Logger.WriteLine($"FYI -- this song has lyrics");
+                    SynchedText[] lyrics = null;
+                    var tag = (TagLib.Id3v2.Tag)file.GetTag(TagLib.TagTypes.Id3v2);
+                    if (tag != null)
+                    {
+                        foreach (var frame in tag.GetFrames())
+                        {
+                            if (frame is SynchronisedLyricsFrame slf)
+                                lyrics = slf.Text;
+                        }
+                    }
+                    if (lyrics == null)
+                        lyrics = new SynchedText[] { new SynchedText(0, tag.Lyrics) };
+                    var lyricstext = lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time).ToString(@"h\:mm\:ss\.ff")}]{x.Text}");
+                    string[] paths;
+                    if (this.ParentSubAlbum != null)
+                        paths = new[] { cachefolder, "lyrics", this.ParentArtist.FolderName, this.ParentAlbum.FolderName, this.ParentSubAlbum?.FolderName, Path.ChangeExtension(proper_file_name, ".lrc") };
+                    else
+                        paths = new[] { cachefolder, "lyrics", this.ParentArtist.FolderName, this.ParentAlbum.FolderName, Path.ChangeExtension(proper_file_name, ".lrc") };
+                    var location = Path.Combine(paths);
+                    Directory.CreateDirectory(Path.GetDirectoryName(location));
+                    File.WriteAllLines(location, lyricstext);
+                }
                 // order matters here because the method must always run, even if we have already changed something
                 var wipe = WipeUselessProperties(file.Tag);
-                foreach (var message in wipe.Item2)
-                {
-                    Logger.WriteLine("\t" + message);
-                }
-                changed = wipe.Item1 || changed;
+                changed = wipe || changed;
 
                 if (changed)
                 {
@@ -293,6 +313,16 @@ namespace NaiveMusicUpdater
                     }
                 }
             }
+            Logger.WriteLine("Normalizing audio with MP3gain...");
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo(@"C:\Program Files (x86)\MP3Gain\mp3gain.exe", $"/r /c \"{Filepath}\"")
+                {
+                    UseShellExecute = false
+                }
+            };
+            process.Start();
+            process.WaitForExit();
         }
     }
 }

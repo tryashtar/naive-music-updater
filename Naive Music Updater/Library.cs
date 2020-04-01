@@ -27,12 +27,12 @@ namespace NaiveMusicUpdater
             }
         }
 
-        public void Save()
+        public void Save(string cachefolder)
         {
             Logger.TabIn();
             foreach (var artist in Artists)
             {
-                artist.Save();
+                artist.Save(cachefolder);
             }
             Logger.TabOut();
         }
