@@ -1,15 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    class Program
+    public static class Program
     {
-        static void Main(string[] args)
+        public static void Main()
         {
+            string FolderPath;
+#if DEBUG
+            FolderPath = @"D:\Music";
+#else
+            FolderPath = Directory.GetCurrentDirectory();
+#endif
+            var library = new MusicLibrary(FolderPath);
+            library.Update();
+#if DEBUG
+            Console.ReadLine();
+#endif
         }
     }
 }
