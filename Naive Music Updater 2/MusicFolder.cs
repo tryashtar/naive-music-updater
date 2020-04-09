@@ -9,7 +9,7 @@ namespace NaiveMusicUpdater
 {
     public interface IMusicItem
     {
-        IEnumerable<string> PathFromRoot();
+        IEnumerable<IMusicItem> PathFromRoot();
         string Location { get; }
         string SimpleName { get; }
     }
@@ -43,12 +43,12 @@ namespace NaiveMusicUpdater
 
         public string SimpleName => Path.GetFileName(Location);
 
-        public IEnumerable<string> PathFromRoot()
+        public IEnumerable<IMusicItem> PathFromRoot()
         {
-            var list = new List<string>();
+            var list = new List<IMusicItem>();
             if (this.Parent != null)
                 list.AddRange(this.Parent.PathFromRoot());
-            list.Add(this.SimpleName);
+            list.Add(this);
             return list;
         }
 

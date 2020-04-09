@@ -16,6 +16,8 @@ namespace NaiveMusicUpdater
         private Dictionary<string, string> FindReplace = new Dictionary<string, string>();
         private Dictionary<string, string> MapNames = new Dictionary<string, string>();
         private Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
+        private MetadataStrategy DefaultStrategy;
+        private List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();;
         public LibraryConfig(string file)
         {
             var json = JObject.Parse(File.ReadAllText(file));
@@ -39,6 +41,21 @@ namespace NaiveMusicUpdater
             {
                 FilesafeConversions.Add(item.Key, (string)item.Value);
             }
+            DefaultStrategy = new MetadataStrategy((JObject)json["strategies"]["default"]);
+            foreach (JObject item in (JArray)json["strategies"]["overrides"])
+            {
+                StrategyOverrides.Add(Tuple.Create(new SongPredicate((JObject)item["predicate"]), new MetadataStrategy((JObject)item["strategy"])));
+            }
+        }
+
+        private MetadataStrategy GetApplicableStrategy(Song song)
+        {
+            foreach (var item in StrategyOverrides)
+            {
+                if (item.Item1.Matches(song))
+                    return item.Item2;
+            }
+            return DefaultStrategy;
         }
 
         public string GetTitleFor(IMusicItem item)
@@ -121,7 +138,7 @@ namespace NaiveMusicUpdater
             string[] words = text.Split(' ');
             // capitalize first and last words of title always
             Capitalize(words, 0);
-            Capitalize(words, words.Length-1);
+            Capitalize(words, words.Length - 1);
             bool prevallcaps = false;
             for (int i = 1; i < words.Length - 1; i++)
             {

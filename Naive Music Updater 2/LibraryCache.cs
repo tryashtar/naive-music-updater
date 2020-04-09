@@ -13,6 +13,7 @@ namespace NaiveMusicUpdater
         private string Folder;
         private LibraryConfig Config;
         private Dictionary<string, DateTime> DateCache;
+        private Dictionary<IMusicItem, string> TitleCache = new Dictionary<IMusicItem, string>();
         private string DateCachePath => Path.Combine(Folder, "datecache.json");
         private string ConfigPath => Path.Combine(Folder, "config.json");
         public LibraryCache(string folder)
@@ -49,7 +50,11 @@ namespace NaiveMusicUpdater
 
         public string GetTitleFor(IMusicItem item)
         {
-            return Config.GetTitleFor(item);
+            if (TitleCache.TryGetValue(item, out var result))
+                return result;
+            var title = Config.GetTitleFor(item);
+            TitleCache[item] = title;
+            return title;
         }
 
         public string GetArtistFor(Song song)

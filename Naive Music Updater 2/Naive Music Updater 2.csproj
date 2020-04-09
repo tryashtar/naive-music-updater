@@ -55,6 +55,7 @@
     <Compile Include="LibraryCache.cs" />
     <Compile Include="LibraryConfig.cs" />
     <Compile Include="Logger.cs" />
+    <Compile Include="MetadataStrategy.cs" />
     <Compile Include="MusicFolder.cs" />
     <Compile Include="MusicLibrary.cs" />
     <Compile Include="Program.cs" />

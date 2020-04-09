@@ -9,12 +9,13 @@ using TagLib.Id3v2;
 namespace NaiveMusicUpdater
 {
     // to do:
-    // - art
+    // - art: every musicitem has a getter for its art path, any change detected in the date cache mean the song should be looked at
     // - write lyrics again
-    // - wipe pointless entries again
+    // - wipe pointless tag entries again
     // - folders can rename themselves too after getting their title/filename
-    // - implement GetArtistFor and GetAlbumFor (maybe tricky)...
-    // - config has "strategies" for getting artist/album/etc, default is parent[1]/parent[0] title
+    // - metadata results are strings with <> replacements like "<artist> - <name>"
+    // - create predicates (some kind of regex on the path I guess)
+    // - model this whole strategy thing sanely
     // - mp3gain again
     public class Song : IMusicItem
     {
@@ -111,12 +112,12 @@ namespace NaiveMusicUpdater
 
         public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);
 
-        public IEnumerable<string> PathFromRoot()
+        public IEnumerable<IMusicItem> PathFromRoot()
         {
-            var list = new List<string>();
+            var list = new List<IMusicItem>();
             if (this.Parent != null)
                 list.AddRange(this.Parent.PathFromRoot());
-            list.Add(this.SimpleName);
+            list.Add(this);
             return list;
         }
     }
