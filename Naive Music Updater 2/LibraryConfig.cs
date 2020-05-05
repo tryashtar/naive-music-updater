@@ -19,6 +19,7 @@ namespace NaiveMusicUpdater
         private Dictionary<string, string> FindReplace = new Dictionary<string, string>();
         private Dictionary<string, string> MapNames = new Dictionary<string, string>();
         private Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
+        private Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
         private MetadataStrategy DefaultStrategy;
         private List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();
         private string MP3GainPath;
@@ -44,6 +45,10 @@ namespace NaiveMusicUpdater
             foreach (var item in (JObject)json["title_to_filename"])
             {
                 FilesafeConversions.Add(item.Key, (string)item.Value);
+            }
+            foreach (var item in (JObject)json["title_to_foldername"])
+            {
+                FoldersafeConversions.Add(item.Key, (string)item.Value);
             }
             DefaultStrategy = new MetadataStrategy(this, (JObject)json["strategies"]["default"]);
             foreach (var item in (JObject)json["strategies"]["overrides"])
@@ -95,7 +100,8 @@ namespace NaiveMusicUpdater
 
         public string ToFilesafe(string text, bool isfolder)
         {
-            foreach (var filenamechar in FilesafeConversions)
+            var conv = isfolder ? FoldersafeConversions : FilesafeConversions;
+            foreach (var filenamechar in conv)
             {
                 text = text.Replace(filenamechar.Key, filenamechar.Value);
             }

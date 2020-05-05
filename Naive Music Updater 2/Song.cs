@@ -4,12 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TagLib;
 using TagLib.Id3v2;
+using File = System.IO.File;
 
 namespace NaiveMusicUpdater
 {
-    // to do:
-    // - save art again
     public class Song : IMusicItem
     {
         public string Location { get; private set; }
@@ -19,20 +19,6 @@ namespace NaiveMusicUpdater
         {
             _Parent = parent;
             Location = file;
-        }
-
-        public string GetArtLocation()
-        {
-            IMusicItem item = this;
-            while (true)
-            {
-                item = item.Parent;
-                if (item == null)
-                    return null;
-                var art = item.GetArtLocation();
-                if (art != null)
-                    return Location;
-            }
         }
 
         public void Update(LibraryCache cache)
@@ -49,10 +35,11 @@ namespace NaiveMusicUpdater
             {
                 bool done = true;
                 bool changed = UpdateTag(file.Tag, title, artist, album);
-                changed = changed || WipeUselessProperties(file.Tag);
+                changed |= UpdateArt(file.Tag, cache.GetArtPathFor(this));
+                changed |= WipeUselessProperties(file.Tag);
                 Logger.WriteLine("Checking for lyrics...");
                 var path = Util.StringPathAfterRoot(this);
-                changed = changed || cache.WriteLyrics(path, (TagLib.Id3v2.Tag)file.GetTag(TagLib.TagTypes.Id3v2));
+                changed |= cache.WriteLyrics(path, (TagLib.Id3v2.Tag)file.GetTag(TagLib.TagTypes.Id3v2));
                 if (changed)
                 {
                     Logger.WriteLine("Saving...");
@@ -66,7 +53,7 @@ namespace NaiveMusicUpdater
                 if (done)
                 {
                     Logger.WriteLine("Normalizing audio with MP3gain...");
-                    done = cache.Normalize(this);
+                    cache.Normalize(this);
                 }
                 if (done)
                     cache.MarkUpdatedRecently(this);
@@ -79,6 +66,28 @@ namespace NaiveMusicUpdater
                 File.Move(Location, newpath);
                 Location = newpath;
             }
+        }
+
+        private bool UpdateArt(TagLib.Tag tag, string art_path)
+        {
+            var picture = art_path == null ? null : ArtCache.GetPicture(art_path);
+            if (!IsSingleValue(tag.Pictures, picture))
+            {
+                if (picture == null)
+                {
+                    if (tag.Pictures.Length == 0)
+                        return false;
+                    Logger.WriteLine($"Deleting art");
+                    tag.Pictures = new IPicture[0];
+                }
+                else
+                {
+                    Logger.WriteLine($"Changing art");
+                    tag.Pictures = new IPicture[] { picture };
+                }
+                return true;
+            }
+            return false;
         }
 
         private bool UpdateTag(TagLib.Tag tag, string title, string artist, string album)
@@ -203,7 +212,7 @@ namespace NaiveMusicUpdater
             return changed;
         }
 
-        private static bool IsSingleValue(string[] array, string value)
+        private static bool IsSingleValue<T>(T[] array, T value)
         {
             if (array == null)
                 return value == null;
@@ -211,8 +220,33 @@ namespace NaiveMusicUpdater
                 return false;
             if (array.Length != 1)
                 return false;
-            return array[0] == value;
+            return value.Equals(array[0]);
         }
+
+        private static bool IsSingleValue(IPicture[] array, IPicture value)
+        {
+            if (array == null)
+                return value == null;
+            if (value == null)
+                return false;
+            if (array.Length != 1)
+                return false;
+
+            return value.Data == array[0].Data;
+        }
+
+        private static bool CompareArt(TagLib.IPicture[] pictures1, TagLib.IPicture[] pictures2)
+        {
+            if (pictures1.Length != pictures2.Length)
+                return false;
+            for (int i = 0; i < pictures1.Length; i++)
+            {
+                if (pictures1[i].Data != pictures2[i].Data)
+                    return false;
+            }
+            return true;
+        }
+
 
         public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);
 

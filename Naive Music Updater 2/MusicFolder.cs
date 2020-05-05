@@ -13,7 +13,6 @@ namespace NaiveMusicUpdater
         string Location { get; }
         string SimpleName { get; }
         MusicFolder Parent { get; }
-        string GetArtLocation();
     }
 
     public class MusicFolder : IMusicItem
@@ -37,11 +36,6 @@ namespace NaiveMusicUpdater
             Location = folder;
             _Parent = parent;
             ScanContents();
-        }
-
-        public string GetArtLocation()
-        {
-            return Util.StringPathAfterRoot(this);
         }
 
         public IEnumerable<Song> GetAllSongs()
@@ -75,6 +69,17 @@ namespace NaiveMusicUpdater
                 Location = newpath;
                 ScanContents();
             }
+
+            var art = cache.GetArtPathFor(this);
+            ArtCache.LoadAndMakeIcon(art);
+            string subalbumini = Path.Combine(Location, "desktop.ini");
+            File.Delete(subalbumini);
+            if (art != null)
+            {
+                File.WriteAllText(subalbumini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Util.RelativePath(Location, art), ".ico")}, 0");
+                File.SetAttributes(subalbumini, FileAttributes.System | FileAttributes.Hidden);
+            }
+
             Logger.TabIn();
             foreach (var child in Children)
             {

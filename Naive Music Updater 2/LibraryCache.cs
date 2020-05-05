@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TagLib;
 using TagLib.Id3v2;
+using File = System.IO.File;
 
 namespace NaiveMusicUpdater
 {
@@ -27,6 +29,10 @@ namespace NaiveMusicUpdater
 
         public void Save()
         {
+            foreach (var item in ArtCache.Cached.Keys)
+            {
+                DateCache[item] = DateTime.Now;
+            }
             File.WriteAllText(DateCachePath, JsonConvert.SerializeObject(DateCache));
         }
 
@@ -42,7 +48,9 @@ namespace NaiveMusicUpdater
             {
                 if (date - TimeSpan.FromSeconds(5) > cached)
                     return true;
-                var art = Path.Combine(Folder, "art", Path.ChangeExtension(item.GetArtLocation(), ".png"));
+                var art = GetArtPathFor(item);
+                if (art == null)
+                    return false;
                 if (DateCache.TryGetValue(art, out DateTime cached2))
                 {
                     if (date - TimeSpan.FromSeconds(5) > cached2)
@@ -54,6 +62,21 @@ namespace NaiveMusicUpdater
             }
             else
                 return true;
+        }
+
+        public string GetArtPathFor(IMusicItem item)
+        {
+            while (item != null)
+            {
+                var partial = Util.StringPathAfterRoot(item);
+                if (item is Song)
+                    partial = Path.ChangeExtension(partial, null);
+                var path = Path.Combine(Folder, "art", partial + ".png");
+                if (File.Exists(path))
+                    return path;
+                item = item.Parent;
+            }
+            return null;
         }
 
         public void MarkUpdatedRecently(IMusicItem item)
@@ -123,8 +146,18 @@ namespace NaiveMusicUpdater
             }
             var lyricstext = lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}");
             location = Path.ChangeExtension(Path.Combine(Folder, "lyrics", location), ".lrc");
-            Directory.CreateDirectory(Path.GetDirectoryName(location));
-            File.WriteAllLines(location, lyricstext);
+            bool write_file = true;
+            if (File.Exists(location))
+            {
+                var existing = File.ReadAllLines(location);
+                if (existing.SequenceEqual(lyricstext))
+                    write_file = false;
+            }
+            if (write_file)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(location));
+                File.WriteAllLines(location, lyricstext);
+            }
             return changed;
         }
     }

@@ -11,6 +11,10 @@ namespace NaiveMusicUpdater
     {
         public static void Main()
         {
+            // allows album art to show up in explorer
+            TagLib.Id3v2.Tag.DefaultVersion = 3;
+            TagLib.Id3v2.Tag.ForceDefaultVersion = true;
+
             string FolderPath;
 #if DEBUG
             FolderPath = @"D:\Music";
