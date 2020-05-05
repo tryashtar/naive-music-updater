@@ -13,7 +13,7 @@ namespace NaiveMusicUpdater
         private string Folder;
         private LibraryConfig Config;
         private Dictionary<string, DateTime> DateCache;
-        private Dictionary<IMusicItem, string> TitleCache = new Dictionary<IMusicItem, string>();
+        private Dictionary<IMusicItem, SongMetadata> MetadataCache = new Dictionary<IMusicItem, SongMetadata>();
         private string DateCachePath => Path.Combine(Folder, "datecache.json");
         private string ConfigPath => Path.Combine(Folder, "config.json");
         public LibraryCache(string folder)
@@ -48,28 +48,18 @@ namespace NaiveMusicUpdater
             DateCache[item.Location] = DateTime.Now;
         }
 
-        public string GetTitleFor(IMusicItem item)
+        public SongMetadata GetMetadataFor(IMusicItem song)
         {
-            if (TitleCache.TryGetValue(item, out var result))
+            if (MetadataCache.TryGetValue(song, out var result))
                 return result;
-            var title = Config.GetTitleFor(item);
-            TitleCache[item] = title;
-            return title;
+            var meta = Config.GetMetadataFor(song);
+            MetadataCache[song] = meta;
+            return meta;
         }
 
-        public string GetArtistFor(Song song)
+        public string ToFilesafe(string text, bool isfolder)
         {
-            return Config.GetArtistFor(song);
-        }
-
-        public string GetAlbumFor(Song song)
-        {
-            return Config.GetAlbumFor(song);
-        }
-
-        public string ToFilesafe(string text)
-        {
-            return Config.ToFilesafe(text);
+            return Config.ToFilesafe(text, isfolder);
         }
     }
 }

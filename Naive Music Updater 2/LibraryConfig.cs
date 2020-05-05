@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,7 +18,7 @@ namespace NaiveMusicUpdater
         private Dictionary<string, string> MapNames = new Dictionary<string, string>();
         private Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
         private MetadataStrategy DefaultStrategy;
-        private List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();;
+        private List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();
         public LibraryConfig(string file)
         {
             var json = JObject.Parse(File.ReadAllText(file));
@@ -41,26 +42,36 @@ namespace NaiveMusicUpdater
             {
                 FilesafeConversions.Add(item.Key, (string)item.Value);
             }
-            DefaultStrategy = new MetadataStrategy((JObject)json["strategies"]["default"]);
-            foreach (JObject item in (JArray)json["strategies"]["overrides"])
+            DefaultStrategy = new MetadataStrategy(this, (JObject)json["strategies"]["default"]);
+            foreach (var item in (JObject)json["strategies"]["overrides"])
             {
-                StrategyOverrides.Add(Tuple.Create(new SongPredicate((JObject)item["predicate"]), new MetadataStrategy((JObject)item["strategy"])));
+                StrategyOverrides.Add(Tuple.Create(new SongPredicate(item.Key), new MetadataStrategy(this, (JObject)item.Value)));
             }
         }
 
-        private MetadataStrategy GetApplicableStrategy(Song song)
+        private IEnumerable<MetadataStrategy> GetApplicableStrategies(IMusicItem item)
         {
-            foreach (var item in StrategyOverrides)
+            yield return DefaultStrategy;
+            foreach (var strat in StrategyOverrides)
             {
-                if (item.Item1.Matches(song))
-                    return item.Item2;
+                if (strat.Item1.Matches(item))
+                    yield return strat.Item2;
             }
-            return DefaultStrategy;
         }
 
-        public string GetTitleFor(IMusicItem item)
+        public SongMetadata GetMetadataFor(IMusicItem item)
         {
-            var name = item.SimpleName;
+            SongMetadata metadata = default;
+            foreach (var strategy in GetApplicableStrategies(item))
+            {
+                var extra = strategy.Perform(item);
+                metadata = metadata.Combine(extra);
+            }
+            return metadata;
+        }
+
+        public string CleanName(string name)
+        {
             foreach (var skip in SkipNames)
             {
                 if (String.Equals(skip, name, StringComparison.OrdinalIgnoreCase))
@@ -76,23 +87,32 @@ namespace NaiveMusicUpdater
             return name;
         }
 
-        public string GetArtistFor(Song song)
-        {
-
-        }
-
-        public string GetAlbumFor(Song song)
-        {
-
-        }
-
-        public string ToFilesafe(string text)
+        public string ToFilesafe(string text, bool isfolder)
         {
             foreach (var filenamechar in FilesafeConversions)
             {
                 text = text.Replace(filenamechar.Key, filenamechar.Value);
             }
+            if (isfolder)
+                text = RemoveDiacritics(text);
             return text;
+        }
+
+        private static string RemoveDiacritics(string text)
+        {
+            var normalizedString = text.Normalize(NormalizationForm.FormD);
+            var stringBuilder = new StringBuilder();
+
+            foreach (var c in normalizedString)
+            {
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+                {
+                    stringBuilder.Append(c);
+                }
+            }
+
+            return stringBuilder.ToString().Normalize(NormalizationForm.FormC);
         }
 
         public string CorrectCase(string text)
@@ -139,7 +159,7 @@ namespace NaiveMusicUpdater
             // capitalize first and last words of title always
             Capitalize(words, 0);
             Capitalize(words, words.Length - 1);
-            bool prevallcaps = false;
+            bool prevallcaps = (words[0] == words[0].ToUpper());
             for (int i = 1; i < words.Length - 1; i++)
             {
                 bool allcaps = words[i] == words[i].ToUpper();

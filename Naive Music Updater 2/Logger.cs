@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlTypes;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -14,7 +15,7 @@ namespace NaiveMusicUpdater
 
         public static void Open(string path)
         {
-            using (File.Create(path)) ;
+            using (File.Create(path)) {; }
             Writer = new StreamWriter(path);
         }
 

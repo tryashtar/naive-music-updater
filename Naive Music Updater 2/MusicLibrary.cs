@@ -22,6 +22,7 @@ namespace NaiveMusicUpdater
         public void Update()
         {
             Update(Cache);
+            Cache.Save();
         }
     }
 }

@@ -12,18 +12,17 @@ namespace NaiveMusicUpdater
     // - art: every musicitem has a getter for its art path, any change detected in the date cache mean the song should be looked at
     // - write lyrics again
     // - wipe pointless tag entries again
-    // - folders can rename themselves too after getting their title/filename
-    // - metadata results are strings with <> replacements like "<artist> - <name>"
-    // - create predicates (some kind of regex on the path I guess)
-    // - model this whole strategy thing sanely
     // - mp3gain again
+    // - mike masse is set as artist wrong (i.e. without accent above e)
+    // - it's decapitalizing allcaps THE
     public class Song : IMusicItem
     {
         public string Location { get; private set; }
-        protected readonly MusicFolder Parent;
+        protected readonly MusicFolder _Parent;
+        public MusicFolder Parent => _Parent;
         public Song(MusicFolder parent, string file)
         {
-            Parent = parent;
+            _Parent = parent;
             Location = file;
         }
 
@@ -33,9 +32,10 @@ namespace NaiveMusicUpdater
             if (!cache.NeedsUpdate(this))
                 return;
             Logger.WriteLine($"(Changed recently)");
-            var title = cache.GetTitleFor(this);
-            var artist = cache.GetArtistFor(this);
-            var album = cache.GetAlbumFor(this);
+            var metadata = cache.GetMetadataFor(this);
+            var title = metadata.Title;
+            var artist = metadata.Artist;
+            var album = metadata.Album;
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool done = true;
@@ -53,7 +53,7 @@ namespace NaiveMusicUpdater
                 if (done)
                     cache.MarkUpdatedRecently(this);
             }
-            var filename = cache.ToFilesafe(title);
+            var filename = cache.ToFilesafe(title, false);
             if (SimpleName != filename)
             {
                 Logger.WriteLine($"Changing filename to {filename}");
@@ -105,7 +105,7 @@ namespace NaiveMusicUpdater
                 return value == null;
             if (value == null)
                 return false;
-            if (array.Length > 1)
+            if (array.Length != 1)
                 return false;
             return array[0] == value;
         }
@@ -115,8 +115,8 @@ namespace NaiveMusicUpdater
         public IEnumerable<IMusicItem> PathFromRoot()
         {
             var list = new List<IMusicItem>();
-            if (this.Parent != null)
-                list.AddRange(this.Parent.PathFromRoot());
+            if (this._Parent != null)
+                list.AddRange(this._Parent.PathFromRoot());
             list.Add(this);
             return list;
         }
