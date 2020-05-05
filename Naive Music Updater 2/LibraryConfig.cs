@@ -1,12 +1,14 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TagLib.Id3v2;
 
 namespace NaiveMusicUpdater
 {
@@ -19,6 +21,7 @@ namespace NaiveMusicUpdater
         private Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
         private MetadataStrategy DefaultStrategy;
         private List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();
+        private string MP3GainPath;
         public LibraryConfig(string file)
         {
             var json = JObject.Parse(File.ReadAllText(file));
@@ -47,6 +50,9 @@ namespace NaiveMusicUpdater
             {
                 StrategyOverrides.Add(Tuple.Create(new SongPredicate(item.Key), new MetadataStrategy(this, (JObject)item.Value)));
             }
+            json.TryGetValue("mp3gain_path", out var mp3path);
+            if (mp3path.Type == JTokenType.String)
+                MP3GainPath = (string)mp3path;
         }
 
         private IEnumerable<MetadataStrategy> GetApplicableStrategies(IMusicItem item)
@@ -113,6 +119,22 @@ namespace NaiveMusicUpdater
             }
 
             return stringBuilder.ToString().Normalize(NormalizationForm.FormC);
+        }
+
+        public bool Normalize(Song song)
+        {
+            if (MP3GainPath == null)
+                return true;
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo(MP3GainPath, $"/r /c \"{song.Location}\"")
+                {
+                    UseShellExecute = false
+                }
+            };
+            process.Start();
+            process.WaitForExit();
+            return process.ExitCode == 0;
         }
 
         public string CorrectCase(string text)

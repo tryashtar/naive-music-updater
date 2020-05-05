@@ -13,6 +13,7 @@ namespace NaiveMusicUpdater
         string Location { get; }
         string SimpleName { get; }
         MusicFolder Parent { get; }
+        string GetArtLocation();
     }
 
     public class MusicFolder : IMusicItem
@@ -36,6 +37,11 @@ namespace NaiveMusicUpdater
             Location = folder;
             _Parent = parent;
             ScanContents();
+        }
+
+        public string GetArtLocation()
+        {
+            return Util.StringPathAfterRoot(this);
         }
 
         public IEnumerable<Song> GetAllSongs()

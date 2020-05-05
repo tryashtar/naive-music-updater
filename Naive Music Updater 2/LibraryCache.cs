@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TagLib.Id3v2;
 
 namespace NaiveMusicUpdater
 {
@@ -38,7 +39,19 @@ namespace NaiveMusicUpdater
             DateTime created = File.GetCreationTime(location);
             var date = modified > created ? modified : created;
             if (DateCache.TryGetValue(location, out DateTime cached))
-                return date - TimeSpan.FromSeconds(5) > cached;
+            {
+                if (date - TimeSpan.FromSeconds(5) > cached)
+                    return true;
+                var art = Path.Combine(Folder, "art", Path.ChangeExtension(item.GetArtLocation(), ".png"));
+                if (DateCache.TryGetValue(art, out DateTime cached2))
+                {
+                    if (date - TimeSpan.FromSeconds(5) > cached2)
+                        return true;
+                }
+                else
+                    return true;
+                return false;
+            }
             else
                 return true;
         }
@@ -60,6 +73,59 @@ namespace NaiveMusicUpdater
         public string ToFilesafe(string text, bool isfolder)
         {
             return Config.ToFilesafe(text, isfolder);
+        }
+
+        public bool Normalize(Song song)
+        {
+            return Config.Normalize(song);
+        }
+
+        // returns true if tag was changed and needs to be resaved
+        public bool WriteLyrics(string location, TagLib.Id3v2.Tag tag)
+        {
+            bool changed = false;
+            SynchedText[] lyrics = null;
+            if (tag != null)
+            {
+                foreach (var frame in tag.GetFrames())
+                {
+                    if (frame is SynchronisedLyricsFrame slf)
+                    {
+                        lyrics = slf.Text;
+                        break;
+                    }
+                }
+            }
+            if (lyrics != null)
+            {
+                Logger.WriteLine("Found synchronized lyrics tag");
+                var plain_lyrics = String.Join("\n", lyrics.Select(x => x.Text));
+                // update lyrics tag
+                if (tag.Lyrics != plain_lyrics)
+                {
+                    Logger.WriteLine("Updating plain lyrics tag");
+                    tag.Lyrics = plain_lyrics;
+                    changed = true;
+                }
+            }
+            else
+            {
+                if (tag.Lyrics == null)
+                    return false;
+                Logger.WriteLine("Found simple lyrics");
+                Logger.WriteLine("Adding synchronized lyrics tag");
+                // convert to frame
+                lyrics = new SynchedText[] { new SynchedText(0, tag.Lyrics) };
+                var frame = new SynchronisedLyricsFrame("lyrics", "english", SynchedTextType.Lyrics, TagLib.StringType.Latin1);
+                frame.Text = lyrics;
+                tag.AddFrame(frame);
+                changed = true;
+            }
+            var lyricstext = lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}");
+            location = Path.ChangeExtension(Path.Combine(Folder, "lyrics", location), ".lrc");
+            Directory.CreateDirectory(Path.GetDirectoryName(location));
+            File.WriteAllLines(location, lyricstext);
+            return changed;
         }
     }
 }

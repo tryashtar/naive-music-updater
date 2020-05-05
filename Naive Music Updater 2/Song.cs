@@ -9,12 +9,7 @@ using TagLib.Id3v2;
 namespace NaiveMusicUpdater
 {
     // to do:
-    // - art: every musicitem has a getter for its art path, any change detected in the date cache mean the song should be looked at
-    // - write lyrics again
-    // - wipe pointless tag entries again
-    // - mp3gain again
-    // - mike masse is set as artist wrong (i.e. without accent above e)
-    // - it's decapitalizing allcaps THE
+    // - save art again
     public class Song : IMusicItem
     {
         public string Location { get; private set; }
@@ -24,6 +19,20 @@ namespace NaiveMusicUpdater
         {
             _Parent = parent;
             Location = file;
+        }
+
+        public string GetArtLocation()
+        {
+            IMusicItem item = this;
+            while (true)
+            {
+                item = item.Parent;
+                if (item == null)
+                    return null;
+                var art = item.GetArtLocation();
+                if (art != null)
+                    return Location;
+            }
         }
 
         public void Update(LibraryCache cache)
@@ -40,6 +49,10 @@ namespace NaiveMusicUpdater
             {
                 bool done = true;
                 bool changed = UpdateTag(file.Tag, title, artist, album);
+                changed = changed || WipeUselessProperties(file.Tag);
+                Logger.WriteLine("Checking for lyrics...");
+                var path = Util.StringPathAfterRoot(this);
+                changed = changed || cache.WriteLyrics(path, (TagLib.Id3v2.Tag)file.GetTag(TagLib.TagTypes.Id3v2));
                 if (changed)
                 {
                     Logger.WriteLine("Saving...");
@@ -49,6 +62,11 @@ namespace NaiveMusicUpdater
                         Logger.WriteLine($"Save failed because {ex.Message}! Skipping...");
                         done = false;
                     }
+                }
+                if (done)
+                {
+                    Logger.WriteLine("Normalizing audio with MP3gain...");
+                    done = cache.Normalize(this);
                 }
                 if (done)
                     cache.MarkUpdatedRecently(this);
@@ -94,6 +112,92 @@ namespace NaiveMusicUpdater
             {
                 Logger.WriteLine($"Changing performers to {artist}");
                 tag.Performers = new string[] { artist };
+                changed = true;
+            }
+            return changed;
+        }
+
+        // returns whether this changed anything
+        private bool WipeUselessProperties(TagLib.Tag filetag)
+        {
+            bool changed = false;
+            if (filetag.AmazonId != null)
+            {
+                Logger.WriteLine($"Wiped amazon ID {filetag.AmazonId}");
+                filetag.AmazonId = null;
+                changed = true;
+            }
+            if (filetag.Comment != null)
+            {
+                Logger.WriteLine($"Wiped comment {filetag.Comment}");
+                filetag.Comment = null;
+                changed = true;
+            }
+            if (filetag.Conductor != null)
+            {
+                Logger.WriteLine($"Wiped conductor {filetag.Conductor}");
+                filetag.Conductor = null;
+                changed = true;
+            }
+            if (filetag.Copyright != null)
+            {
+                Logger.WriteLine($"Wiped copyright {filetag.Copyright}");
+                filetag.Copyright = null;
+                changed = true;
+            }
+            if (filetag.Disc != 0)
+            {
+                Logger.WriteLine($"Wiped disc number {filetag.Disc}");
+                filetag.Disc = 0;
+                changed = true;
+            }
+            if (filetag.DiscCount != 0)
+            {
+                Logger.WriteLine($"Wiped disc count {filetag.DiscCount}");
+                filetag.DiscCount = 0;
+                changed = true;
+            }
+            if (filetag.FirstGenre != null)
+            {
+                Logger.WriteLine($"Wiped genre {filetag.FirstGenre}");
+                filetag.Genres = new string[0];
+                changed = true;
+            }
+            if (filetag.MusicBrainzArtistId != null || filetag.MusicBrainzDiscId != null || filetag.MusicBrainzReleaseArtistId != null || filetag.MusicBrainzReleaseCountry != null || filetag.MusicBrainzReleaseId != null || filetag.MusicBrainzReleaseStatus != null || filetag.MusicBrainzReleaseType != null || filetag.MusicBrainzTrackId != null)
+            {
+                Logger.WriteLine($"Wiped musicbrainz data");
+                filetag.MusicBrainzArtistId = null;
+                filetag.MusicBrainzDiscId = null;
+                filetag.MusicBrainzReleaseArtistId = null;
+                filetag.MusicBrainzReleaseCountry = null;
+                filetag.MusicBrainzReleaseId = null;
+                filetag.MusicBrainzReleaseStatus = null;
+                filetag.MusicBrainzReleaseType = null;
+                filetag.MusicBrainzTrackId = null;
+                changed = true;
+            }
+            if (filetag.MusicIpId != null)
+            {
+                Logger.WriteLine($"Wiped music IP ID {filetag.MusicIpId}");
+                filetag.MusicIpId = null;
+                changed = true;
+            }
+            if (filetag.Track != 0)
+            {
+                Logger.WriteLine($"Wiped track number {filetag.Track}");
+                filetag.Track = 0;
+                changed = true;
+            }
+            if (filetag.TrackCount != 0)
+            {
+                Logger.WriteLine($"Wiped track count {filetag.TrackCount}");
+                filetag.TrackCount = 0;
+                changed = true;
+            }
+            if (filetag.Year != 0)
+            {
+                Logger.WriteLine($"Wiped year {filetag.Year}");
+                filetag.Year = 0;
                 changed = true;
             }
             return changed;
