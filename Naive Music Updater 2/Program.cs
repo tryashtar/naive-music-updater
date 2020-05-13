@@ -11,6 +11,8 @@ namespace NaiveMusicUpdater
     {
         public static void Main()
         {
+            Console.OutputEncoding = Encoding.UTF8;
+
             // allows album art to show up in explorer
             TagLib.Id3v2.Tag.DefaultVersion = 3;
             TagLib.Id3v2.Tag.ForceDefaultVersion = true;

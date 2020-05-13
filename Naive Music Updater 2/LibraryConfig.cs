@@ -90,11 +90,18 @@ namespace NaiveMusicUpdater
             }
             if (MapNames.TryGetValue(name, out string result))
                 return result;
+            name = FindReplaceName(name);
+            name = CorrectCase(name);
+            name = FindReplaceName(name);
+            return name;
+        }
+
+        private string FindReplaceName(string name)
+        {
             foreach (var findrepl in FindReplace)
             {
                 name = name.Replace(findrepl.Key, findrepl.Value);
             }
-            name = CorrectCase(name);
             return name;
         }
 
@@ -106,7 +113,10 @@ namespace NaiveMusicUpdater
                 text = text.Replace(filenamechar.Key, filenamechar.Value);
             }
             if (isfolder)
+            {
                 text = RemoveDiacritics(text);
+                text = text.TrimEnd('.');
+            }
             return text;
         }
 
@@ -127,7 +137,7 @@ namespace NaiveMusicUpdater
             return stringBuilder.ToString().Normalize(NormalizationForm.FormC);
         }
 
-        public bool Normalize(Song song)
+        public bool NormalizeAudio(Song song)
         {
             if (MP3GainPath == null)
                 return true;
@@ -174,7 +184,7 @@ namespace NaiveMusicUpdater
             }
 
             // treat "foo! bar" like two titles
-            var exclam = Regex.Match(text, @"^(.+)(!|\?|:) (.+)$");
+            var exclam = Regex.Match(text, @"^(.+)(!|\?|:|\.|,|;) (.+)$");
             if (exclam.Success)
             {
                 var part1 = exclam.Groups[1].Value;

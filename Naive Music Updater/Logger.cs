@@ -14,7 +14,7 @@ namespace NaiveMusicUpdater
 
         public static void Open(string path)
         {
-            using (File.Create(path)) ;
+            using (File.Create(path)) { };
             Writer = new StreamWriter(path);
         }
 

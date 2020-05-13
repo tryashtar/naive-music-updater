@@ -26,18 +26,18 @@ namespace NaiveMusicUpdater
             Logger.WriteLine($"Song: {SimpleName}");
             if (!cache.NeedsUpdate(this))
                 return;
-            Logger.WriteLine($"(Changed recently)");
+            Logger.WriteLine($"(checking)");
             var metadata = cache.GetMetadataFor(this);
             var title = metadata.Title;
             var artist = metadata.Artist;
             var album = metadata.Album;
+            var comment = metadata.Comment;
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool done = true;
-                bool changed = UpdateTag(file.Tag, title, artist, album);
+                bool changed = UpdateTag(file.Tag, title, artist, album, comment);
                 changed |= UpdateArt(file.Tag, cache.GetArtPathFor(this));
                 changed |= WipeUselessProperties(file.Tag);
-                Logger.WriteLine("Checking for lyrics...");
                 var path = Util.StringPathAfterRoot(this);
                 changed |= cache.WriteLyrics(path, (TagLib.Id3v2.Tag)file.GetTag(TagLib.TagTypes.Id3v2));
                 if (changed)
@@ -52,17 +52,18 @@ namespace NaiveMusicUpdater
                 }
                 if (done)
                 {
-                    Logger.WriteLine("Normalizing audio with MP3gain...");
-                    cache.Normalize(this);
-                }
-                if (done)
+                    cache.NormalizeAudio(this);
                     cache.MarkUpdatedRecently(this);
+                }
             }
-            var filename = cache.ToFilesafe(title, false);
+            // correct case of filename
+            // changing filename in other ways is forbidden because stuff is derived from it
+            // it's the USER's job to set the filename they want and set config to determine how to pull metadata out of it
+            var filename = cache.ToFilesafe(cache.CleanName(SimpleName), false);
             if (SimpleName != filename)
             {
-                Logger.WriteLine($"Changing filename to {filename}");
-                var newpath = Path.Combine(Path.GetDirectoryName(Location), Path.ChangeExtension(filename, Path.GetExtension(Location)));
+                Logger.WriteLine($"Renaming file: \"{filename}\"");
+                var newpath = Path.Combine(Path.GetDirectoryName(Location), filename + Path.GetExtension(Location));
                 File.Move(Location, newpath);
                 Location = newpath;
             }
@@ -77,12 +78,12 @@ namespace NaiveMusicUpdater
                 {
                     if (tag.Pictures.Length == 0)
                         return false;
-                    Logger.WriteLine($"Deleting art");
+                    Logger.WriteLine($"Deleted art");
                     tag.Pictures = new IPicture[0];
                 }
                 else
                 {
-                    Logger.WriteLine($"Changing art");
+                    Logger.WriteLine($"Added art");
                     tag.Pictures = new IPicture[] { picture };
                 }
                 return true;
@@ -90,36 +91,58 @@ namespace NaiveMusicUpdater
             return false;
         }
 
-        private bool UpdateTag(TagLib.Tag tag, string title, string artist, string album)
+        private void ChangedThing(string thing, object old_value, object new_value)
+        {
+            if (old_value != null)
+                Logger.WriteLine($"Deleted {thing}: \"{old_value}\"");
+            if (new_value != null)
+                Logger.WriteLine($"Added {thing}: \"{new_value}\"");
+        }
+
+        private void ChangedThing(string thing, IEnumerable<string> old_value, string new_value)
+        {
+            if (old_value != null)
+                Logger.WriteLine($"Deleted {thing}: \"{String.Join(";", old_value)}\"");
+            if (new_value != null)
+                Logger.WriteLine($"Added {thing}: \"{new_value}\"");
+        }
+
+        private bool UpdateTag(TagLib.Tag tag, string title, string artist, string album, string comment)
         {
             bool changed = false;
             if (tag.Title != title)
             {
-                Logger.WriteLine($"Changing title to {title}");
+                ChangedThing("title", tag.Title, title);
                 tag.Title = title;
                 changed = true;
             }
             if (tag.Album != album)
             {
-                Logger.WriteLine($"Changing album to {album}");
+                ChangedThing("album", tag.Album, album);
                 tag.Album = album;
+                changed = true;
+            }
+            if (tag.Comment != comment)
+            {
+                ChangedThing("comment", tag.Comment, comment);
+                tag.Comment = comment;
                 changed = true;
             }
             if (!IsSingleValue(tag.AlbumArtists, artist))
             {
-                Logger.WriteLine($"Changing album artists to {artist}");
+                ChangedThing("album artists", tag.AlbumArtists, artist);
                 tag.AlbumArtists = new string[] { artist };
                 changed = true;
             }
             if (!IsSingleValue(tag.Composers, artist))
             {
-                Logger.WriteLine($"Changing composers to {artist}");
+                ChangedThing("composers", tag.Composers, artist);
                 tag.Composers = new string[] { artist };
                 changed = true;
             }
             if (!IsSingleValue(tag.Performers, artist))
             {
-                Logger.WriteLine($"Changing performers to {artist}");
+                ChangedThing("performers", tag.Performers, artist);
                 tag.Performers = new string[] { artist };
                 changed = true;
             }
@@ -127,86 +150,88 @@ namespace NaiveMusicUpdater
         }
 
         // returns whether this changed anything
-        private bool WipeUselessProperties(TagLib.Tag filetag)
+        private bool WipeUselessProperties(TagLib.Tag tag)
         {
             bool changed = false;
-            if (filetag.AmazonId != null)
+            if (tag.AmazonId != null)
             {
-                Logger.WriteLine($"Wiped amazon ID {filetag.AmazonId}");
-                filetag.AmazonId = null;
+                ChangedThing("amazon id", tag.AmazonId, null);
+                tag.AmazonId = null;
                 changed = true;
             }
-            if (filetag.Comment != null)
+            if (tag.Conductor != null)
             {
-                Logger.WriteLine($"Wiped comment {filetag.Comment}");
-                filetag.Comment = null;
+                ChangedThing("conductor", tag.Conductor, null);
+                tag.Conductor = null;
                 changed = true;
             }
-            if (filetag.Conductor != null)
+            if (tag.Copyright != null)
             {
-                Logger.WriteLine($"Wiped conductor {filetag.Conductor}");
-                filetag.Conductor = null;
+                ChangedThing("copyright", tag.Copyright, null);
+                tag.Copyright = null;
                 changed = true;
             }
-            if (filetag.Copyright != null)
+            if (tag.Disc != 0)
             {
-                Logger.WriteLine($"Wiped copyright {filetag.Copyright}");
-                filetag.Copyright = null;
+                ChangedThing("disc number", tag.Disc, null);
+                tag.Disc = 0;
                 changed = true;
             }
-            if (filetag.Disc != 0)
+            if (tag.DiscCount != 0)
             {
-                Logger.WriteLine($"Wiped disc number {filetag.Disc}");
-                filetag.Disc = 0;
+                ChangedThing("disc count", tag.DiscCount, null);
+                tag.DiscCount = 0;
                 changed = true;
             }
-            if (filetag.DiscCount != 0)
+            if (tag.FirstGenre != null)
             {
-                Logger.WriteLine($"Wiped disc count {filetag.DiscCount}");
-                filetag.DiscCount = 0;
+                ChangedThing("genre", tag.Genres, null);
+                tag.Genres = new string[0];
                 changed = true;
             }
-            if (filetag.FirstGenre != null)
+            if (tag.MusicBrainzArtistId != null || tag.MusicBrainzDiscId != null || tag.MusicBrainzReleaseArtistId != null || tag.MusicBrainzReleaseCountry != null || tag.MusicBrainzReleaseId != null || tag.MusicBrainzReleaseStatus != null || tag.MusicBrainzReleaseType != null || tag.MusicBrainzTrackId != null)
             {
-                Logger.WriteLine($"Wiped genre {filetag.FirstGenre}");
-                filetag.Genres = new string[0];
+                ChangedThing("musicbrainz data", new string[] { tag.MusicBrainzArtistId,
+                tag.MusicBrainzDiscId,
+                tag.MusicBrainzReleaseArtistId,
+                tag.MusicBrainzReleaseCountry,
+                tag.MusicBrainzReleaseId,
+                tag.MusicBrainzReleaseStatus,
+                tag.MusicBrainzReleaseType,
+                tag.MusicBrainzTrackId, }, null);
+
+                tag.MusicBrainzArtistId = null;
+                tag.MusicBrainzDiscId = null;
+                tag.MusicBrainzReleaseArtistId = null;
+                tag.MusicBrainzReleaseCountry = null;
+                tag.MusicBrainzReleaseId = null;
+                tag.MusicBrainzReleaseStatus = null;
+                tag.MusicBrainzReleaseType = null;
+                tag.MusicBrainzTrackId = null;
                 changed = true;
             }
-            if (filetag.MusicBrainzArtistId != null || filetag.MusicBrainzDiscId != null || filetag.MusicBrainzReleaseArtistId != null || filetag.MusicBrainzReleaseCountry != null || filetag.MusicBrainzReleaseId != null || filetag.MusicBrainzReleaseStatus != null || filetag.MusicBrainzReleaseType != null || filetag.MusicBrainzTrackId != null)
+            if (tag.MusicIpId != null)
             {
-                Logger.WriteLine($"Wiped musicbrainz data");
-                filetag.MusicBrainzArtistId = null;
-                filetag.MusicBrainzDiscId = null;
-                filetag.MusicBrainzReleaseArtistId = null;
-                filetag.MusicBrainzReleaseCountry = null;
-                filetag.MusicBrainzReleaseId = null;
-                filetag.MusicBrainzReleaseStatus = null;
-                filetag.MusicBrainzReleaseType = null;
-                filetag.MusicBrainzTrackId = null;
+                ChangedThing("music IP", tag.MusicIpId, null);
+                tag.MusicIpId = null;
                 changed = true;
             }
-            if (filetag.MusicIpId != null)
+            if (tag.Track != 0)
             {
-                Logger.WriteLine($"Wiped music IP ID {filetag.MusicIpId}");
-                filetag.MusicIpId = null;
+                ChangedThing("track number", tag.Track, 0);
+                tag.Track = 0;
                 changed = true;
             }
-            if (filetag.Track != 0)
+            if (tag.TrackCount != 0)
             {
-                Logger.WriteLine($"Wiped track number {filetag.Track}");
-                filetag.Track = 0;
+                ChangedThing("track count", tag.TrackCount, 0);
+                tag.TrackCount = 0;
                 changed = true;
             }
-            if (filetag.TrackCount != 0)
+            if (tag.Year != 0)
             {
-                Logger.WriteLine($"Wiped track count {filetag.TrackCount}");
-                filetag.TrackCount = 0;
-                changed = true;
-            }
-            if (filetag.Year != 0)
-            {
-                Logger.WriteLine($"Wiped year {filetag.Year}");
-                filetag.Year = 0;
+                ChangedThing("year", tag.Year, 0);
+                tag.Year = 0;
                 changed = true;
             }
             return changed;

@@ -21,7 +21,10 @@ namespace NaiveMusicUpdater
 
         public void Update()
         {
-            Update(Cache);
+            foreach (var child in Children)
+            {
+                child.Update(Cache);
+            }
             Cache.Save();
         }
     }

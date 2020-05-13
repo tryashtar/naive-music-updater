@@ -41,5 +41,12 @@ namespace NaiveMusicUpdater
         {
             return RelativePath(new DirectoryInfo(current), new FileInfo(destination));
         }
+
+        public static void MoveDirectory(string from, string to)
+        {
+            var temp_windows_hack = to + "_TEMPORARY_FOLDER";
+            Directory.Move(from, temp_windows_hack);
+            Directory.Move(temp_windows_hack, to);
+        }
     }
 }

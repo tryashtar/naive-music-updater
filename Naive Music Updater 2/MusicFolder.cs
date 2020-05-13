@@ -24,16 +24,12 @@ namespace NaiveMusicUpdater
         protected List<Song> SongList;
         public IReadOnlyList<MusicFolder> SubFolders { get { return Children.AsReadOnly(); } }
         public IReadOnlyList<Song> Songs { get { return SongList.AsReadOnly(); } }
-        public MusicFolder(string folder)
-        {
-            Location = folder;
-            _Parent = null;
-            ScanContents();
-        }
+        public MusicFolder(string folder) : this(null, folder)
+        { }
 
         private MusicFolder(MusicFolder parent, string folder)
         {
-            Location = folder;
+            Location = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).TrimEnd('.');
             _Parent = parent;
             ScanContents();
         }
@@ -57,15 +53,12 @@ namespace NaiveMusicUpdater
         public void Update(LibraryCache cache)
         {
             Logger.WriteLine($"Folder: {SimpleName}");
-            var metadata = cache.GetMetadataFor(this);
-            var filename = cache.ToFilesafe(metadata.Title, true);
+            var filename = cache.ToFilesafe(cache.CleanName(SimpleName), true);
             if (SimpleName != filename)
             {
-                Logger.WriteLine($"Changing folder name to {filename}");
+                Logger.WriteLine($"Renaming folder: \"{filename}\"");
                 var newpath = Path.Combine(Path.GetDirectoryName(Location), filename);
-                var temp_windows_hack = newpath + "_TEMPORARY_FOLDER";
-                Directory.Move(Location, temp_windows_hack);
-                Directory.Move(temp_windows_hack, newpath);
+                Util.MoveDirectory(Location, newpath);
                 Location = newpath;
                 ScanContents();
             }

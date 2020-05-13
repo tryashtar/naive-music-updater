@@ -1,9 +1,12 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TagLib;
 using TagLib.Id3v2;
@@ -24,7 +27,7 @@ namespace NaiveMusicUpdater
             Folder = folder;
             Config = new LibraryConfig(ConfigPath);
             var datecache = File.ReadAllText(DateCachePath);
-            DateCache = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(datecache);
+            DateCache = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(datecache) ?? new Dictionary<string, DateTime>();
         }
 
         public void Save()
@@ -93,72 +96,109 @@ namespace NaiveMusicUpdater
             return meta;
         }
 
-        public string ToFilesafe(string text, bool isfolder)
-        {
-            return Config.ToFilesafe(text, isfolder);
-        }
+        public string ToFilesafe(string text, bool isfolder) => Config.ToFilesafe(text, isfolder);
+        public bool NormalizeAudio(Song song) => Config.NormalizeAudio(song);
+        public string CleanName(string name) => Config.CleanName(name);
 
-        public bool Normalize(Song song)
+        private SynchedText[] ParseSyncedTexts(string[] lines)
         {
-            return Config.Normalize(song);
+            var list = new List<SynchedText>();
+            string alltext = String.Join("\n", lines);
+            var stamps = Regex.Matches(alltext, @"\[(\d:\d\d:\d\d.\d\d)\]");
+            for (int i = 0; i < stamps.Count; i++)
+            {
+                var time = TimeSpan.ParseExact(stamps[i].Groups[1].Value, "h\\:mm\\:ss\\.ff", CultureInfo.InvariantCulture);
+                string text;
+                if (i == stamps.Count - 1)
+                    text = alltext.Substring(stamps[i].Index + stamps[i].Length);
+                else
+                    text = alltext.Substring(stamps[i].Index + stamps[i].Length, stamps[i + 1].Index - stamps[i].Index - stamps[i].Length);
+                text = text.TrimEnd('\n');
+                list.Add(new SynchedText((long)time.TotalMilliseconds, text));
+            }
+            return list.ToArray();
         }
 
         // returns true if tag was changed and needs to be resaved
         public bool WriteLyrics(string location, TagLib.Id3v2.Tag tag)
         {
-            bool changed = false;
-            SynchedText[] lyrics = null;
+            var lyrics_file = Path.ChangeExtension(Path.Combine(Folder, "lyrics", location), ".lrc");
+            // higher priority first
+            SynchedText[] frame_lyrics = null;
+            SynchedText[] tag_lyrics = null;
+            SynchedText[] file_lyrics = null;
+            string[] file_text = null;
+
+            // load lyrics from various sources
+            if (File.Exists(lyrics_file))
+            {
+                file_text = File.ReadAllLines(lyrics_file);
+                file_lyrics = ParseSyncedTexts(file_text);
+            }
             if (tag != null)
             {
+                if (tag.Lyrics != null)
+                    tag_lyrics = new SynchedText[] { new SynchedText(0, tag.Lyrics) };
                 foreach (var frame in tag.GetFrames())
                 {
                     if (frame is SynchronisedLyricsFrame slf)
                     {
-                        lyrics = slf.Text;
+                        frame_lyrics = slf.Text;
                         break;
                     }
                 }
             }
-            if (lyrics != null)
+
+            SynchedText[] chosen_lyrics = frame_lyrics ?? tag_lyrics ?? file_lyrics;
+            bool tag_changed = false;
+
+            if (chosen_lyrics != null)
             {
-                Logger.WriteLine("Found synchronized lyrics tag");
-                var plain_lyrics = String.Join("\n", lyrics.Select(x => x.Text));
-                // update lyrics tag
-                if (tag.Lyrics != plain_lyrics)
+                if (chosen_lyrics != file_lyrics)
                 {
-                    Logger.WriteLine("Updating plain lyrics tag");
-                    tag.Lyrics = plain_lyrics;
-                    changed = true;
+                    // write to file
+                    var lyrics_text = chosen_lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}");
+                    if (file_text == null || !file_text.SequenceEqual(lyrics_text))
+                    {
+                        if (chosen_lyrics == frame_lyrics)
+                            Logger.WriteLine($"Wrote lyrics from synced frame to file cache");
+                        if (chosen_lyrics == tag_lyrics)
+                            Logger.WriteLine($"Wrote lyrics from simple tag to file cache");
+                        Directory.CreateDirectory(Path.GetDirectoryName(lyrics_file));
+                        File.WriteAllLines(lyrics_file, lyrics_text);
+                    }
+                }
+
+                if (chosen_lyrics != tag_lyrics)
+                {
+                    // update simple tag
+                    var simple_lyrics = String.Join("\n", chosen_lyrics.Select(x => x.Text));
+                    if (tag.Lyrics != simple_lyrics)
+                    {
+                        if (chosen_lyrics == frame_lyrics)
+                            Logger.WriteLine($"Wrote lyrics from synced frame to simple tag");
+                        if (chosen_lyrics == file_lyrics)
+                            Logger.WriteLine($"Wrote lyrics from file cache to simple tag");
+                        tag.Lyrics = simple_lyrics;
+                        tag_changed = true;
+                    }
+                }
+
+                if (chosen_lyrics != frame_lyrics)
+                {
+                    // add frame
+                    if (chosen_lyrics == tag_lyrics)
+                        Logger.WriteLine($"Wrote lyrics from simple tag to synced frame");
+                    if (chosen_lyrics == file_lyrics)
+                        Logger.WriteLine($"Wrote lyrics from file cache to synced frame");
+                    var frame = new SynchronisedLyricsFrame("lyrics", "english", SynchedTextType.Lyrics, TagLib.StringType.Latin1);
+                    frame.Text = chosen_lyrics;
+                    tag.AddFrame(frame);
+                    tag_changed = true;
                 }
             }
-            else
-            {
-                if (tag.Lyrics == null)
-                    return false;
-                Logger.WriteLine("Found simple lyrics");
-                Logger.WriteLine("Adding synchronized lyrics tag");
-                // convert to frame
-                lyrics = new SynchedText[] { new SynchedText(0, tag.Lyrics) };
-                var frame = new SynchronisedLyricsFrame("lyrics", "english", SynchedTextType.Lyrics, TagLib.StringType.Latin1);
-                frame.Text = lyrics;
-                tag.AddFrame(frame);
-                changed = true;
-            }
-            var lyricstext = lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}");
-            location = Path.ChangeExtension(Path.Combine(Folder, "lyrics", location), ".lrc");
-            bool write_file = true;
-            if (File.Exists(location))
-            {
-                var existing = File.ReadAllLines(location);
-                if (existing.SequenceEqual(lyricstext))
-                    write_file = false;
-            }
-            if (write_file)
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(location));
-                File.WriteAllLines(location, lyricstext);
-            }
-            return changed;
+
+            return tag_changed;
         }
     }
 }
