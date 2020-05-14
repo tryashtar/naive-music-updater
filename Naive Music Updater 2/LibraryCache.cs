@@ -44,9 +44,7 @@ namespace NaiveMusicUpdater
             var location = item.Location;
             if (!File.Exists(location))
                 return false;
-            DateTime modified = File.GetLastWriteTime(location);
-            DateTime created = File.GetCreationTime(location);
-            var date = modified > created ? modified : created;
+            var date = TouchedTime(location);
             if (DateCache.TryGetValue(location, out DateTime cached))
             {
                 if (date - TimeSpan.FromSeconds(5) > cached)
@@ -56,7 +54,8 @@ namespace NaiveMusicUpdater
                     return false;
                 if (DateCache.TryGetValue(art, out DateTime cached2))
                 {
-                    if (date - TimeSpan.FromSeconds(5) > cached2)
+                    var artdate = TouchedTime(art);
+                    if (artdate - TimeSpan.FromSeconds(5) > cached2)
                         return true;
                 }
                 else
@@ -65,6 +64,13 @@ namespace NaiveMusicUpdater
             }
             else
                 return true;
+        }
+
+        private static DateTime TouchedTime(string filepath)
+        {
+            DateTime modified = File.GetLastWriteTime(filepath);
+            DateTime created = File.GetCreationTime(filepath);
+            return modified > created ? modified : created;
         }
 
         public string GetArtPathFor(IMusicItem item)
@@ -100,10 +106,9 @@ namespace NaiveMusicUpdater
         public bool NormalizeAudio(Song song) => Config.NormalizeAudio(song);
         public string CleanName(string name) => Config.CleanName(name);
 
-        private SynchedText[] ParseSyncedTexts(string[] lines)
+        private SynchedText[] ParseSyncedTexts(string alltext)
         {
             var list = new List<SynchedText>();
-            string alltext = String.Join("\n", lines);
             var stamps = Regex.Matches(alltext, @"\[(\d:\d\d:\d\d.\d\d)\]");
             for (int i = 0; i < stamps.Count; i++)
             {
@@ -127,12 +132,12 @@ namespace NaiveMusicUpdater
             SynchedText[] frame_lyrics = null;
             SynchedText[] tag_lyrics = null;
             SynchedText[] file_lyrics = null;
-            string[] file_text = null;
+            string file_text = null;
 
             // load lyrics from various sources
             if (File.Exists(lyrics_file))
             {
-                file_text = File.ReadAllLines(lyrics_file);
+                file_text = File.ReadAllText(lyrics_file).Replace("\r\n", "\n");
                 file_lyrics = ParseSyncedTexts(file_text);
             }
             if (tag != null)
@@ -157,15 +162,15 @@ namespace NaiveMusicUpdater
                 if (chosen_lyrics != file_lyrics)
                 {
                     // write to file
-                    var lyrics_text = chosen_lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}");
-                    if (file_text == null || !file_text.SequenceEqual(lyrics_text))
+                    var lyrics_text = String.Join("\n", chosen_lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}"));
+                    if (file_text == null || file_text != lyrics_text)
                     {
                         if (chosen_lyrics == frame_lyrics)
                             Logger.WriteLine($"Wrote lyrics from synced frame to file cache");
                         if (chosen_lyrics == tag_lyrics)
                             Logger.WriteLine($"Wrote lyrics from simple tag to file cache");
                         Directory.CreateDirectory(Path.GetDirectoryName(lyrics_file));
-                        File.WriteAllLines(lyrics_file, lyrics_text);
+                        File.WriteAllText(lyrics_file, lyrics_text);
                     }
                 }
 
