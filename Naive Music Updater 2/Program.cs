@@ -25,6 +25,7 @@ namespace NaiveMusicUpdater
 #endif
             var library = new MusicLibrary(FolderPath);
             library.Update();
+            library.SourcesUpdate();
 #if DEBUG
             Console.ReadLine();
 #endif

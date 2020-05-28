@@ -93,6 +93,11 @@ namespace NaiveMusicUpdater
             DateCache[item.Location] = DateTime.Now;
         }
 
+        public void MarkNeedsUpdateNextTime(IMusicItem item)
+        {
+            DateCache.Remove(item.Location);
+        }
+
         public SongMetadata GetMetadataFor(IMusicItem song)
         {
             if (MetadataCache.TryGetValue(song, out var result))

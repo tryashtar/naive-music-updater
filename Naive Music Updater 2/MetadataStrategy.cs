@@ -78,19 +78,9 @@ namespace NaiveMusicUpdater
                 if (obj.TryGetValue("operation", out var operation))
                 {
                     if ((string)operation == "split")
-                    {
-                        if (obj.TryGetValue("from", out var from) &&
-                            obj.TryGetValue("separator", out var separator) &&
-                            obj.TryGetValue("index", out var index))
-                            return new SplitOperationSelector(config, from, (string)separator, (int)index);
-                    }
+                        return new SplitOperationSelector(config, obj);
                     else if ((string)operation == "join")
-                    {
-                        if (obj.TryGetValue("from1", out var from1) &&
-                            obj.TryGetValue("from2", out var from2) &&
-                            obj.TryGetValue("with", out var with))
-                            return new JoinOperationSelector(config, from1, from2, (string)with);
-                    }
+                        return new JoinOperationSelector(config, obj);
                 }
             }
             if (token.Type == JTokenType.String)
@@ -146,13 +136,39 @@ namespace NaiveMusicUpdater
         private readonly MetadataSelector From;
         private readonly string Separator;
         private readonly int Index;
+        private NoSeparatorDecision NoSeparator;
+        private OutofBoundsDecision OutofBounds;
+
+        private enum NoSeparatorDecision
+        {
+            Exit,
+            Ignore
+        }
+
+        private enum OutofBoundsDecision
+        {
+            Exit,
+            Wrap,
+            Clamp
+        }
 
         // gets metadata "From" somewhere else and extracts a part of it by splitting the string and taking one of its pieces
-        public SplitOperationSelector(LibraryConfig config, JToken from, string separator, int index) : base(config)
+        public SplitOperationSelector(LibraryConfig config, JObject data) : base(config)
         {
-            From = MetadataSelector.FromToken(config, from);
-            Separator = separator;
-            Index = index;
+            From = MetadataSelector.FromToken(config, data["from"]);
+            Separator = (string)data["separator"];
+            Index = (int)data["index"];
+            NoSeparator = NoSeparatorDecision.Ignore;
+            if (data.TryGetValue("no_separator", out var sep) && (string)sep == "exit")
+                NoSeparator = NoSeparatorDecision.Exit;
+            OutofBounds = OutofBoundsDecision.Exit;
+            if (data.TryGetValue("out_of_bounds", out var bounds))
+            {
+                if ((string)bounds == "wrap")
+                    OutofBounds = OutofBoundsDecision.Wrap;
+                if ((string)bounds == "clamp")
+                    OutofBounds = OutofBoundsDecision.Clamp;
+            }
         }
 
         public override string Get(IMusicItem item)
@@ -161,9 +177,19 @@ namespace NaiveMusicUpdater
             if (basetext == null)
                 return null;
             string[] parts = basetext.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
-            if (Index < 0 || Index >= parts.Length)
+            if (parts.Length == 1 && NoSeparator == NoSeparatorDecision.Exit)
                 return null;
-            return parts[Index];
+            int index = Index;
+            if (index < 0 || index >= parts.Length)
+            {
+                if (OutofBounds == OutofBoundsDecision.Exit)
+                    return null;
+                if (OutofBounds == OutofBoundsDecision.Wrap)
+                    index %= parts.Length;
+                if (OutofBounds == OutofBoundsDecision.Clamp)
+                    index = Math.Max(0, Math.Min(parts.Length - 1, index));
+            }
+            return parts[index];
         }
     }
 
@@ -174,11 +200,11 @@ namespace NaiveMusicUpdater
         private readonly string With;
 
         // gets metadata "From" two other places and combines them with "With" in between
-        public JoinOperationSelector(LibraryConfig config, JToken from1, JToken from2, string with) : base(config)
+        public JoinOperationSelector(LibraryConfig config, JObject data) : base(config)
         {
-            From1 = MetadataSelector.FromToken(config, from1);
-            From2 = MetadataSelector.FromToken(config, from2);
-            With = with;
+            From1 = MetadataSelector.FromToken(config, data["from1"]);
+            From2 = MetadataSelector.FromToken(config, data["from2"]);
+            With = (string)data["with"];
         }
 
         public override string Get(IMusicItem item)

@@ -34,12 +34,13 @@ namespace NaiveMusicUpdater
             var comment = metadata.Comment;
             using (TagLib.File file = TagLib.File.Create(Location))
             {
-                bool done = true;
-                bool changed = UpdateTag(file.Tag, title, artist, album, comment);
-                changed |= UpdateArt(file.Tag, cache.GetArtPathFor(this));
-                changed |= WipeUselessProperties(file.Tag);
+                bool success = true;
+                var tag = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
+                bool changed = UpdateTag(tag, title, artist, album, comment);
                 var path = Util.StringPathAfterRoot(this);
-                changed |= cache.WriteLyrics(path, (TagLib.Id3v2.Tag)file.GetTag(TagLib.TagTypes.Id3v2));
+                changed |= UpdateArt(tag, cache.GetArtPathFor(this));
+                changed |= WipeUselessProperties(tag);
+                changed |= cache.WriteLyrics(path, tag);
                 if (changed)
                 {
                     Logger.WriteLine("Saving...");
@@ -47,10 +48,11 @@ namespace NaiveMusicUpdater
                     catch (IOException ex)
                     {
                         Logger.WriteLine($"Save failed because {ex.Message}! Skipping...");
-                        done = false;
+                        cache.MarkNeedsUpdateNextTime(this);
+                        success = false;
                     }
                 }
-                if (done)
+                if (success)
                 {
                     cache.NormalizeAudio(this);
                     cache.MarkUpdatedRecently(this);
@@ -150,9 +152,51 @@ namespace NaiveMusicUpdater
         }
 
         // returns whether this changed anything
-        private bool WipeUselessProperties(TagLib.Tag tag)
+        private bool WipeUselessProperties(TagLib.Id3v2.Tag tag)
         {
             bool changed = false;
+            if (tag.Publisher != null)
+            {
+                ChangedThing("publisher", tag.Publisher, null);
+                tag.Publisher = null;
+                changed = true;
+            }
+            if (tag.BeatsPerMinute != 0)
+            {
+                ChangedThing("beats per minute", tag.BeatsPerMinute, null);
+                tag.BeatsPerMinute = 0;
+                changed = true;
+            }
+            if (tag.Description != null)
+            {
+                ChangedThing("description", tag.Description, null);
+                tag.Description = null;
+                changed = true;
+            }
+            if (tag.Grouping != null)
+            {
+                ChangedThing("grouping", tag.Grouping, null);
+                tag.Grouping = null;
+                changed = true;
+            }
+            if (tag.IsCompilation != false)
+            {
+                ChangedThing("compilation", tag.IsCompilation, null);
+                tag.IsCompilation = false;
+                changed = true;
+            }
+            if (tag.RemixedBy != null)
+            {
+                ChangedThing("remixer", tag.RemixedBy, null);
+                tag.RemixedBy = null;
+                changed = true;
+            }
+            if (tag.Subtitle != null)
+            {
+                ChangedThing("subtitle", tag.Subtitle, null);
+                tag.Subtitle = null;
+                changed = true;
+            }
             if (tag.AmazonId != null)
             {
                 ChangedThing("amazon id", tag.AmazonId, null);
@@ -189,7 +233,14 @@ namespace NaiveMusicUpdater
                 tag.Genres = new string[0];
                 changed = true;
             }
-            if (tag.MusicBrainzArtistId != null || tag.MusicBrainzDiscId != null || tag.MusicBrainzReleaseArtistId != null || tag.MusicBrainzReleaseCountry != null || tag.MusicBrainzReleaseId != null || tag.MusicBrainzReleaseStatus != null || tag.MusicBrainzReleaseType != null || tag.MusicBrainzTrackId != null)
+            if (tag.MusicBrainzArtistId != null ||
+                tag.MusicBrainzDiscId != null ||
+                tag.MusicBrainzReleaseArtistId != null ||
+                tag.MusicBrainzReleaseCountry != null ||
+                tag.MusicBrainzReleaseId != null ||
+                tag.MusicBrainzReleaseStatus != null ||
+                tag.MusicBrainzReleaseType != null ||
+                tag.MusicBrainzTrackId != null)
             {
                 ChangedThing("musicbrainz data", new string[] { tag.MusicBrainzArtistId,
                 tag.MusicBrainzDiscId,
