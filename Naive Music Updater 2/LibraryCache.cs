@@ -16,10 +16,10 @@ namespace NaiveMusicUpdater
 {
     public class LibraryCache
     {
-        private string Folder;
-        private LibraryConfig Config;
-        private Dictionary<string, DateTime> DateCache;
-        private Dictionary<IMusicItem, SongMetadata> MetadataCache = new Dictionary<IMusicItem, SongMetadata>();
+        public readonly string Folder;
+        public readonly LibraryConfig Config;
+        private readonly Dictionary<string, DateTime> DateCache;
+        private readonly Dictionary<IMusicItem, SongMetadata> MetadataCache = new Dictionary<IMusicItem, SongMetadata>();
         private string DateCachePath => Path.Combine(Folder, "datecache.json");
         private string ConfigPath => Path.Combine(Folder, "config.json");
         public LibraryCache(string folder)
@@ -107,10 +107,6 @@ namespace NaiveMusicUpdater
             return meta;
         }
 
-        public string ToFilesafe(string text, bool isfolder) => Config.ToFilesafe(text, isfolder);
-        public bool NormalizeAudio(Song song) => Config.NormalizeAudio(song);
-        public string CleanName(string name) => Config.CleanName(name);
-
         private SynchedText[] ParseSyncedTexts(string alltext)
         {
             var list = new List<SynchedText>();
@@ -149,12 +145,21 @@ namespace NaiveMusicUpdater
             {
                 if (tag.Lyrics != null)
                     tag_lyrics = new SynchedText[] { new SynchedText(0, tag.Lyrics) };
-                foreach (var frame in tag.GetFrames())
+                bool has_frame = false;
+                foreach (var frame in tag.GetFrames().ToList())
                 {
                     if (frame is SynchronisedLyricsFrame slf)
                     {
-                        frame_lyrics = slf.Text;
-                        break;
+                        if (!has_frame)
+                        {
+                            frame_lyrics = slf.Text;
+                            has_frame = true;
+                        }
+                        else
+                        {
+                            Logger.WriteLine($"Removed non-initial synced lyrics frame: \"{frame}\"");
+                            tag.RemoveFrame(frame);
+                        }
                     }
                 }
             }

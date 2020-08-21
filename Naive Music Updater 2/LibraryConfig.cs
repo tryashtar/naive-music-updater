@@ -14,15 +14,16 @@ namespace NaiveMusicUpdater
 {
     public class LibraryConfig
     {
-        private HashSet<string> LowercaseWords = new HashSet<string>();
-        private HashSet<string> SkipNames = new HashSet<string>();
-        private Dictionary<string, string> FindReplace = new Dictionary<string, string>();
-        private Dictionary<string, string> MapNames = new Dictionary<string, string>();
-        private Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
-        private Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
-        private MetadataStrategy DefaultStrategy;
-        private List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();
-        private string MP3GainPath;
+        private readonly HashSet<string> LowercaseWords = new HashSet<string>();
+        private readonly HashSet<string> SkipNames = new HashSet<string>();
+        private readonly Dictionary<string, string> FindReplace = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> MapNames = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
+        private readonly MetadataStrategy DefaultStrategy;
+        private readonly List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();
+        private readonly string MP3GainPath;
+        private readonly List<string> IllegalPrivateOwners;
         public LibraryConfig(string file)
         {
             var json = JObject.Parse(File.ReadAllText(file));
@@ -51,13 +52,16 @@ namespace NaiveMusicUpdater
                 FoldersafeConversions.Add(item.Key, (string)item.Value);
             }
             DefaultStrategy = new MetadataStrategy(this, (JObject)json["strategies"]["default"]);
-            foreach (var item in (JObject)json["strategies"]["overrides"])
+            foreach (var item in (JArray)json["strategies"]["overrides"])
             {
-                StrategyOverrides.Add(Tuple.Create(new SongPredicate(item.Key), new MetadataStrategy(this, (JObject)item.Value)));
+                StrategyOverrides.Add(Tuple.Create(new SongPredicate((string)item["name"]), new MetadataStrategy(this, (JObject)item["set"])));
             }
             json.TryGetValue("mp3gain_path", out var mp3path);
             if (mp3path.Type == JTokenType.String)
                 MP3GainPath = (string)mp3path;
+            json.TryGetValue("clear_private_owners", out var cpo);
+            if (cpo.Type == JTokenType.Array)
+                IllegalPrivateOwners = cpo.ToObject<List<string>>();
         }
 
         private IEnumerable<MetadataStrategy> GetApplicableStrategies(IMusicItem item)
@@ -68,6 +72,11 @@ namespace NaiveMusicUpdater
                 if (strat.Item1.Matches(item))
                     yield return strat.Item2;
             }
+        }
+
+        public bool IsIllegalPrivateOwner(string owner)
+        {
+            return IllegalPrivateOwners?.Contains(owner) ?? false;
         }
 
         public SongMetadata GetMetadataFor(IMusicItem item)

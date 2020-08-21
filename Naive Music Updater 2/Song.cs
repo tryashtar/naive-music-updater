@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TagLib;
 using TagLib.Id3v2;
+using TagLib.Matroska;
 using File = System.IO.File;
 
 namespace NaiveMusicUpdater
@@ -24,8 +25,10 @@ namespace NaiveMusicUpdater
         public void Update(LibraryCache cache)
         {
             Logger.WriteLine($"Song: {SimpleName}");
+#if !DEBUG
             if (!cache.NeedsUpdate(this))
                 return;
+#endif
             Logger.WriteLine($"(checking)");
             var metadata = cache.GetMetadataFor(this);
             var title = metadata.Title;
@@ -39,8 +42,8 @@ namespace NaiveMusicUpdater
                 bool changed = UpdateTag(tag, title, artist, album, comment);
                 var path = Util.StringPathAfterRoot(this);
                 changed |= UpdateArt(tag, cache.GetArtPathFor(this));
-                changed |= WipeUselessProperties(tag);
                 changed |= cache.WriteLyrics(path, tag);
+                changed |= WipeUselessProperties(cache, tag);
                 if (changed)
                 {
                     Logger.WriteLine("Saving...");
@@ -54,14 +57,14 @@ namespace NaiveMusicUpdater
                 }
                 if (success)
                 {
-                    cache.NormalizeAudio(this);
+                    cache.Config.NormalizeAudio(this);
                     cache.MarkUpdatedRecently(this);
                 }
             }
             // correct case of filename
             // changing filename in other ways is forbidden because stuff is derived from it
             // it's the USER's job to set the filename they want and set config to determine how to pull metadata out of it
-            var filename = cache.ToFilesafe(cache.CleanName(SimpleName), false);
+            var filename = cache.Config.ToFilesafe(cache.Config.CleanName(SimpleName), false);
             if (SimpleName != filename)
             {
                 Logger.WriteLine($"Renaming file: \"{filename}\"");
@@ -152,9 +155,75 @@ namespace NaiveMusicUpdater
         }
 
         // returns whether this changed anything
-        private bool WipeUselessProperties(TagLib.Id3v2.Tag tag)
+        private bool WipeUselessProperties(LibraryCache cache, TagLib.Id3v2.Tag tag)
         {
             bool changed = false;
+            foreach (var frame in tag.GetFrames().ToList())
+            {
+                bool remove = false;
+                if (frame is TextInformationFrame tif)
+                {
+                    if (tif.Text.Length != 1)
+                    {
+                        Logger.WriteLine($"Removed text information frame with length {tif.Text.Length}: \"{tif}\"");
+                        remove = true;
+                    }
+                    else
+                    {
+                        var tiftext = tif.Text.Single();
+                        var tags = new List<string> { tag.Title, tag.FirstPerformer, tag.Album };
+                        if (!tags.Contains(tiftext) && !tiftext.StartsWith("[replaygain_"))
+                        {
+                            Logger.WriteLine($"Removed text information frame not carrying tag data: \"{tif}\"");
+                            remove = true;
+                        }
+                    }
+                }
+                else if (frame is CommentsFrame cf)
+                {
+                    if (cf.Text != tag.Comment)
+                    {
+                        Logger.WriteLine($"Removed comment frame not matching comment: \"{cf}\"");
+                        remove = true;
+                    }
+                }
+                else if (frame is UnsynchronisedLyricsFrame ulf)
+                {
+                    if (ulf.Text != tag.Lyrics)
+                    {
+                        Logger.WriteLine($"Removed lyrics frame not matching lyrics: \"{ulf}\"");
+                        remove = true;
+                    }
+                }
+                else if (frame is MusicCdIdentifierFrame mcd)
+                {
+                    Logger.WriteLine($"Removed music CD identifier frame: \"{mcd.Data}\"");
+                    remove = true;
+                }
+                else if (frame is UrlLinkFrame urlf)
+                {
+                    Logger.WriteLine($"Removed URL link frame: \"{urlf}\"");
+                    remove = true;
+                }
+                else if (frame is UnknownFrame unkf)
+                {
+                    Logger.WriteLine($"Removed unknown frame: \"{unkf.Data}\"");
+                    remove = true;
+                }
+                else if (frame is PrivateFrame pf)
+                {
+                    if (cache.Config.IsIllegalPrivateOwner(pf.Owner))
+                    {
+                        Logger.WriteLine($"Removed private frame with owner \"{pf.Owner}\": \"{pf.PrivateData}\"");
+                        remove = true;
+                    }
+                }
+                if (remove)
+                {
+                    tag.RemoveFrame(frame);
+                    changed = true;
+                }
+            }
             if (tag.Publisher != null)
             {
                 ChangedThing("publisher", tag.Publisher, null);

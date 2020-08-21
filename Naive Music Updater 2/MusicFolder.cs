@@ -53,7 +53,7 @@ namespace NaiveMusicUpdater
         public void Update(LibraryCache cache)
         {
             Logger.WriteLine($"Folder: {SimpleName}");
-            var filename = cache.ToFilesafe(cache.CleanName(SimpleName), true);
+            var filename = cache.Config.ToFilesafe(cache.Config.CleanName(SimpleName), true);
             if (SimpleName != filename)
             {
                 Logger.WriteLine($"Renaming folder: \"{filename}\"");

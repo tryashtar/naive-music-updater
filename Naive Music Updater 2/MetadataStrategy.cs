@@ -103,6 +103,7 @@ namespace NaiveMusicUpdater
         }
     }
 
+    // cannot be used to get itself, use "<this>" instead
     public class SimpleParentSelector : MetadataSelector
     {
         private readonly int Number;
@@ -121,10 +122,13 @@ namespace NaiveMusicUpdater
                     return null;
                 found = list[Number];
             }
-            int index = list.Count - Number;
-            if (index < 0)
-                return null;
-            found = list[Number];
+            else
+            {
+                int index = list.Count + Number - 1;
+                if (index < 0)
+                    return null;
+                found = list[index];
+            }
             if (found == item)
                 return null;
             return ResolveNameOrDefault(found, item);
@@ -136,8 +140,8 @@ namespace NaiveMusicUpdater
         private readonly MetadataSelector From;
         private readonly string Separator;
         private readonly int Index;
-        private NoSeparatorDecision NoSeparator;
-        private OutofBoundsDecision OutofBounds;
+        private readonly NoSeparatorDecision NoSeparator;
+        private readonly OutofBoundsDecision OutofBounds;
 
         private enum NoSeparatorDecision
         {
