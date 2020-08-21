@@ -76,7 +76,14 @@ namespace NaiveMusicUpdater
 
         public bool IsIllegalPrivateOwner(string owner)
         {
-            return IllegalPrivateOwners?.Contains(owner) ?? false;
+            if (IllegalPrivateOwners == null)
+                return false;
+            foreach (var item in IllegalPrivateOwners)
+            {
+                if (Regex.IsMatch(owner, item))
+                    return true;
+            }
+            return false;
         }
 
         public SongMetadata GetMetadataFor(IMusicItem item)
