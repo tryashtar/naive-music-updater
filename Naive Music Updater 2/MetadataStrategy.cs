@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TagLib.Flac;
 
@@ -20,7 +21,9 @@ namespace NaiveMusicUpdater
         public readonly bool HasArtist;
         public readonly string Comment;
         public readonly bool HasComment;
-        public SongMetadata(string title, string album, string artist, string comment, bool has_title = true, bool has_album = true, bool has_artist = true, bool has_comment = true)
+        public readonly uint? TrackNumber;
+        public readonly bool HasTrackNumber;
+        public SongMetadata(string title, string album, string artist, string comment, uint? track_number, bool has_title = true, bool has_album = true, bool has_artist = true, bool has_comment = true, bool has_track_number = true)
         {
             Title = title;
             Album = album;
@@ -30,6 +33,8 @@ namespace NaiveMusicUpdater
             HasAlbum = has_album;
             HasArtist = has_artist;
             HasComment = has_comment;
+            TrackNumber = track_number;
+            HasTrackNumber = has_track_number;
         }
 
         public SongMetadata Combine(SongMetadata other)
@@ -38,14 +43,15 @@ namespace NaiveMusicUpdater
                 title: other.HasTitle ? other.Title : other.Title ?? Title,
                 album: other.HasAlbum ? other.Album : other.Album ?? Album,
                 artist: other.HasArtist ? other.Artist : other.Artist ?? Artist,
-                comment: other.HasComment ? other.Comment : other.Comment ?? Comment
+                comment: other.HasComment ? other.Comment : other.Comment ?? Comment,
+                track_number: other.HasTrackNumber ? other.TrackNumber : other.TrackNumber ?? TrackNumber
             );
         }
     }
 
     public class SongPredicate
     {
-        private string[] Path;
+        private readonly string[] Path;
         public SongPredicate(string name)
         {
             Path = name.Split('/');
@@ -272,20 +278,37 @@ namespace NaiveMusicUpdater
         {
             // returns null = don't change existing metadata
             // returns <remove> = delete existing metadata
-            var title = Title?.Get(item);
-            var artist = Artist?.Get(item);
-            var album = Album?.Get(item);
-            var comment = Comment?.Get(item);
+            string title = Title?.Get(item);
+            string artist = Artist?.Get(item);
+            string album = Album?.Get(item);
+            string comment = Comment?.Get(item);
+            var track = GetTrackNumber(title);
+            if (track != null)
+                title = track.Item1;
+            uint? track_number = track?.Item2;
             return new SongMetadata(
                 title: title == "<remove>" ? null : title,
                 artist: artist == "<remove>" ? null : artist,
                 album: album == "<remove>" ? null : album,
                 comment: comment == "<remove>" ? null : comment,
+                track_number: track_number,
                 has_title: title != null,
                 has_artist: artist != null,
                 has_album: album != null,
-                has_comment: comment != null
+                has_comment: comment != null,
+                has_track_number: track_number != null
             );
+        }
+
+        private static readonly Regex TrackNumberRegex = new Regex(@"^(?<number>\d+)\.\s+(?<title>.*)");
+        public static Tuple<string, uint> GetTrackNumber(string title)
+        {
+            if (title == null)
+                return null;
+            var match = TrackNumberRegex.Match(title);
+            if (match.Success)
+                return Tuple.Create(match.Groups["title"].Value, uint.Parse(match.Groups["number"].Value));
+            return null;
         }
     }
 }

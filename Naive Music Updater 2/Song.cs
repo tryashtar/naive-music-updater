@@ -31,15 +31,16 @@ namespace NaiveMusicUpdater
 #endif
             Logger.WriteLine($"(checking)");
             var metadata = cache.GetMetadataFor(this);
-            var title = metadata.Title;
-            var artist = metadata.Artist;
-            var album = metadata.Album;
-            var comment = metadata.Comment;
+            string title = metadata.Title;
+            string artist = metadata.Artist;
+            string album = metadata.Album;
+            string comment = metadata.Comment;
+            uint? track_number = metadata.TrackNumber;
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool success = true;
                 var tag = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
-                bool changed = UpdateTag(tag, title, artist, album, comment);
+                bool changed = UpdateTag(tag, title, artist, album, comment, track_number);
                 var path = Util.StringPathAfterRoot(this);
                 changed |= UpdateArt(tag, cache.GetArtPathFor(this));
                 changed |= cache.WriteLyrics(path, tag);
@@ -57,8 +58,10 @@ namespace NaiveMusicUpdater
                 }
                 if (success)
                 {
+#if !DEBUG
                     cache.Config.NormalizeAudio(this);
                     cache.MarkUpdatedRecently(this);
+#endif
                 }
             }
             // correct case of filename
@@ -112,7 +115,7 @@ namespace NaiveMusicUpdater
                 Logger.WriteLine($"Added {thing}: \"{new_value}\"");
         }
 
-        private bool UpdateTag(TagLib.Tag tag, string title, string artist, string album, string comment)
+        private bool UpdateTag(TagLib.Tag tag, string title, string artist, string album, string comment, uint? track_number)
         {
             bool changed = false;
             if (tag.Title != title)
@@ -131,6 +134,12 @@ namespace NaiveMusicUpdater
             {
                 ChangedThing("comment", tag.Comment, comment);
                 tag.Comment = comment;
+                changed = true;
+            }
+            if (tag.Track != (track_number ?? 0))
+            {
+                ChangedThing("track number", tag.Track, track_number);
+                tag.Track = track_number ?? 0;
                 changed = true;
             }
             if (!IsSingleValue(tag.AlbumArtists, artist))
@@ -171,7 +180,7 @@ namespace NaiveMusicUpdater
                     else
                     {
                         var tiftext = tif.Text.Single();
-                        var tags = new List<string> { tag.Title, tag.FirstPerformer, tag.Album };
+                        var tags = new List<string> { tag.Title, tag.FirstPerformer, tag.Album, "0" + tag.Track };
                         if (!tags.Contains(tiftext) && !tiftext.StartsWith("[replaygain_"))
                         {
                             Logger.WriteLine($"Removed text information frame not carrying tag data: \"{tif}\"");
@@ -334,12 +343,6 @@ namespace NaiveMusicUpdater
             {
                 ChangedThing("music IP", tag.MusicIpId, null);
                 tag.MusicIpId = null;
-                changed = true;
-            }
-            if (tag.Track != 0)
-            {
-                ChangedThing("track number", tag.Track, 0);
-                tag.Track = 0;
                 changed = true;
             }
             if (tag.TrackCount != 0)
