@@ -65,6 +65,11 @@ namespace NaiveMusicUpdater
             var path2 = String.Join("/", songpath.Select(x => x.SimpleName)) + "/";
             return path2.Contains(path1);
         }
+
+        public override string ToString()
+        {
+            return String.Join("/", Path);
+        }
     }
 
     public abstract class MetadataSelector

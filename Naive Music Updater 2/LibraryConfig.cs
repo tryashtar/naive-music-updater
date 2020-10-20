@@ -22,6 +22,8 @@ namespace NaiveMusicUpdater
         private readonly Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
         private readonly MetadataStrategy DefaultStrategy;
         private readonly List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();
+        private readonly HashSet<Tuple<SongPredicate, MetadataStrategy>> UsedStrategyOverrides = new HashSet<Tuple<SongPredicate, MetadataStrategy>>();
+        public IEnumerable<Tuple<SongPredicate, MetadataStrategy>> UnusedStrategyOverrides => StrategyOverrides.Except(UsedStrategyOverrides);
         private readonly string MP3GainPath;
         private readonly List<string> IllegalPrivateOwners;
         public LibraryConfig(string file)
@@ -70,7 +72,10 @@ namespace NaiveMusicUpdater
             foreach (var strat in StrategyOverrides)
             {
                 if (strat.Item1.Matches(item))
+                {
+                    UsedStrategyOverrides.Add(strat);
                     yield return strat.Item2;
+                }
             }
         }
 
