@@ -92,6 +92,8 @@ namespace NaiveMusicUpdater
                         return new SplitOperationSelector(config, obj);
                     else if ((string)operation == "join")
                         return new JoinOperationSelector(config, obj);
+                    else if ((string)operation == "regex")
+                        return new RegexSelector(config, obj);
                 }
             }
             if (token.Type == JTokenType.String)
@@ -208,6 +210,42 @@ namespace NaiveMusicUpdater
         }
     }
 
+    public class RegexSelector : MetadataSelector
+    {
+        private readonly MetadataSelector From;
+        private readonly Regex Regex;
+        private readonly string Group;
+        private readonly MatchFailDecision MatchFail;
+
+        private enum MatchFailDecision
+        {
+            Exit,
+            Ignore
+        }
+
+        // gets metadata "From" somewhere else and extracts a part of it by splitting the string and taking one of its pieces
+        public RegexSelector(LibraryConfig config, JObject data) : base(config)
+        {
+            From = MetadataSelector.FromToken(config, data["from"]);
+            Regex = new Regex((string)data["regex"]);
+            Group = (string)data["group"];
+            MatchFail = MatchFailDecision.Ignore;
+            if (data.TryGetValue("fail", out var fail) && (string)fail == "exit")
+                MatchFail = MatchFailDecision.Exit;
+        }
+
+        public override string Get(IMusicItem item)
+        {
+            var basetext = From.Get(item);
+            if (basetext == null)
+                return null;
+            var match = Regex.Match(basetext);
+            if (!match.Success)
+                return MatchFail == MatchFailDecision.Ignore ? basetext : null;
+            return match.Groups[Group].Value;
+        }
+    }
+
     public class JoinOperationSelector : MetadataSelector
     {
         private readonly MetadataSelector From1;
@@ -267,6 +305,7 @@ namespace NaiveMusicUpdater
         private readonly MetadataSelector Artist;
         private readonly MetadataSelector Album;
         private readonly MetadataSelector Comment;
+        private readonly MetadataSelector TrackNumber;
         public MetadataStrategy(LibraryConfig config, JObject json)
         {
             if (json.TryGetValue("title", out var title))
@@ -277,6 +316,8 @@ namespace NaiveMusicUpdater
                 Album = MetadataSelector.FromToken(config, album);
             if (json.TryGetValue("comment", out var comment))
                 Comment = MetadataSelector.FromToken(config, comment);
+            if (json.TryGetValue("track", out var track))
+                TrackNumber = MetadataSelector.FromToken(config, track);
         }
 
         public SongMetadata Perform(IMusicItem item)
@@ -287,33 +328,22 @@ namespace NaiveMusicUpdater
             string artist = Artist?.Get(item);
             string album = Album?.Get(item);
             string comment = Comment?.Get(item);
-            var track = GetTrackNumber(title);
-            if (track != null)
-                title = track.Item1;
-            uint? track_number = track?.Item2;
+            string track_str = TrackNumber?.Get(item);
+            uint? track = null;
+            if (track_str != null && uint.TryParse(track_str, out uint result))
+                track = result;
             return new SongMetadata(
                 title: title == "<remove>" ? null : title,
                 artist: artist == "<remove>" ? null : artist,
                 album: album == "<remove>" ? null : album,
                 comment: comment == "<remove>" ? null : comment,
-                track_number: track_number,
+                track_number: track,
                 has_title: title != null,
                 has_artist: artist != null,
                 has_album: album != null,
                 has_comment: comment != null,
-                has_track_number: track_number != null
+                has_track_number: track != null
             );
-        }
-
-        private static readonly Regex TrackNumberRegex = new Regex(@"^(?<number>\d+)\.\s+(?<title>.*)");
-        public static Tuple<string, uint> GetTrackNumber(string title)
-        {
-            if (title == null)
-                return null;
-            var match = TrackNumberRegex.Match(title);
-            if (match.Success)
-                return Tuple.Create(match.Groups["title"].Value, uint.Parse(match.Groups["number"].Value));
-            return null;
         }
     }
 }
