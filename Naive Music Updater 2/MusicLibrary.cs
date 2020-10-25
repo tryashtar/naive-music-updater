@@ -27,6 +27,7 @@ namespace NaiveMusicUpdater
             {
                 child.Update(Cache);
             }
+#if DEBUG
             var unused = Cache.Config.UnusedStrategyOverrides;
             if (unused.Any())
             {
@@ -36,6 +37,7 @@ namespace NaiveMusicUpdater
                     Logger.WriteLine(item.Item1.ToString());
                 }
             }
+#endif
             Cache.Save();
         }
 

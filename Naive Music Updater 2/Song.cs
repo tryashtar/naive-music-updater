@@ -39,12 +39,22 @@ namespace NaiveMusicUpdater
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool success = true;
-                var tag = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
-                bool changed = UpdateTag(tag, title, artist, album, comment, track_number);
+                var tag_v1 = (TagLib.Id3v1.Tag)file.GetTag(TagTypes.Id3v1);
+                var tag_v2 = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
                 var path = Util.StringPathAfterRoot(this);
-                changed |= UpdateArt(tag, cache.GetArtPathFor(this));
-                changed |= cache.WriteLyrics(path, tag);
-                changed |= WipeUselessProperties(cache, tag);
+                var art = cache.GetArtPathFor(this);
+                bool changed = false;
+                changed |= UpdateTag(tag_v2, title, artist, album, comment, track_number);
+                changed |= UpdateArt(tag_v2, art);
+                changed |= cache.WriteLyrics(path, tag_v2);
+                changed |= WipeUselessProperties(cache, tag_v1);
+                changed |= WipeUselessProperties(cache, tag_v2);
+                if (tag_v1.Track != tag_v2.Track)
+                {
+                    Logger.WriteLine($"Fixed mismatched track number: {tag_v1.Track} to {tag_v1.Track}");
+                    tag_v1.Track = tag_v2.Track;
+                    changed = true;
+                }
                 if (changed)
                 {
                     Logger.WriteLine("Saving...");
@@ -164,73 +174,82 @@ namespace NaiveMusicUpdater
         }
 
         // returns whether this changed anything
-        private bool WipeUselessProperties(LibraryCache cache, TagLib.Id3v2.Tag tag)
+        private bool WipeUselessProperties(LibraryCache cache, TagLib.Tag tag)
         {
             bool changed = false;
-            foreach (var frame in tag.GetFrames().ToList())
+            if (tag is TagLib.Id3v2.Tag tag_v2)
             {
-                bool remove = false;
-                if (frame is TextInformationFrame tif)
+                if (tag_v2.IsCompilation != false)
                 {
-                    if (tif.Text.Length != 1)
+                    ChangedThing("compilation", tag_v2.IsCompilation, null);
+                    tag_v2.IsCompilation = false;
+                    changed = true;
+                }
+                foreach (var frame in tag_v2.GetFrames().ToList())
+                {
+                    bool remove = false;
+                    if (frame is TextInformationFrame tif)
                     {
-                        Logger.WriteLine($"Removed text information frame with length {tif.Text.Length}: \"{tif}\"");
-                        remove = true;
-                    }
-                    else
-                    {
-                        var tiftext = tif.Text.Single();
-                        var tags = new List<string> { tag.Title, tag.FirstPerformer, tag.Album, "0" + tag.Track };
-                        if (!tags.Contains(tiftext) && !tiftext.StartsWith("[replaygain_"))
+                        if (tif.Text.Length != 1)
                         {
-                            Logger.WriteLine($"Removed text information frame not carrying tag data: \"{tif}\"");
+                            Logger.WriteLine($"Removed text information frame with length {tif.Text.Length}: \"{tif}\"");
+                            remove = true;
+                        }
+                        else
+                        {
+                            var tiftext = tif.Text.Single();
+                            var tags = new List<string> { tag.Title, tag.FirstPerformer, tag.Album, "0" + tag.Track };
+                            if (!tags.Contains(tiftext) && !tiftext.StartsWith("[replaygain_"))
+                            {
+                                Logger.WriteLine($"Removed text information frame not carrying tag data: \"{tif}\"");
+                                remove = true;
+                            }
+                        }
+                    }
+                    else if (frame is CommentsFrame cf)
+                    {
+                        if (cf.Text != tag.Comment)
+                        {
+                            Logger.WriteLine($"Removed comment frame not matching comment: \"{cf}\"");
                             remove = true;
                         }
                     }
-                }
-                else if (frame is CommentsFrame cf)
-                {
-                    if (cf.Text != tag.Comment)
+                    else if (frame is UnsynchronisedLyricsFrame ulf)
                     {
-                        Logger.WriteLine($"Removed comment frame not matching comment: \"{cf}\"");
+                        if (ulf.Text != tag.Lyrics)
+                        {
+                            Logger.WriteLine($"Removed lyrics frame not matching lyrics: \"{ulf}\"");
+                            remove = true;
+                        }
+                    }
+                    else if (frame is MusicCdIdentifierFrame mcd)
+                    {
+                        Logger.WriteLine($"Removed music CD identifier frame: \"{mcd.Data}\"");
                         remove = true;
                     }
-                }
-                else if (frame is UnsynchronisedLyricsFrame ulf)
-                {
-                    if (ulf.Text != tag.Lyrics)
+                    else if (frame is UrlLinkFrame urlf)
                     {
-                        Logger.WriteLine($"Removed lyrics frame not matching lyrics: \"{ulf}\"");
+                        Logger.WriteLine($"Removed URL link frame: \"{urlf}\"");
                         remove = true;
                     }
-                }
-                else if (frame is MusicCdIdentifierFrame mcd)
-                {
-                    Logger.WriteLine($"Removed music CD identifier frame: \"{mcd.Data}\"");
-                    remove = true;
-                }
-                else if (frame is UrlLinkFrame urlf)
-                {
-                    Logger.WriteLine($"Removed URL link frame: \"{urlf}\"");
-                    remove = true;
-                }
-                else if (frame is UnknownFrame unkf)
-                {
-                    Logger.WriteLine($"Removed unknown frame: \"{unkf.Data}\"");
-                    remove = true;
-                }
-                else if (frame is PrivateFrame pf)
-                {
-                    if (cache.Config.IsIllegalPrivateOwner(pf.Owner))
+                    else if (frame is UnknownFrame unkf)
                     {
-                        Logger.WriteLine($"Removed private frame with owner \"{pf.Owner}\": \"{pf.PrivateData}\"");
+                        Logger.WriteLine($"Removed unknown frame: \"{unkf.Data}\"");
                         remove = true;
                     }
-                }
-                if (remove)
-                {
-                    tag.RemoveFrame(frame);
-                    changed = true;
+                    else if (frame is PrivateFrame pf)
+                    {
+                        if (cache.Config.IsIllegalPrivateOwner(pf.Owner))
+                        {
+                            Logger.WriteLine($"Removed private frame with owner \"{pf.Owner}\": \"{pf.PrivateData}\"");
+                            remove = true;
+                        }
+                    }
+                    if (remove)
+                    {
+                        tag_v2.RemoveFrame(frame);
+                        changed = true;
+                    }
                 }
             }
             if (tag.Publisher != null)
@@ -255,12 +274,6 @@ namespace NaiveMusicUpdater
             {
                 ChangedThing("grouping", tag.Grouping, null);
                 tag.Grouping = null;
-                changed = true;
-            }
-            if (tag.IsCompilation != false)
-            {
-                ChangedThing("compilation", tag.IsCompilation, null);
-                tag.IsCompilation = false;
                 changed = true;
             }
             if (tag.RemixedBy != null)
