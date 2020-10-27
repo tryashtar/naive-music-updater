@@ -51,7 +51,7 @@ namespace NaiveMusicUpdater
                 changed |= WipeUselessProperties(cache, tag_v2);
                 if (tag_v1.Track != tag_v2.Track)
                 {
-                    Logger.WriteLine($"Fixed mismatched track number: {tag_v1.Track} to {tag_v1.Track}");
+                    Logger.WriteLine($"Fixed mismatched track number: {tag_v1.Track} to {tag_v2.Track}");
                     tag_v1.Track = tag_v2.Track;
                     changed = true;
                 }
@@ -198,8 +198,15 @@ namespace NaiveMusicUpdater
                         else
                         {
                             var tiftext = tif.Text.Single();
-                            var tags = new List<string> { tag.Title, tag.FirstPerformer, tag.Album, "0" + tag.Track };
-                            if (!tags.Contains(tiftext) && !tiftext.StartsWith("[replaygain_"))
+                            var id = tif.FrameId.ToString();
+                            if (!new string[] {
+                                "TIT2", // title
+                                "TALB", // album
+                                "TPE1", // artist
+                                "TPE2", // performer
+                                "TCOM", // composer
+                                "TRCK", // track number
+                            }.Contains(id) && !tiftext.StartsWith("[replaygain_"))
                             {
                                 Logger.WriteLine($"Removed text information frame not carrying tag data: \"{tif}\"");
                                 remove = true;
