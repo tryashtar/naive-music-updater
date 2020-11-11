@@ -83,6 +83,14 @@ namespace NaiveMusicUpdater
                 var path = Path.Combine(Folder, "art", partial + ".png");
                 if (File.Exists(path))
                     return path;
+                if (item is Song)
+                {
+                    string parent = Path.GetDirectoryName(partial);
+                    string contents = Path.Combine(parent, "__contents__");
+                    var contents_path = Path.Combine(Folder, "art", contents + ".png");
+                    if (File.Exists(contents_path))
+                        return contents_path;
+                }
                 item = item.Parent;
             }
             return null;
