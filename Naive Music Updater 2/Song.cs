@@ -47,14 +47,8 @@ namespace NaiveMusicUpdater
                 changed |= UpdateTag(tag_v2, title, artist, album, comment, track_number);
                 changed |= UpdateArt(tag_v2, art);
                 changed |= cache.WriteLyrics(path, tag_v2);
-                changed |= WipeUselessProperties(cache, tag_v1);
                 changed |= WipeUselessProperties(cache, tag_v2);
-                if (tag_v1.Track != tag_v2.Track)
-                {
-                    Logger.WriteLine($"Fixed mismatched track number: {tag_v1.Track} to {tag_v2.Track}");
-                    tag_v1.Track = tag_v2.Track;
-                    changed = true;
-                }
+                changed |= EqualizeTags(tag_v2, tag_v1);
                 if (changed)
                 {
                     Logger.WriteLine("Saving...");
@@ -168,6 +162,63 @@ namespace NaiveMusicUpdater
             {
                 ChangedThing("performers", tag.Performers, artist);
                 tag.Performers = new string[] { artist };
+                changed = true;
+            }
+            return changed;
+        }
+
+        private string Resize(string thing, int size)
+        {
+            if (thing == null)
+                return null;
+            return TagLib.Id3v1.Tag.DefaultStringHandler.Render(thing).Resize(size).ToString().Trim().TrimEnd('\0');
+        }
+
+        private bool EqualizeTags(TagLib.Id3v2.Tag v2, TagLib.Id3v1.Tag v1)
+        {
+            bool changed = false;
+            if (Resize(v2.Title, 30) != Resize(v1.Title, 30))
+            {
+                Logger.WriteLine($"Updated title in V1 tag ({v1.Title}) to match V2 ({v2.Title})");
+                v1.Title = v2.Title;
+                changed = true;
+            }
+            if (Resize(v2.FirstPerformer, 30) != Resize(v1.FirstPerformer, 30))
+            {
+                Logger.WriteLine($"Updated artist in V1 tag ({v1.FirstPerformer}) to match V2 ({v2.FirstPerformer})");
+                v1.Performers = v2.Performers;
+                v1.AlbumArtists = v2.AlbumArtists;
+                v1.Composers = v2.Composers;
+                changed = true;
+            }
+            if (Resize(v2.Album, 30) != Resize(v1.Album, 30))
+            {
+                Logger.WriteLine($"Updated album in V1 tag ({v1.Album}) to match V2 ({v2.Album})");
+                v1.Album = v2.Album;
+                changed = true;
+            }
+            if (Resize(v2.Comment, 28) != Resize(v1.Comment, 28))
+            {
+                Logger.WriteLine($"Updated comment in V1 tag ({v1.Comment}) to match V2 ({v2.Comment})");
+                v1.Comment = v2.Comment;
+                changed = true;
+            }
+            if (v2.Year != v1.Year)
+            {
+                Logger.WriteLine($"Updated year in V1 tag ({v1.Year}) to match V2 ({v2.Year})");
+                v1.Year = v2.Year;
+                changed = true;
+            }
+            if (v2.Track != v1.Track)
+            {
+                Logger.WriteLine($"Updated track in V1 tag ({v1.Track}) to match V2 ({v2.Track})");
+                v1.Track = v2.Track;
+                changed = true;
+            }
+            if (v2.FirstGenre != v1.FirstGenre)
+            {
+                Logger.WriteLine($"Updated genre in V1 tag ({v1.FirstGenre}) to match V2 ({v2.FirstGenre})");
+                v1.Genres = v2.Genres;
                 changed = true;
             }
             return changed;
@@ -402,19 +453,6 @@ namespace NaiveMusicUpdater
 
             return value.Data == array[0].Data;
         }
-
-        private static bool CompareArt(TagLib.IPicture[] pictures1, TagLib.IPicture[] pictures2)
-        {
-            if (pictures1.Length != pictures2.Length)
-                return false;
-            for (int i = 0; i < pictures1.Length; i++)
-            {
-                if (pictures1[i].Data != pictures2[i].Data)
-                    return false;
-            }
-            return true;
-        }
-
 
         public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);
 
