@@ -20,10 +20,9 @@ namespace NaiveMusicUpdater
         private readonly Dictionary<string, string> MapNames = new Dictionary<string, string>();
         private readonly Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
         private readonly Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
-        private readonly MetadataStrategy DefaultStrategy;
-        private readonly List<Tuple<SongPredicate, MetadataStrategy>> StrategyOverrides = new List<Tuple<SongPredicate, MetadataStrategy>>();
-        private readonly HashSet<Tuple<SongPredicate, MetadataStrategy>> UsedStrategyOverrides = new HashSet<Tuple<SongPredicate, MetadataStrategy>>();
-        public IEnumerable<Tuple<SongPredicate, MetadataStrategy>> UnusedStrategyOverrides => StrategyOverrides.Except(UsedStrategyOverrides);
+        private readonly IMetadataStrategy DefaultStrategy;
+        private readonly Dictionary<string, IMetadataStrategy> NamedStrategies = new Dictionary<string, IMetadataStrategy>();
+        private readonly List<(List<SongPredicate>, IMetadataStrategy)> StrategyOverrides = new List<(List<SongPredicate>, IMetadataStrategy)>();
         private readonly string MP3GainPath;
         private readonly List<string> IllegalPrivateOwners;
         public LibraryConfig(string file)
@@ -53,10 +52,22 @@ namespace NaiveMusicUpdater
             {
                 FoldersafeConversions.Add(item.Key, (string)item.Value);
             }
-            DefaultStrategy = new MetadataStrategy(this, (JObject)json["strategies"]["default"]);
-            foreach (var item in (JArray)json["strategies"]["overrides"])
+            DefaultStrategy = MetadataStrategyFactory.Create(this, json["strategies"]["default"]);
+            foreach (var item in (JObject)json["strategies"]["named"])
             {
-                StrategyOverrides.Add(Tuple.Create(new SongPredicate((string)item["name"]), new MetadataStrategy(this, (JObject)item["set"])));
+                NamedStrategies.Add(item.Key, MetadataStrategyFactory.Create(this, item.Value));
+            }
+            foreach (JObject item in (JArray)json["strategies"]["overrides"])
+            {
+                var predicates = new List<SongPredicate>();
+                if (item.TryGetValue("name", out var name))
+                    predicates.Add(new SongPredicate((string)name));
+                else if (item.TryGetValue("names", out var names))
+                    predicates.AddRange(((JArray)names).Select(x => new SongPredicate((string)x)));
+                if (item.TryGetValue("reference", out var reference))
+                    StrategyOverrides.Add((predicates, NamedStrategies[(string)reference]));
+                if (item.TryGetValue("set", out var set))
+                    StrategyOverrides.Add((predicates, MetadataStrategyFactory.Create(this, set)));
             }
             json.TryGetValue("mp3gain_path", out var mp3path);
             if (mp3path.Type == JTokenType.String)
@@ -66,15 +77,14 @@ namespace NaiveMusicUpdater
                 IllegalPrivateOwners = cpo.ToObject<List<string>>();
         }
 
-        private IEnumerable<MetadataStrategy> GetApplicableStrategies(IMusicItem item)
+        private IEnumerable<IMetadataStrategy> GetApplicableStrategies(IMusicItem item)
         {
             yield return DefaultStrategy;
-            foreach (var strat in StrategyOverrides)
+            foreach (var (predicates, strategy) in StrategyOverrides)
             {
-                if (strat.Item1.Matches(item))
+                if (predicates.Any(x => x.Matches(item)))
                 {
-                    UsedStrategyOverrides.Add(strat);
-                    yield return strat.Item2;
+                    yield return strategy;
                 }
             }
         }
@@ -93,13 +103,8 @@ namespace NaiveMusicUpdater
 
         public SongMetadata GetMetadataFor(IMusicItem item)
         {
-            SongMetadata metadata = default;
-            foreach (var strategy in GetApplicableStrategies(item))
-            {
-                var extra = strategy.Perform(item);
-                metadata = metadata.Combine(extra);
-            }
-            return metadata;
+            var merged = new MultipleMetadataStrategy(GetApplicableStrategies(item));
+            return merged.Perform(item);
         }
 
         public string CleanName(string name)

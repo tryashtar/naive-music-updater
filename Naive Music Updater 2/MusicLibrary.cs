@@ -27,17 +27,6 @@ namespace NaiveMusicUpdater
             {
                 child.Update(Cache);
             }
-#if DEBUG
-            var unused = Cache.Config.UnusedStrategyOverrides;
-            if (unused.Any())
-            {
-                Logger.WriteLine($"Some metadata overrides were unused:");
-                foreach (var item in unused)
-                {
-                    Logger.WriteLine(item.Item1.ToString());
-                }
-            }
-#endif
             Cache.Save();
         }
 

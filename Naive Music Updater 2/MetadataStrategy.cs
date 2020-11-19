@@ -40,11 +40,16 @@ namespace NaiveMusicUpdater
         public SongMetadata Combine(SongMetadata other)
         {
             return new SongMetadata(
-                title: other.HasTitle ? other.Title : other.Title ?? Title,
-                album: other.HasAlbum ? other.Album : other.Album ?? Album,
-                artist: other.HasArtist ? other.Artist : other.Artist ?? Artist,
-                comment: other.HasComment ? other.Comment : other.Comment ?? Comment,
-                track_number: other.HasTrackNumber ? other.TrackNumber : other.TrackNumber ?? TrackNumber
+                title: other.HasTitle ? other.Title : other.Title ?? this.Title,
+                album: other.HasAlbum ? other.Album : other.Album ?? this.Album,
+                artist: other.HasArtist ? other.Artist : other.Artist ?? this.Artist,
+                comment: other.HasComment ? other.Comment : other.Comment ?? this.Comment,
+                track_number: other.HasTrackNumber ? other.TrackNumber : other.TrackNumber ?? this.TrackNumber,
+                has_title : other.HasTitle || this.HasTitle,
+                has_album: other.HasTitle || this.HasAlbum,
+                has_artist: other.HasArtist || this.HasArtist,
+                has_comment: other.HasComment || this.HasComment,
+                has_track_number: other.HasTrackNumber || this.HasTrackNumber
             );
         }
     }
@@ -299,7 +304,24 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class MetadataStrategy
+    public interface IMetadataStrategy
+    {
+        SongMetadata Perform(IMusicItem item);
+    }
+
+    public static class MetadataStrategyFactory
+    {
+        public static IMetadataStrategy Create(LibraryConfig config, JToken token)
+        {
+            if (token is JObject obj)
+                return new MetadataStrategy(config, obj);
+            else if (token is JArray arr)
+                return new MultipleMetadataStrategy(config, arr);
+            throw new ArgumentException();
+        }
+    }
+
+    public class MetadataStrategy : IMetadataStrategy
     {
         private readonly MetadataSelector Title;
         private readonly MetadataSelector Artist;
@@ -344,6 +366,35 @@ namespace NaiveMusicUpdater
                 has_comment: comment != null,
                 has_track_number: track != null
             );
+        }
+    }
+
+    public class MultipleMetadataStrategy : IMetadataStrategy
+    {
+        private readonly List<IMetadataStrategy> Substrategies;
+        public MultipleMetadataStrategy(LibraryConfig config, JArray json)
+        {
+            Substrategies = new List<IMetadataStrategy>();
+            foreach (var item in json)
+            {
+                Substrategies.Add(MetadataStrategyFactory.Create(config, item));
+            }
+        }
+
+        public MultipleMetadataStrategy(IEnumerable<IMetadataStrategy> strategies)
+        {
+            Substrategies = strategies.ToList();
+        }
+
+        public SongMetadata Perform(IMusicItem item)
+        {
+            var metadata = Substrategies.First().Perform(item);
+            foreach (var strategy in Substrategies.Skip(1))
+            {
+                var extra = strategy.Perform(item);
+                metadata = metadata.Combine(extra);
+            }
+            return metadata;
         }
     }
 }
