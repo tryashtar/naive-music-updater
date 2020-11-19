@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Text;
 using System.Threading.Tasks;
 using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
 
 namespace NaiveMusicUpdater
 {
@@ -31,63 +32,60 @@ namespace NaiveMusicUpdater
             string ico = Path.ChangeExtension(png, ".ico");
             using (image)
             {
-                byte[] bytes = ConvertToIcon(image, true);
-                if (!File.Exists(ico) || !File.ReadAllBytes(ico).SequenceEqual(bytes))
-                    File.WriteAllBytes(ico, ConvertToIcon(image, true));
+                using (var stream = ConvertToIcon(image))
+                {
+                    var bytes = stream.ToArray();
+                    if (!File.Exists(ico) || !File.ReadAllBytes(ico).SequenceEqual(bytes))
+                    {
+                        Logger.WriteLine($"Creating icon");
+                        File.WriteAllBytes(ico, bytes);
+                    }
+                }
                 var icon = new TagLib.Picture(new TagLib.ByteVector((byte[])new ImageConverter().ConvertTo(image, typeof(byte[]))));
                 return icon;
             }
         }
 
-        private static byte[] ConvertToIcon(Image image, bool preserveAspectRatio = false)
+        // convert to a 256x256 icon, preserving aspect ratio
+        private static MemoryStream ConvertToIcon(Image image)
         {
-            MemoryStream inputStream = new MemoryStream();
-            image.Save(inputStream, ImageFormat.Png);
-            inputStream.Seek(0, SeekOrigin.Begin);
-            MemoryStream outputStream = new MemoryStream();
-            if (!ConvertToIcon(inputStream, outputStream, 256, preserveAspectRatio))
-                return null;
-            return outputStream.ToArray();
-        }
-
-        private static bool ConvertToIcon(Stream input, Stream output, int size = 256, bool preserveAspectRatio = false)
-        {
-            var inputBitmap = (Bitmap)Bitmap.FromStream(input);
-            if (inputBitmap == null)
-                return false;
-            float width = size, height = size;
-            if (preserveAspectRatio)
+            int width = 256;
+            int height = 256;
+            float ratio = (float)image.Width / image.Height;
+            if (image.Width > image.Height)
+                height = (int)(ratio * 256);
+            else
+                width = (int)(ratio * 256);
+            var square_image = new Bitmap(256, 256);
+            using (var graphics = Graphics.FromImage(square_image))
             {
-                if (inputBitmap.Width > inputBitmap.Height)
-                    height = ((float)inputBitmap.Height / inputBitmap.Width) * size;
-                else
-                    width = ((float)inputBitmap.Width / inputBitmap.Height) * size;
+                int y = (256 / 2) - (height / 2);
+                int x = (256 / 2) - (width / 2);
+                graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                graphics.DrawImage(image, x, y, width, height);
             }
-            var newBitmap = new Bitmap(inputBitmap, new Size((int)width, (int)height));
-            if (newBitmap == null)
-                return false;
-            using (MemoryStream memoryStream = new MemoryStream())
+            using (var source_stream = new MemoryStream())
             {
-                newBitmap.Save(memoryStream, ImageFormat.Png);
-                var iconWriter = new BinaryWriter(output);
-                if (output == null || iconWriter == null)
-                    return false;
-                iconWriter.Write((byte)0);
-                iconWriter.Write((byte)0);
-                iconWriter.Write((short)1);
-                iconWriter.Write((short)1);
-                iconWriter.Write((byte)width);
-                iconWriter.Write((byte)height);
-                iconWriter.Write((byte)0);
-                iconWriter.Write((byte)0);
-                iconWriter.Write((short)0);
-                iconWriter.Write((short)32);
-                iconWriter.Write((int)memoryStream.Length);
-                iconWriter.Write((int)(6 + 16));
-                iconWriter.Write(memoryStream.ToArray());
-                iconWriter.Flush();
+                square_image.Save(source_stream, ImageFormat.Png);
+                var output_stream = new MemoryStream();
+                var writer = new BinaryWriter(output_stream);
+                writer.Write((byte)0);
+                writer.Write((byte)0);
+                writer.Write((short)1);
+                writer.Write((short)1);
+                writer.Write((byte)square_image.Width);
+                writer.Write((byte)square_image.Height);
+                writer.Write((byte)0);
+                writer.Write((byte)0);
+                writer.Write((short)0);
+                writer.Write((short)32);
+                writer.Write((int)source_stream.Length);
+                writer.Write((int)(6 + 16));
+                source_stream.WriteTo(output_stream);
+                writer.Flush();
+                output_stream.Position = 0;
+                return output_stream;
             }
-            return true;
         }
     }
 }
