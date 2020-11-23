@@ -167,15 +167,33 @@ namespace NaiveMusicUpdater
         {
             if (MP3GainPath == null)
                 return true;
+            string location = song.Location;
+            bool abnormal_chars = song.Location.Any(x => x > 255);
+            string temp_file = Path.Combine(Path.GetTempPath(), "temp-song" + Path.GetExtension(song.Location));
+            string text_file = Path.Combine(Path.GetDirectoryName(song.Location), "temp-song-original.txt");
+            if (abnormal_chars)
+            {
+                Logger.WriteLine("Weird characters detected, doing weird rename thingy");
+                File.WriteAllText(text_file, song.Location + "\n" + temp_file);
+                location = temp_file;
+                if (File.Exists(location))
+                    throw new InvalidOperationException("That's not supposed to be there...");
+                File.Move(song.Location, location);
+            }
             var process = new Process()
             {
-                StartInfo = new ProcessStartInfo(MP3GainPath, $"/r /c \"{song.Location}\"")
+                StartInfo = new ProcessStartInfo(MP3GainPath, $"/r /c \"{location}\"")
                 {
                     UseShellExecute = false
                 }
             };
             process.Start();
             process.WaitForExit();
+            if (abnormal_chars)
+            {
+                File.Move(location, song.Location);
+                File.Delete(text_file);
+            }
             return process.ExitCode == 0;
         }
 
