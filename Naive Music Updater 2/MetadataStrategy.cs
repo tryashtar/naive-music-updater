@@ -46,7 +46,9 @@ namespace NaiveMusicUpdater
         public readonly OptionalProperty<string> Artist;
         public readonly OptionalProperty<string> Comment;
         public readonly OptionalProperty<uint> TrackNumber;
+        public readonly OptionalProperty<uint> Year;
         public readonly OptionalProperty<string> Language;
+        public readonly OptionalProperty<string> Genre;
 
         public SongMetadata(
            // these aren't allowed to be null
@@ -55,7 +57,9 @@ namespace NaiveMusicUpdater
            OptionalProperty<string> artist,
            OptionalProperty<string> comment,
            OptionalProperty<uint> track_number,
-           OptionalProperty<string> language
+           OptionalProperty<uint> year,
+           OptionalProperty<string> language,
+           OptionalProperty<string> genre
         )
         {
             Title = title;
@@ -63,7 +67,9 @@ namespace NaiveMusicUpdater
             Artist = artist;
             Comment = comment;
             TrackNumber = track_number;
+            Year = year;
             Language = language;
+            Genre = genre;
         }
 
         public SongMetadata Combine(SongMetadata other)
@@ -74,7 +80,9 @@ namespace NaiveMusicUpdater
                 Artist.CombineWith(other.Artist),
                 Comment.CombineWith(other.Comment),
                 TrackNumber.CombineWith(other.TrackNumber),
-                Language.CombineWith(other.Language)
+                Year.CombineWith(other.Year),
+                Language.CombineWith(other.Language),
+                Genre.CombineWith(other.Genre)
             );
         }
     }
@@ -366,6 +374,8 @@ namespace NaiveMusicUpdater
                 new OptionalProperty<string>(),
                 new OptionalProperty<string>(),
                 new OptionalProperty<uint>(),
+                new OptionalProperty<uint>(),
+                new OptionalProperty<string>(),
                 new OptionalProperty<string>()
             );
         }
@@ -378,21 +388,25 @@ namespace NaiveMusicUpdater
         private readonly MetadataSelector Artist;
         private readonly MetadataSelector Comment;
         private readonly MetadataSelector TrackNumber;
+        private readonly MetadataSelector Year;
         private readonly MetadataSelector Language;
+        private readonly MetadataSelector Genre;
         public MetadataStrategy(LibraryConfig config, JObject json)
         {
-            if (json.TryGetValue("title", out var title))
-                Title = MetadataSelector.FromToken(config, title);
-            if (json.TryGetValue("album", out var album))
-                Album = MetadataSelector.FromToken(config, album);
-            if (json.TryGetValue("artist", out var artist))
-                Artist = MetadataSelector.FromToken(config, artist);
-            if (json.TryGetValue("comment", out var comment))
-                Comment = MetadataSelector.FromToken(config, comment);
-            if (json.TryGetValue("track", out var track))
-                TrackNumber = MetadataSelector.FromToken(config, track);
-            if (json.TryGetValue("language", out var lang))
-                Language = MetadataSelector.FromToken(config, lang);
+            MetadataSelector FromJson(string key)
+            {
+                if (json.TryGetValue(key, out var item))
+                    return MetadataSelector.FromToken(config, item);
+                return null;
+            }
+            Title = FromJson("title");
+            Album = FromJson("album");
+            Artist = FromJson("artist");
+            Comment = FromJson("comment");
+            TrackNumber = FromJson("track");
+            Year = FromJson("year");
+            Language = FromJson("language");
+            Genre = FromJson("genre");
         }
 
         private OptionalProperty<string> Get(MetadataSelector selector, IMusicItem item)
@@ -407,8 +421,10 @@ namespace NaiveMusicUpdater
             var artist = Get(Artist, item);
             var comment = Get(Comment, item);
             var track = Get(TrackNumber, item).ConvertTo(x => uint.Parse(x));
+            var year = Get(Year, item).ConvertTo(x => uint.Parse(x));
             var lang = Get(Language, item);
-            return new SongMetadata(title, album, artist, comment, track, lang);
+            var genre = Get(Genre, item);
+            return new SongMetadata(title, album, artist, comment, track, year, lang, genre);
         }
     }
 

@@ -145,6 +145,20 @@ namespace NaiveMusicUpdater
                 tag.Track = track_number;
                 changed = true;
             }
+            uint year = metadata.Year.Value;
+            if (tag.Year != year)
+            {
+                ChangedThing("year", tag.Year, year);
+                tag.Year = year;
+                changed = true;
+            }
+            string genre = metadata.Genre.Value;
+            if (!IsSingleValue(tag.Genres, genre))
+            {
+                ChangedThing("genres", tag.Genres, genre);
+                tag.Genres = new string[] { genre };
+                changed = true;
+            }
             string artist = metadata.Artist.Value;
             if (!IsSingleValue(tag.AlbumArtists, artist))
             {
