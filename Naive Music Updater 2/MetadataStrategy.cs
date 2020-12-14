@@ -87,26 +87,83 @@ namespace NaiveMusicUpdater
         }
     }
 
+    public static class ItemPredicateFactory
+    {
+        public static IItemPredicate[] CreateManyFrom(JToken token)
+        {
+            if (token.Type == JTokenType.String)
+                return CreateManyFrom((string)token);
+            if (token is JArray array)
+                return array.Cast<string>().Select(CreateFrom).ToArray();
+            throw new ArgumentException();
+        }
+
+        public static IItemPredicate[] CreateManyFrom(string str)
+        {
+            string[] split = str.Split('/');
+            return split.Select(CreateFrom).ToArray();
+        }
+
+        public static IItemPredicate CreateFrom(string str)
+        {
+            if (str.StartsWith(":"))
+                return new RegexItemPredicate(str.Substring(1));
+            return new ExactItemPredicate(str);
+        }
+    }
+
+    public interface IItemPredicate
+    {
+        bool Matches(IMusicItem item);
+    }
+
+    public class ExactItemPredicate : IItemPredicate
+    {
+        public readonly string Matcher;
+        public ExactItemPredicate(string str)
+        {
+            Matcher = str;
+        }
+
+        public bool Matches(IMusicItem item)
+        {
+            return item.SimpleName == Matcher;
+        }
+    }
+
+    public class RegexItemPredicate : IItemPredicate
+    {
+        public readonly Regex Matcher;
+        public RegexItemPredicate(string str)
+        {
+            Matcher = new Regex(str, RegexOptions.IgnoreCase);
+        }
+
+        public bool Matches(IMusicItem item)
+        {
+            return Matcher.IsMatch(item.SimpleName);
+        }
+    }
+
     public class SongPredicate
     {
-        private readonly string[] Path;
-        public SongPredicate(string name)
+        private readonly IItemPredicate[] Path;
+        public SongPredicate(JToken json)
         {
-            Path = name.Split('/');
+            Path = ItemPredicateFactory.CreateManyFrom(json);
         }
 
         public bool Matches(IMusicItem song)
         {
-            // only slightly naive
-            var songpath = song.PathFromRoot();
-            var path1 = String.Join("/", Path) + "/";
-            var path2 = String.Join("/", songpath.Select(x => x.SimpleName)) + "/";
-            return path2.Contains(path1);
-        }
-
-        public override string ToString()
-        {
-            return String.Join("/", Path);
+            var songpath = song.PathFromRoot().Skip(1).ToArray();
+            if (Path.Length > songpath.Length)
+                return false;
+            for (int i = 0; i < Path.Length; i++)
+            {
+                if (!Path[i].Matches(songpath[i]))
+                    return false;
+            }
+            return true;
         }
     }
 

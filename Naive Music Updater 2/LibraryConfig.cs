@@ -67,7 +67,7 @@ namespace NaiveMusicUpdater
             {
                 var predicates = new List<SongPredicate>();
                 if (item.TryGetValue("name", out var name))
-                    predicates.Add(new SongPredicate((string)name));
+                    predicates.Add(new SongPredicate(name));
                 else if (item.TryGetValue("names", out var names))
                     predicates.AddRange(((JArray)names).Select(x => new SongPredicate((string)x)));
                 if (item.TryGetValue("reference", out var reference))

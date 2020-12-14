@@ -156,26 +156,26 @@ namespace NaiveMusicUpdater
             if (!IsSingleValue(tag.Genres, genre))
             {
                 ChangedThing("genres", tag.Genres, genre);
-                tag.Genres = new string[] { genre };
+                tag.Genres = SingleValue(genre);
                 changed = true;
             }
             string artist = metadata.Artist.Value;
             if (!IsSingleValue(tag.AlbumArtists, artist))
             {
                 ChangedThing("album artists", tag.AlbumArtists, artist);
-                tag.AlbumArtists = new string[] { artist };
+                tag.AlbumArtists = SingleValue(artist);
                 changed = true;
             }
             if (!IsSingleValue(tag.Composers, artist))
             {
                 ChangedThing("composers", tag.Composers, artist);
-                tag.Composers = new string[] { artist };
+                tag.Composers = SingleValue(artist);
                 changed = true;
             }
             if (!IsSingleValue(tag.Performers, artist))
             {
                 ChangedThing("performers", tag.Performers, artist);
-                tag.Performers = new string[] { artist };
+                tag.Performers = SingleValue(artist);
                 changed = true;
             }
             string language = metadata.Language.Value;
@@ -305,6 +305,8 @@ namespace NaiveMusicUpdater
                                 "TCOM", // composer
                                 "TRCK", // track number
                                 "TLAN", // language
+                                "TDRC", // year
+                                "TCON", // genre
                             }.Contains(id) && !tiftext.StartsWith("[replaygain_"))
                             {
                                 Logger.WriteLine($"Removed text information frame of type {id} not carrying tag data: \"{tif}\"");
@@ -482,12 +484,19 @@ namespace NaiveMusicUpdater
         private static bool IsSingleValue<T>(T[] array, T value)
         {
             if (array == null)
-                return value == null;
-            if (value == null)
                 return false;
+            if (value == null)
+                return array.Length == 0;
             if (array.Length != 1)
                 return false;
             return value.Equals(array[0]);
+        }
+
+        private static T[] SingleValue<T>(T value)
+        {
+            if (value == null)
+                return new T[0];
+            return new T[] { value };
         }
 
         private static bool IsSingleValue(IPicture[] array, IPicture value)
