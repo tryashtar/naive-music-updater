@@ -26,8 +26,16 @@ namespace NaiveMusicUpdater
         {
             Folder = folder;
             Config = new LibraryConfig(ConfigPath);
-            var datecache = File.ReadAllText(DateCachePath);
-            DateCache = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(datecache) ?? new Dictionary<string, DateTime>();
+            if (File.Exists(DateCachePath))
+            {
+                var datecache = File.ReadAllText(DateCachePath);
+                DateCache = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(datecache) ?? new Dictionary<string, DateTime>();
+            }
+            else
+            {
+                Logger.WriteLine($"Couldn't find date cache {DateCachePath}, starting fresh");
+                DateCache = new Dictionary<string, DateTime>();
+            }
         }
 
         public void Save()

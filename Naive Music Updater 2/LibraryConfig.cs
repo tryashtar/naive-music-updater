@@ -27,6 +27,12 @@ namespace NaiveMusicUpdater
         private readonly List<string> IllegalPrivateOwners;
         public LibraryConfig(string file)
         {
+            if (!File.Exists(file))
+            {
+                Logger.WriteLine($"Couldn't find config file {file}, using blank config!!!");
+                DefaultStrategy = new NoOpMetadataStrategy();
+                return;
+            }
             var json = JObject.Parse(File.ReadAllText(file));
             foreach (string item in (JArray)json["lowercase"])
             {

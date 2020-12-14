@@ -31,11 +31,6 @@ namespace NaiveMusicUpdater
 #endif
             Logger.WriteLine($"(checking)");
             var metadata = cache.GetMetadataFor(this);
-            string title = metadata.Title;
-            string artist = metadata.Artist;
-            string album = metadata.Album;
-            string comment = metadata.Comment;
-            uint? track_number = metadata.TrackNumber;
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool success = true;
@@ -44,7 +39,7 @@ namespace NaiveMusicUpdater
                 var path = Util.StringPathAfterRoot(this);
                 var art = cache.GetArtPathFor(this);
                 bool changed = false;
-                changed |= UpdateTag(tag_v2, title, artist, album, comment, track_number);
+                changed |= UpdateTag(tag_v2, metadata);
                 changed |= UpdateArt(tag_v2, art);
                 changed |= cache.WriteLyrics(path, tag_v2);
                 changed |= WipeUselessProperties(cache, tag_v2);
@@ -119,33 +114,38 @@ namespace NaiveMusicUpdater
                 Logger.WriteLine($"Added {thing}: \"{new_value}\"");
         }
 
-        private bool UpdateTag(TagLib.Tag tag, string title, string artist, string album, string comment, uint? track_number)
+        private bool UpdateTag(TagLib.Id3v2.Tag tag, SongMetadata metadata)
         {
             bool changed = false;
+            string title = metadata.Title.Value;
             if (tag.Title != title)
             {
                 ChangedThing("title", tag.Title, title);
                 tag.Title = title;
                 changed = true;
             }
+            string album = metadata.Album.Value;
             if (tag.Album != album)
             {
                 ChangedThing("album", tag.Album, album);
                 tag.Album = album;
                 changed = true;
             }
+            string comment = metadata.Comment.Value;
             if (tag.Comment != comment)
             {
                 ChangedThing("comment", tag.Comment, comment);
                 tag.Comment = comment;
                 changed = true;
             }
-            if (tag.Track != (track_number ?? 0))
+            uint track_number = metadata.TrackNumber.Value;
+            if (tag.Track != track_number)
             {
                 ChangedThing("track number", tag.Track, track_number);
-                tag.Track = track_number ?? 0;
+                tag.Track = track_number;
                 changed = true;
             }
+            string artist = metadata.Artist.Value;
             if (!IsSingleValue(tag.AlbumArtists, artist))
             {
                 ChangedThing("album artists", tag.AlbumArtists, artist);
@@ -162,6 +162,39 @@ namespace NaiveMusicUpdater
             {
                 ChangedThing("performers", tag.Performers, artist);
                 tag.Performers = new string[] { artist };
+                changed = true;
+            }
+            string language = metadata.Language.Value;
+            bool found_language = language == null;
+            foreach (var frame in tag.GetFrames().ToList())
+            {
+                if (frame is TextInformationFrame tif && tif.FrameId.ToString() == "TLAN")
+                {
+                    string current = tif.Text.Single();
+                    if (!found_language)
+                    {
+                        found_language = true;
+                        if (tif.Text.Single() != language)
+                        {
+                            ChangedThing("language frame", current, language);
+                            tif.Text = new[] { language };
+                            changed = true;
+                        }
+                    }
+                    else
+                    {
+                        Logger.WriteLine($"Removing extra language frame: {current}");
+                        tag.RemoveFrame(frame);
+                        changed = true;
+                    }
+                }
+            }
+            if (!found_language)
+            {
+                Logger.WriteLine($"Creating new language frame: {language}");
+                var frame = new TextInformationFrame(ByteVector.FromString("TLAN", StringType.UTF8));
+                frame.Text = new[] { language };
+                tag.AddFrame(frame);
                 changed = true;
             }
             return changed;
@@ -257,9 +290,10 @@ namespace NaiveMusicUpdater
                                 "TPE2", // performer
                                 "TCOM", // composer
                                 "TRCK", // track number
+                                "TLAN", // language
                             }.Contains(id) && !tiftext.StartsWith("[replaygain_"))
                             {
-                                Logger.WriteLine($"Removed text information frame not carrying tag data: \"{tif}\"");
+                                Logger.WriteLine($"Removed text information frame of type {id} not carrying tag data: \"{tif}\"");
                                 remove = true;
                             }
                         }

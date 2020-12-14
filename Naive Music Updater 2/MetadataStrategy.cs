@@ -9,47 +9,72 @@ using TagLib.Flac;
 
 namespace NaiveMusicUpdater
 {
+    public class OptionalProperty<T>
+    {
+        public readonly T Value;
+        public readonly bool IsPresent;
+        public OptionalProperty(T item)
+        {
+            Value = item;
+            IsPresent = true;
+        }
+
+        public OptionalProperty()
+        {
+            IsPresent = false;
+        }
+
+        public OptionalProperty<T> CombineWith(OptionalProperty<T> other)
+        {
+            if (other.IsPresent)
+                return other;
+            return this;
+        }
+
+        public OptionalProperty<U> ConvertTo<U>(Func<T, U> converter)
+        {
+            if (!IsPresent)
+                return new OptionalProperty<U>();
+            return new OptionalProperty<U>(converter(Value));
+        }
+    }
+
     public struct SongMetadata
     {
-        // if HasThing, then it gets used when combining even if null
-        // if not HasThing, then it gets skipped
-        public readonly string Title;
-        public readonly bool HasTitle;
-        public readonly string Album;
-        public readonly bool HasAlbum;
-        public readonly string Artist;
-        public readonly bool HasArtist;
-        public readonly string Comment;
-        public readonly bool HasComment;
-        public readonly uint? TrackNumber;
-        public readonly bool HasTrackNumber;
-        public SongMetadata(string title, string album, string artist, string comment, uint? track_number, bool has_title = true, bool has_album = true, bool has_artist = true, bool has_comment = true, bool has_track_number = true)
+        public readonly OptionalProperty<string> Title;
+        public readonly OptionalProperty<string> Album;
+        public readonly OptionalProperty<string> Artist;
+        public readonly OptionalProperty<string> Comment;
+        public readonly OptionalProperty<uint> TrackNumber;
+        public readonly OptionalProperty<string> Language;
+
+        public SongMetadata(
+           // these aren't allowed to be null
+           OptionalProperty<string> title,
+           OptionalProperty<string> album,
+           OptionalProperty<string> artist,
+           OptionalProperty<string> comment,
+           OptionalProperty<uint> track_number,
+           OptionalProperty<string> language
+        )
         {
             Title = title;
             Album = album;
             Artist = artist;
             Comment = comment;
-            HasTitle = has_title;
-            HasAlbum = has_album;
-            HasArtist = has_artist;
-            HasComment = has_comment;
             TrackNumber = track_number;
-            HasTrackNumber = has_track_number;
+            Language = language;
         }
 
         public SongMetadata Combine(SongMetadata other)
         {
             return new SongMetadata(
-                title: other.HasTitle ? other.Title : other.Title ?? this.Title,
-                album: other.HasAlbum ? other.Album : other.Album ?? this.Album,
-                artist: other.HasArtist ? other.Artist : other.Artist ?? this.Artist,
-                comment: other.HasComment ? other.Comment : other.Comment ?? this.Comment,
-                track_number: other.HasTrackNumber ? other.TrackNumber : other.TrackNumber ?? this.TrackNumber,
-                has_title : other.HasTitle || this.HasTitle,
-                has_album: other.HasTitle || this.HasAlbum,
-                has_artist: other.HasArtist || this.HasArtist,
-                has_comment: other.HasComment || this.HasComment,
-                has_track_number: other.HasTrackNumber || this.HasTrackNumber
+                Title.CombineWith(other.Title),
+                Album.CombineWith(other.Album),
+                Artist.CombineWith(other.Artist),
+                Comment.CombineWith(other.Comment),
+                TrackNumber.CombineWith(other.TrackNumber),
+                Language.CombineWith(other.Language)
             );
         }
     }
@@ -111,13 +136,23 @@ namespace NaiveMusicUpdater
             throw new ArgumentException($"Couldn't figure out what kind of metadata selector this is: {token}");
         }
 
-        public abstract string Get(IMusicItem item);
+        public abstract string GetRaw(IMusicItem item);
+
+        public OptionalProperty<string> Get(IMusicItem item)
+        {
+            string result = GetRaw(item);
+            if (result == null)
+                return new OptionalProperty<string>();
+            if (result == "<remove>")
+                return new OptionalProperty<string>(null);
+            return new OptionalProperty<string>(result);
+        }
 
         protected string ResolveNameOrDefault(IMusicItem item, IMusicItem current)
         {
             if (item == current)
                 return ConfigReference.CleanName(item.SimpleName);
-            return ConfigReference.GetMetadataFor(item).Title;
+            return ConfigReference.GetMetadataFor(item).Title.Value;
         }
     }
 
@@ -130,7 +165,7 @@ namespace NaiveMusicUpdater
             Number = number;
         }
 
-        public override string Get(IMusicItem item)
+        public override string GetRaw(IMusicItem item)
         {
             IMusicItem found;
             var list = item.PathFromRoot().ToList();
@@ -193,9 +228,9 @@ namespace NaiveMusicUpdater
             }
         }
 
-        public override string Get(IMusicItem item)
+        public override string GetRaw(IMusicItem item)
         {
-            var basetext = From.Get(item);
+            var basetext = From.GetRaw(item);
             if (basetext == null)
                 return null;
             string[] parts = basetext.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
@@ -239,9 +274,9 @@ namespace NaiveMusicUpdater
                 MatchFail = MatchFailDecision.Exit;
         }
 
-        public override string Get(IMusicItem item)
+        public override string GetRaw(IMusicItem item)
         {
-            var basetext = From.Get(item);
+            var basetext = From.GetRaw(item);
             if (basetext == null)
                 return null;
             var match = Regex.Match(basetext);
@@ -265,10 +300,10 @@ namespace NaiveMusicUpdater
             With = (string)data["with"];
         }
 
-        public override string Get(IMusicItem item)
+        public override string GetRaw(IMusicItem item)
         {
-            var text1 = From1.Get(item);
-            var text2 = From2.Get(item);
+            var text1 = From1.GetRaw(item);
+            var text2 = From2.GetRaw(item);
             if (text1 == null && text2 == null)
                 return null;
             if (text1 == null)
@@ -284,7 +319,7 @@ namespace NaiveMusicUpdater
         public FilenameSelector(LibraryConfig config) : base(config)
         { }
 
-        public override string Get(IMusicItem item)
+        public override string GetRaw(IMusicItem item)
         {
             return ResolveNameOrDefault(item, item);
         }
@@ -298,7 +333,7 @@ namespace NaiveMusicUpdater
             Specification = spec;
         }
 
-        public override string Get(IMusicItem item)
+        public override string GetRaw(IMusicItem item)
         {
             return Specification;
         }
@@ -321,51 +356,59 @@ namespace NaiveMusicUpdater
         }
     }
 
+    public class NoOpMetadataStrategy : IMetadataStrategy
+    {
+        public SongMetadata Perform(IMusicItem item)
+        {
+            return new SongMetadata(
+                new OptionalProperty<string>(),
+                new OptionalProperty<string>(),
+                new OptionalProperty<string>(),
+                new OptionalProperty<string>(),
+                new OptionalProperty<uint>(),
+                new OptionalProperty<string>()
+            );
+        }
+    }
+
     public class MetadataStrategy : IMetadataStrategy
     {
         private readonly MetadataSelector Title;
-        private readonly MetadataSelector Artist;
         private readonly MetadataSelector Album;
+        private readonly MetadataSelector Artist;
         private readonly MetadataSelector Comment;
         private readonly MetadataSelector TrackNumber;
+        private readonly MetadataSelector Language;
         public MetadataStrategy(LibraryConfig config, JObject json)
         {
             if (json.TryGetValue("title", out var title))
                 Title = MetadataSelector.FromToken(config, title);
-            if (json.TryGetValue("artist", out var artist))
-                Artist = MetadataSelector.FromToken(config, artist);
             if (json.TryGetValue("album", out var album))
                 Album = MetadataSelector.FromToken(config, album);
+            if (json.TryGetValue("artist", out var artist))
+                Artist = MetadataSelector.FromToken(config, artist);
             if (json.TryGetValue("comment", out var comment))
                 Comment = MetadataSelector.FromToken(config, comment);
             if (json.TryGetValue("track", out var track))
                 TrackNumber = MetadataSelector.FromToken(config, track);
+            if (json.TryGetValue("language", out var lang))
+                Language = MetadataSelector.FromToken(config, lang);
+        }
+
+        private OptionalProperty<string> Get(MetadataSelector selector, IMusicItem item)
+        {
+            return selector?.Get(item) ?? new OptionalProperty<string>();
         }
 
         public SongMetadata Perform(IMusicItem item)
         {
-            // returns null = don't change existing metadata
-            // returns <remove> = delete existing metadata
-            string title = Title?.Get(item);
-            string artist = Artist?.Get(item);
-            string album = Album?.Get(item);
-            string comment = Comment?.Get(item);
-            string track_str = TrackNumber?.Get(item);
-            uint? track = null;
-            if (track_str != null && uint.TryParse(track_str, out uint result))
-                track = result;
-            return new SongMetadata(
-                title: title == "<remove>" ? null : title,
-                artist: artist == "<remove>" ? null : artist,
-                album: album == "<remove>" ? null : album,
-                comment: comment == "<remove>" ? null : comment,
-                track_number: track,
-                has_title: title != null,
-                has_artist: artist != null,
-                has_album: album != null,
-                has_comment: comment != null,
-                has_track_number: track != null
-            );
+            var title = Get(Title, item);
+            var album = Get(Album, item);
+            var artist = Get(Artist, item);
+            var comment = Get(Comment, item);
+            var track = Get(TrackNumber, item).ConvertTo(x => uint.Parse(x));
+            var lang = Get(Language, item);
+            return new SongMetadata(title, album, artist, comment, track, lang);
         }
     }
 
