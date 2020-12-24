@@ -9,57 +9,100 @@ using TagLib.Flac;
 
 namespace NaiveMusicUpdater
 {
-    public class OptionalProperty<T>
+    public class MetadataProperty<T>
     {
         public readonly T Value;
-        public readonly bool IsPresent;
-        public OptionalProperty(T item)
+        public readonly bool Overwrite;
+
+        private MetadataProperty(T item, bool overwrite)
         {
             Value = item;
-            IsPresent = true;
+            Overwrite = overwrite;
         }
 
-        public OptionalProperty()
+        public static MetadataProperty<T> Create(T item)
         {
-            IsPresent = false;
+            return new MetadataProperty<T>(item, true);
         }
 
-        public OptionalProperty<T> CombineWith(OptionalProperty<T> other)
+        public static MetadataProperty<T> Delete()
         {
-            if (other.IsPresent)
+            return new MetadataProperty<T>(default, true);
+        }
+
+        public static MetadataProperty<T> Ignore()
+        {
+            return new MetadataProperty<T>(default, false);
+        }
+
+        public MetadataProperty<T> CombineWith(MetadataProperty<T> other)
+        {
+            if (other.Overwrite)
                 return other;
             return this;
         }
 
-        public OptionalProperty<U> ConvertTo<U>(Func<T, U> converter)
+        public MetadataProperty<U> ConvertTo<U>(Func<T, U> converter)
         {
-            if (!IsPresent)
-                return new OptionalProperty<U>();
-            return new OptionalProperty<U>(converter(Value));
+            if (!Overwrite)
+                return MetadataProperty<U>.Ignore();
+            return new MetadataProperty<U>(converter(Value), Overwrite);
         }
     }
 
-    public struct SongMetadata
+    public class SongMetadataBuilder
     {
-        public readonly OptionalProperty<string> Title;
-        public readonly OptionalProperty<string> Album;
-        public readonly OptionalProperty<string> Artist;
-        public readonly OptionalProperty<string> Comment;
-        public readonly OptionalProperty<uint> TrackNumber;
-        public readonly OptionalProperty<uint> Year;
-        public readonly OptionalProperty<string> Language;
-        public readonly OptionalProperty<string> Genre;
+        public MetadataProperty<string> Title;
+        public MetadataProperty<string> Album;
+        public MetadataProperty<string> Artist;
+        public MetadataProperty<string> Comment;
+        public MetadataProperty<uint> TrackNumber;
+        public MetadataProperty<uint> TrackTotal;
+        public MetadataProperty<uint> Year;
+        public MetadataProperty<string> Language;
+        public MetadataProperty<string> Genre;
+        public SongMetadataBuilder()
+        { }
+
+        public SongMetadata Build()
+        {
+            return new SongMetadata(
+                Title ?? MetadataProperty<string>.Ignore(),
+                Album ?? MetadataProperty<string>.Ignore(),
+                Artist ?? MetadataProperty<string>.Ignore(),
+                Comment ?? MetadataProperty<string>.Ignore(),
+                TrackNumber ?? MetadataProperty<uint>.Ignore(),
+                TrackTotal ?? MetadataProperty<uint>.Ignore(),
+                Year ?? MetadataProperty<uint>.Ignore(),
+                Language ?? MetadataProperty<string>.Ignore(),
+                Genre ?? MetadataProperty<string>.Ignore()
+            );
+        }
+    }
+
+    public class SongMetadata
+    {
+        public readonly MetadataProperty<string> Title;
+        public readonly MetadataProperty<string> Album;
+        public readonly MetadataProperty<string> Artist;
+        public readonly MetadataProperty<string> Comment;
+        public readonly MetadataProperty<uint> TrackNumber;
+        public readonly MetadataProperty<uint> TrackTotal;
+        public readonly MetadataProperty<uint> Year;
+        public readonly MetadataProperty<string> Language;
+        public readonly MetadataProperty<string> Genre;
 
         public SongMetadata(
            // these aren't allowed to be null
-           OptionalProperty<string> title,
-           OptionalProperty<string> album,
-           OptionalProperty<string> artist,
-           OptionalProperty<string> comment,
-           OptionalProperty<uint> track_number,
-           OptionalProperty<uint> year,
-           OptionalProperty<string> language,
-           OptionalProperty<string> genre
+           MetadataProperty<string> title,
+           MetadataProperty<string> album,
+           MetadataProperty<string> artist,
+           MetadataProperty<string> comment,
+           MetadataProperty<uint> track_number,
+           MetadataProperty<uint> track_total,
+           MetadataProperty<uint> year,
+           MetadataProperty<string> language,
+           MetadataProperty<string> genre
         )
         {
             Title = title;
@@ -67,6 +110,7 @@ namespace NaiveMusicUpdater
             Artist = artist;
             Comment = comment;
             TrackNumber = track_number;
+            TrackTotal = track_total;
             Year = year;
             Language = language;
             Genre = genre;
@@ -80,6 +124,7 @@ namespace NaiveMusicUpdater
                 Artist.CombineWith(other.Artist),
                 Comment.CombineWith(other.Comment),
                 TrackNumber.CombineWith(other.TrackNumber),
+                TrackTotal.CombineWith(other.TrackTotal),
                 Year.CombineWith(other.Year),
                 Language.CombineWith(other.Language),
                 Genre.CombineWith(other.Genre)
@@ -130,14 +175,14 @@ namespace NaiveMusicUpdater
 
         public abstract string GetRaw(IMusicItem item);
 
-        public OptionalProperty<string> Get(IMusicItem item)
+        public MetadataProperty<string> Get(IMusicItem item)
         {
             string result = GetRaw(item);
             if (result == null)
-                return new OptionalProperty<string>();
+                return MetadataProperty<string>.Ignore();
             if (result == "<remove>")
-                return new OptionalProperty<string>(null);
-            return new OptionalProperty<string>(result);
+                return MetadataProperty<string>.Delete();
+            return MetadataProperty<string>.Create(result);
         }
 
         protected string ResolveNameOrDefault(IMusicItem item, IMusicItem current)
@@ -333,7 +378,7 @@ namespace NaiveMusicUpdater
 
     public class GetMetadataSelector : MetadataSelector
     {
-        public delegate OptionalProperty<string> MetadataGetter(SongMetadata meta);
+        public delegate MetadataProperty<string> MetadataGetter(SongMetadata meta);
         private readonly MetadataGetter Getter;
         public GetMetadataSelector(LibraryConfig config, MetadataGetter getter) : base(config)
         {
@@ -367,16 +412,7 @@ namespace NaiveMusicUpdater
     {
         public SongMetadata Perform(IMusicItem item)
         {
-            return new SongMetadata(
-                new OptionalProperty<string>(),
-                new OptionalProperty<string>(),
-                new OptionalProperty<string>(),
-                new OptionalProperty<string>(),
-                new OptionalProperty<uint>(),
-                new OptionalProperty<uint>(),
-                new OptionalProperty<string>(),
-                new OptionalProperty<string>()
-            );
+            return new SongMetadataBuilder().Build();
         }
     }
 
@@ -387,6 +423,7 @@ namespace NaiveMusicUpdater
         private readonly MetadataSelector Artist;
         private readonly MetadataSelector Comment;
         private readonly MetadataSelector TrackNumber;
+        private readonly MetadataSelector TrackTotal;
         private readonly MetadataSelector Year;
         private readonly MetadataSelector Language;
         private readonly MetadataSelector Genre;
@@ -403,14 +440,15 @@ namespace NaiveMusicUpdater
             Artist = FromJson("artist");
             Comment = FromJson("comment");
             TrackNumber = FromJson("track");
+            TrackTotal = FromJson("track_count");
             Year = FromJson("year");
             Language = FromJson("language");
             Genre = FromJson("genre");
         }
 
-        private OptionalProperty<string> Get(MetadataSelector selector, IMusicItem item)
+        private MetadataProperty<string> Get(MetadataSelector selector, IMusicItem item)
         {
-            return selector?.Get(item) ?? new OptionalProperty<string>();
+            return selector?.Get(item) ?? MetadataProperty<string>.Ignore();
         }
 
         public SongMetadata Perform(IMusicItem item)
@@ -420,10 +458,11 @@ namespace NaiveMusicUpdater
             var artist = Get(Artist, item);
             var comment = Get(Comment, item);
             var track = Get(TrackNumber, item).ConvertTo(x => uint.Parse(x));
+            var track_total = Get(TrackTotal, item).ConvertTo(x => uint.Parse(x));
             var year = Get(Year, item).ConvertTo(x => uint.Parse(x));
             var lang = Get(Language, item);
             var genre = Get(Genre, item);
-            return new SongMetadata(title, album, artist, comment, track, year, lang, genre);
+            return new SongMetadata(title, album, artist, comment, track, track_total, year, lang, genre);
         }
     }
 

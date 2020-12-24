@@ -14,26 +14,45 @@ namespace NaiveMusicUpdater
 {
     public class MusicItemConfig
     {
-        public List<IItemPredicate> order;
-        public List<(IItemPredicate predicate, MetadataStrategy strategy)> set;
-        public static MusicItemConfig ParseFile(string file)
+        private IMusicItem _Item;
+        public IMusicItem Item => _Item;
+        public List<SongPredicate> order;
+        public List<(SongPredicate predicate, MetadataStrategy strategy)> set;
+        public static MusicItemConfig ParseFile(IMusicItem item, string file)
         {
             var deserializer = new DeserializerBuilder()
                 .WithNamingConvention(UnderscoredNamingConvention.Instance)
                 .WithTypeConverter(ConfigTypeConverter.Instance)
                 .Build();
-            return deserializer.Deserialize<MusicItemConfig>(File.ReadAllText(file));
+            var config = deserializer.Deserialize<MusicItemConfig>(File.ReadAllText(file));
+            config._Item = item;
+            return config;
+        }
+
+        private SongMetadata GetOrderMetadata(IMusicItem item)
+        {
+            if (order == null)
+                return new SongMetadataBuilder().Build();
+            for (int i = 0; i < order.Count; i++)
+            {
+                if (order[i].Matches(Item, item))
+                    return new SongMetadataBuilder() { TrackNumber = MetadataProperty<uint>.Create((uint)i + 1) }.Build();
+            }
+            return new SongMetadataBuilder().Build();
         }
 
         public SongMetadata GetMetadataFor(IMusicItem item)
         {
+            var first = GetOrderMetadata(item);
+            if (set == null)
+                return first;
             var metadata = new List<SongMetadata>();
             foreach (var (predicate, strategy) in set)
             {
-                if (predicate.Matches(item))
+                if (predicate.Matches(Item, item))
                     metadata.Add(strategy.Perform(item));
             }
-            return SongMetadata.Merge(metadata);
+            return first.Combine(SongMetadata.Merge(metadata));
         }
     }
 
@@ -44,13 +63,17 @@ namespace NaiveMusicUpdater
 
         public bool Accepts(Type type)
         {
-            return typeof(IItemPredicate).IsAssignableFrom(type);
+            return typeof(SongPredicate).IsAssignableFrom(type);
         }
 
         public object ReadYaml(IParser parser, Type type)
         {
-            var value = parser.Consume<Scalar>().Value;
-            return ItemPredicateFactory.CreateFrom(value);
+            if (typeof(SongPredicate).IsAssignableFrom(type))
+            {
+                var value = parser.Consume<Scalar>().Value;
+                return new SongPredicate(value);
+            }
+            throw new ArgumentException();
         }
 
         public void WriteYaml(IEmitter emitter, object value, Type type)

@@ -54,10 +54,10 @@ namespace NaiveMusicUpdater
         private MusicFolder(MusicFolder parent, string folder)
         {
             Location = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).TrimEnd('.');
+            _Parent = parent;
             string config = Path.Combine(folder, "config.yaml");
             if (File.Exists(config))
-                _LocalConfig = MusicItemConfig.ParseFile(config);
-            _Parent = parent;
+                _LocalConfig = MusicItemConfig.ParseFile(this, config);
             ScanContents();
         }
 

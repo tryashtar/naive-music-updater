@@ -123,98 +123,108 @@ namespace NaiveMusicUpdater
         {
             bool changed = false;
             string title = metadata.Title.Value;
-            if (tag.Title != title)
+            if (metadata.Title.Overwrite && tag.Title != title)
             {
                 ChangedThing("title", tag.Title, title);
                 tag.Title = title;
                 changed = true;
             }
             string album = metadata.Album.Value;
-            if (tag.Album != album)
+            if (metadata.Album.Overwrite && tag.Album != album)
             {
                 ChangedThing("album", tag.Album, album);
                 tag.Album = album;
                 changed = true;
             }
             string comment = metadata.Comment.Value;
-            if (tag.Comment != comment)
+            if (metadata.Comment.Overwrite && tag.Comment != comment)
             {
                 ChangedThing("comment", tag.Comment, comment);
                 tag.Comment = comment;
                 changed = true;
             }
             uint track_number = metadata.TrackNumber.Value;
-            if (tag.Track != track_number)
+            if (metadata.TrackNumber.Overwrite && tag.Track != track_number)
             {
                 ChangedThing("track number", tag.Track, track_number);
                 tag.Track = track_number;
                 changed = true;
             }
+            uint track_count = metadata.TrackTotal.Value;
+            if (metadata.TrackTotal.Overwrite && tag.TrackCount != track_count)
+            {
+                ChangedThing("track count", tag.TrackCount, track_count);
+                tag.TrackCount = track_count;
+                changed = true;
+            }
             uint year = metadata.Year.Value;
-            if (tag.Year != year)
+            if (metadata.Year.Overwrite && tag.Year != year)
             {
                 ChangedThing("year", tag.Year, year);
                 tag.Year = year;
                 changed = true;
             }
             string genre = metadata.Genre.Value;
-            if (!IsSingleValue(tag.Genres, genre))
+            if (metadata.Title.Overwrite && !IsSingleValue(tag.Genres, genre))
             {
                 ChangedThing("genres", tag.Genres, genre);
                 tag.Genres = SingleValue(genre);
                 changed = true;
             }
             string artist = metadata.Artist.Value;
-            if (!IsSingleValue(tag.AlbumArtists, artist))
+            if (metadata.Artist.Overwrite && !IsSingleValue(tag.AlbumArtists, artist))
             {
                 ChangedThing("album artists", tag.AlbumArtists, artist);
                 tag.AlbumArtists = SingleValue(artist);
                 changed = true;
             }
-            if (!IsSingleValue(tag.Composers, artist))
+            if (metadata.Artist.Overwrite && !IsSingleValue(tag.Composers, artist))
             {
                 ChangedThing("composers", tag.Composers, artist);
                 tag.Composers = SingleValue(artist);
                 changed = true;
             }
-            if (!IsSingleValue(tag.Performers, artist))
+            if (metadata.Artist.Overwrite && !IsSingleValue(tag.Performers, artist))
             {
                 ChangedThing("performers", tag.Performers, artist);
                 tag.Performers = SingleValue(artist);
                 changed = true;
             }
             string language = metadata.Language.Value;
-            bool found_language = language == null;
-            foreach (var frame in tag.GetFrames().ToList())
+            if (metadata.Language.Overwrite)
             {
-                if (frame is TextInformationFrame tif && tif.FrameId.ToString() == "TLAN")
+                bool found_language = language == null;
+                foreach (var frame in tag.GetFrames().ToList())
                 {
-                    string current = tif.Text.Single();
-                    if (!found_language)
+                    if (frame is TextInformationFrame tif && tif.FrameId.ToString() == "TLAN")
                     {
-                        found_language = true;
-                        if (tif.Text.Single() != language)
+                        string current = tif.Text.Single();
+                        if (!found_language)
                         {
-                            ChangedThing("language frame", current, language);
-                            tif.Text = new[] { language };
+                            found_language = true;
+                            if (tif.Text.Single() != language)
+                            {
+                                ChangedThing("language frame", current, language);
+                                tif.Text = new[] { language };
+                                changed = true;
+                            }
+                        }
+                        else
+                        {
+                            Logger.WriteLine($"Removing extra language frame: {current}");
+                            tag.RemoveFrame(frame);
                             changed = true;
                         }
                     }
-                    else
-                    {
-                        Logger.WriteLine($"Removing extra language frame: {current}");
-                        tag.RemoveFrame(frame);
-                        changed = true;
-                    }
                 }
-            }
-            if (!found_language)
-            {
-                Logger.WriteLine($"Creating new language frame: {language}");
-                var frame = new TextInformationFrame(ByteVector.FromString("TLAN", StringType.UTF8));
-                frame.Text = new[] { language };
-                tag.AddFrame(frame);
-                changed = true;
+                if (!found_language)
+                {
+                    Logger.WriteLine($"Creating new language frame: {language}");
+                    var frame = new TextInformationFrame(ByteVector.FromString("TLAN", StringType.UTF8));
+                    frame.Text = new[] { language };
+                    tag.AddFrame(frame);
+                    changed = true;
+                }
             }
             return changed;
         }
@@ -469,18 +479,6 @@ namespace NaiveMusicUpdater
             {
                 ChangedThing("music IP", tag.MusicIpId, null);
                 tag.MusicIpId = null;
-                changed = true;
-            }
-            if (tag.TrackCount != 0)
-            {
-                ChangedThing("track count", tag.TrackCount, 0);
-                tag.TrackCount = 0;
-                changed = true;
-            }
-            if (tag.Year != 0)
-            {
-                ChangedThing("year", tag.Year, 0);
-                tag.Year = 0;
                 changed = true;
             }
             return changed;
