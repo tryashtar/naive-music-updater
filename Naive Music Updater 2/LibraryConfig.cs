@@ -58,10 +58,10 @@ namespace NaiveMusicUpdater
             {
                 FoldersafeConversions.Add(item.Key, (string)item.Value);
             }
-            DefaultStrategy = MetadataStrategyFactory.Create(this, json["strategies"]["default"]);
+            DefaultStrategy = MetadataStrategyFactory.Create(json["strategies"]["default"]);
             foreach (var item in (JObject)json["strategies"]["named"])
             {
-                NamedStrategies.Add(item.Key, MetadataStrategyFactory.Create(this, item.Value));
+                NamedStrategies.Add(item.Key, MetadataStrategyFactory.Create(item.Value));
             }
             foreach (JObject item in (JArray)json["strategies"]["overrides"])
             {
@@ -73,7 +73,7 @@ namespace NaiveMusicUpdater
                 if (item.TryGetValue("reference", out var reference))
                     StrategyOverrides.Add((predicates, NamedStrategies[(string)reference]));
                 if (item.TryGetValue("set", out var set))
-                    StrategyOverrides.Add((predicates, MetadataStrategyFactory.Create(this, set)));
+                    StrategyOverrides.Add((predicates, MetadataStrategyFactory.Create(set)));
             }
             json.TryGetValue("mp3gain_path", out var mp3path);
             if (mp3path.Type == JTokenType.String)

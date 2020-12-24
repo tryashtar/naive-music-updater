@@ -63,7 +63,9 @@ namespace NaiveMusicUpdater
 
         public bool Accepts(Type type)
         {
-            return typeof(SongPredicate).IsAssignableFrom(type);
+            return
+                typeof(SongPredicate).IsAssignableFrom(type) ||
+                typeof(MetadataStrategy).IsAssignableFrom(type);
         }
 
         public object ReadYaml(IParser parser, Type type)
