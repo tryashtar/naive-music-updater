@@ -15,6 +15,18 @@ namespace NaiveMusicUpdater
         void Update(IMusicItem item);
     }
 
+    public static class MetadataStrategyUtils
+    {
+        public static void UpdateAll(this IMetadataStrategy strategy, MusicFolder folder)
+        {
+            strategy.Update(folder);
+            foreach (var item in folder.GetAllSubItems())
+            {
+                strategy.Update(item);
+            }
+        }
+    }
+
     public static class MetadataStrategyFactory
     {
         public static IMetadataStrategy Create(JToken token)
@@ -100,6 +112,7 @@ namespace NaiveMusicUpdater
 
         public void Update(IMusicItem item)
         {
+            Logger.WriteLine(item.SimpleName);
             var meta = item.Metadata;
             meta.Title.CombineWith(Get(Title, item));
             meta.Album.CombineWith(Get(Album, item));

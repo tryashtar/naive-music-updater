@@ -14,14 +14,12 @@ namespace NaiveMusicUpdater
 {
     public class MusicItemConfig
     {
-        public readonly IMusicItem Item;
         public readonly SongOrder TrackOrder;
         public readonly IMetadataStrategy LocalMetadata;
         // have to defer these because some of the data needed isn't ready until after constructor is done
-        public readonly List<Func<(SongPredicate predicate, IMetadataStrategy strategy)>> MetadataStrategies;
-        public MusicItemConfig(IMusicItem item, string file)
+        public readonly List<Func<MusicFolder, (ItemSelector selector, IMetadataStrategy strategy)>> MetadataStrategies;
+        public MusicItemConfig(string file)
         {
-            Item = item;
             using (var reader = new StreamReader(File.OpenRead(file)))
             {
                 var stream = new YamlStream();
@@ -29,108 +27,113 @@ namespace NaiveMusicUpdater
                 var root = stream.Documents.SingleOrDefault()?.RootNode;
                 var order = root?.TryGet("order");
                 if (order != null)
-                    TrackOrder = SongOrderFactory.FromNode(Item, order);
+                    TrackOrder = SongOrderFactory.FromNode(order);
                 var local = root?.TryGet("this");
                 if (local != null)
                     LocalMetadata = MetadataStrategyFactory.Create(local);
-                MetadataStrategies = (root?.TryGet("set") as YamlMappingNode)?.Children.Select(x => (Func<(SongPredicate, IMetadataStrategy)>)(() => ParseStrategy(x.Key, x.Value))).ToList() ?? new List<Func<(SongPredicate, IMetadataStrategy)>>();
+                MetadataStrategies = (root?.TryGet("set") as YamlMappingNode)?.Children.Select(x => (Func<MusicFolder, (ItemSelector, IMetadataStrategy)>)(f => ParseStrategy(f, x.Key, x.Value))).ToList() ?? new List<Func<MusicFolder, (ItemSelector, IMetadataStrategy)>>();
             }
         }
 
-        private (SongPredicate predicate, IMetadataStrategy strategy) ParseStrategy(YamlNode key, YamlNode value)
+        private (ItemSelector selector, IMetadataStrategy strategy) ParseStrategy(MusicFolder folder, YamlNode key, YamlNode value)
         {
-            var predicate = SongPredicate.FromNode(key);
+            var selector = ItemSelector.FromNode(key);
             var reference = value.TryGet("reference");
             IMetadataStrategy strategy;
             if (reference != null)
-                strategy = Item.GlobalCache.Config.GetNamedStrategy((string)reference);
+                strategy = folder.GlobalCache.Config.GetNamedStrategy((string)reference);
             else
                 strategy = MetadataStrategyFactory.Create(value);
-            return (predicate, strategy);
+            return (selector, strategy);
         }
 
-        public IMetadataStrategy GetMetadataStrategy(IMusicItem item)
+        public void ApplyMetadata(MusicFolder folder)
         {
-            var strategies = new List<IMetadataStrategy>();
+            // untargeted stuff
             if (TrackOrder != null)
-                strategies.Add(TrackOrder.GetStrategy(item));
+                TrackOrder.ApplyAll(folder);
             if (LocalMetadata != null)
-                strategies.Add(LocalMetadata);
+                LocalMetadata.UpdateAll(folder);
+
+            // targeted stuff
             foreach (var func in MetadataStrategies)
             {
-                var (predicate, strategy) = func();
-                if (predicate.Matches(Item, item))
-                    strategies.Add(strategy);
+                var (selector, strategy) = func(folder);
+                var matches = selector.SelectFrom(folder);
+                foreach (var item in matches)
+                {
+                    strategy.Update(item);
+                }
             }
-            return new MultipleMetadataStrategy(strategies);
         }
     }
 
     public static class SongOrderFactory
     {
-        public static SongOrder FromNode(IMusicItem source, YamlNode yaml)
+        public static SongOrder FromNode(YamlNode yaml)
         {
             if (yaml is YamlSequenceNode sequence)
-                return new DefinedSongOrder(source, sequence);
+                return new DefinedSongOrder(sequence);
             if (yaml is YamlMappingNode map)
-                return new FolderSongOrder(source, map);
+                return new FolderSongOrder(map);
             throw new ArgumentException();
         }
     }
 
     public abstract class SongOrder
     {
-        protected readonly IMusicItem Source;
-        public SongOrder(IMusicItem source)
-        {
-            Source = source;
-        }
-
-        public abstract IMetadataStrategy GetStrategy(IMusicItem item);
+        public abstract void ApplyAll(MusicFolder folder);
     }
 
     public class DefinedSongOrder : SongOrder
     {
-        private readonly List<SongPredicate> DefinedOrder;
-        public DefinedSongOrder(IMusicItem source, YamlSequenceNode yaml) : base(source)
+        private readonly List<ItemSelector> DefinedOrder;
+        public DefinedSongOrder(YamlSequenceNode yaml)
         {
-            DefinedOrder = yaml.Children.Select(x => SongPredicate.FromNode(x)).ToList();
+            DefinedOrder = yaml.Children.Select(x => ItemSelector.FromNode(x)).ToList();
         }
 
-        public override IMetadataStrategy GetStrategy(IMusicItem item)
+        public override void ApplyAll(MusicFolder folder)
         {
+            var items = folder.Songs;
             for (int i = 0; i < DefinedOrder.Count; i++)
             {
-                if (DefinedOrder[i].Matches(Source, item))
-                    return new ApplyMetadataStrategy(new Metadata
+                var matches = DefinedOrder[i].SelectFrom(folder);
+                foreach (var match in matches)
+                {
+                    var strategy = new ApplyMetadataStrategy(new Metadata
                     {
                         TrackNumber = MetadataProperty<uint>.Create((uint)i + 1),
-                        TrackTotal = MetadataProperty<uint>.Create((uint)item.Parent.Songs.Count),
+                        TrackTotal = MetadataProperty<uint>.Create((uint)items.Count),
                     });
+                    strategy.Update(match);
+                }
             }
-            return new NoOpMetadataStrategy();
         }
     }
 
     public class FolderSongOrder : SongOrder
     {
         private readonly SortType Sort;
-        public FolderSongOrder(IMusicItem source, YamlMappingNode yaml) : base(source)
+        public FolderSongOrder(YamlMappingNode yaml)
         {
             var sort = yaml.TryGet("sort");
             if ((string)sort == "alphabetical")
                 Sort = SortType.Alphabetical;
         }
 
-        public override IMetadataStrategy GetStrategy(IMusicItem item)
+        public override void ApplyAll(MusicFolder folder)
         {
-            var all = item.Parent.Songs.OrderBy(GetSort()).ToList();
-            int index = all.IndexOf((Song)item);
-            return new ApplyMetadataStrategy(new Metadata
+            var all = folder.Songs.OrderBy(GetSort()).ToList();
+            for (int i = 0; i < all.Count; i++)
             {
-                TrackNumber = MetadataProperty<uint>.Create((uint)index + 1),
-                TrackTotal = MetadataProperty<uint>.Create((uint)all.Count)
-            });
+                var strategy = new ApplyMetadataStrategy(new Metadata
+                {
+                    TrackNumber = MetadataProperty<uint>.Create((uint)i + 1),
+                    TrackTotal = MetadataProperty<uint>.Create((uint)all.Count)
+                });
+                strategy.Update(all[i]);
+            }
         }
 
         private Func<Song, string> GetSort()

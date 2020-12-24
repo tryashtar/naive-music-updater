@@ -64,46 +64,50 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class SongPredicate
+    public class ItemSelector
     {
         private readonly IItemPredicate[] Path;
-        public SongPredicate(params IItemPredicate[] items)
+        public ItemSelector(params IItemPredicate[] items)
         {
             Path = items;
         }
 
-        public SongPredicate(string slash_delimited)
+        public ItemSelector(string slash_delimited)
         {
             Path = slash_delimited.Split('/').Select(x => ItemPredicateFactory.CreateFrom(x)).ToArray();
         }
 
-        public static SongPredicate FromNode(YamlNode node)
+        public static ItemSelector FromNode(YamlNode node)
         {
             if (node.NodeType == YamlNodeType.Scalar)
-                return new SongPredicate((string)node);
+                return new ItemSelector((string)node);
             if (node.NodeType == YamlNodeType.Sequence)
-                return new SongPredicate(((YamlSequenceNode)node).Children.Select(x => ItemPredicateFactory.FromNode(x)).ToArray());
+                return new ItemSelector(((YamlSequenceNode)node).Children.Select(x => ItemPredicateFactory.FromNode(x)).ToArray());
             throw new ArgumentException();
         }
 
-        public bool Matches(IMusicItem start, IMusicItem song)
+        public List<IMusicItem> SelectFrom(MusicFolder start)
         {
-            var startpath = start.PathFromRoot().Skip(1).ToArray();
-            var songpath = song.PathFromRoot().Skip(1).ToArray();
-            int index;
-            // get the relative path between the folder and the song
-            // fail if they don't share a history
-            for (index = 0; index < startpath.Length; index++)
+            var start_path = start.PathFromRoot().ToArray();
+            var results = new List<IMusicItem>();
+            var all = start.SubItems;
+            foreach (var item in all)
             {
-                if (startpath[index] != songpath[index])
-                    return false;
+                var item_path = item.PathFromRoot().Skip(start_path.Length).ToArray();
+                if (IsMatch(item_path))
+                    results.Add(item);
             }
+            return results;
+        }
+
+        private bool IsMatch(IMusicItem[] item_path)
+        {
             // fail if the song isn't deep enough
-            if (Path.Length > songpath.Length - index)
+            if (Path.Length > item_path.Length)
                 return false;
             for (int i = 0; i < Path.Length; i++)
             {
-                if (!Path[i].Matches(songpath[index + i]))
+                if (!Path[i].Matches(item_path[i]))
                     return false;
             }
             return true;

@@ -22,7 +22,7 @@ namespace NaiveMusicUpdater
         private readonly Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
         private readonly IMetadataStrategy DefaultStrategy;
         private readonly Dictionary<string, IMetadataStrategy> NamedStrategies = new Dictionary<string, IMetadataStrategy>();
-        private readonly List<(List<SongPredicate>, IMetadataStrategy)> StrategyOverrides = new List<(List<SongPredicate>, IMetadataStrategy)>();
+        private readonly List<(List<ItemSelector>, IMetadataStrategy)> StrategyOverrides = new List<(List<ItemSelector>, IMetadataStrategy)>();
         private readonly string MP3GainPath;
         private readonly List<string> IllegalPrivateOwners;
         public LibraryConfig(string file)
@@ -65,11 +65,11 @@ namespace NaiveMusicUpdater
             }
             foreach (JObject item in (JArray)json["strategies"]["overrides"])
             {
-                var predicates = new List<SongPredicate>();
+                var predicates = new List<ItemSelector>();
                 if (item.TryGetValue("name", out var name))
-                    predicates.Add(new SongPredicate((string)name));
+                    predicates.Add(new ItemSelector((string)name));
                 else if (item.TryGetValue("names", out var names))
-                    predicates.AddRange(((JArray)names).Select(x => new SongPredicate((string)x)));
+                    predicates.AddRange(((JArray)names).Select(x => new ItemSelector((string)x)));
                 if (item.TryGetValue("reference", out var reference))
                     StrategyOverrides.Add((predicates, NamedStrategies[(string)reference]));
                 if (item.TryGetValue("set", out var set))
@@ -81,18 +81,6 @@ namespace NaiveMusicUpdater
             json.TryGetValue("clear_private_owners", out var cpo);
             if (cpo.Type == JTokenType.Array)
                 IllegalPrivateOwners = cpo.ToObject<List<string>>();
-        }
-
-        private IEnumerable<IMetadataStrategy> GetApplicableStrategies(IMusicItem item)
-        {
-            yield return DefaultStrategy;
-            foreach (var (predicates, strategy) in StrategyOverrides)
-            {
-                if (predicates.Any(x => x.Matches(item.PathFromRoot().First(), item)))
-                {
-                    yield return strategy;
-                }
-            }
         }
 
         public IMetadataStrategy GetNamedStrategy(string name)
@@ -110,6 +98,22 @@ namespace NaiveMusicUpdater
                     return true;
             }
             return false;
+        }
+
+        public void ApplyMetadata(MusicLibrary library)
+        {
+            foreach (var item in library.GetAllSubItems())
+            {
+                DefaultStrategy.Update(item);
+            }
+            foreach (var (selectors, strategy) in StrategyOverrides)
+            {
+                var selected = selectors.SelectMany(x => x.SelectFrom(library));
+                foreach (var item in selected)
+                {
+                    strategy.Update(item);
+                }
+            }
         }
 
         public string CleanName(string name)

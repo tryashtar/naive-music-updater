@@ -30,6 +30,7 @@ namespace NaiveMusicUpdater
         protected List<Song> SongList;
         public IReadOnlyList<MusicFolder> SubFolders { get { return ChildFolders.AsReadOnly(); } }
         public IReadOnlyList<Song> Songs { get { return SongList.AsReadOnly(); } }
+        public IEnumerable<IMusicItem> SubItems => ChildFolders.Concat<IMusicItem>(SongList);
         public MusicFolder(string folder) : this(null, folder)
         { }
 
@@ -37,10 +38,10 @@ namespace NaiveMusicUpdater
         {
             Location = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).TrimEnd('.');
             _Parent = parent;
+            ScanContents();
             string config = Path.Combine(folder, "config.yaml");
             if (File.Exists(config))
-                _LocalConfig = new MusicItemConfig(this, config);
-            ScanContents();
+                _LocalConfig = new MusicItemConfig(config);
         }
 
         public Metadata Metadata { get; set; } = new Metadata();
@@ -48,6 +49,11 @@ namespace NaiveMusicUpdater
         public IEnumerable<Song> GetAllSongs()
         {
             return SongList.Concat(ChildFolders.SelectMany(x => x.GetAllSongs()));
+        }
+
+        public IEnumerable<IMusicItem> GetAllSubItems()
+        {
+            return SubItems.Concat(ChildFolders.SelectMany(x => x.GetAllSubItems()));
         }
 
         public string SimpleName => Path.GetFileName(Location);
@@ -85,6 +91,8 @@ namespace NaiveMusicUpdater
             }
 
             Logger.TabIn();
+            if (_LocalConfig != null)
+                _LocalConfig.ApplyMetadata(this);
             foreach (var child in ChildFolders)
             {
                 child.Update();
