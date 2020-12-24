@@ -23,7 +23,7 @@ namespace NaiveMusicUpdater
         public static SongMetadata GetMetadata(this IMusicItem item)
         {
             var first = item.GlobalCache.Config.GetMetadataFor(item);
-            var path = item.PathFromRoot().Reverse();
+            var path = item.PathFromRoot();
             var metas = new List<SongMetadata>();
             foreach (var entry in path)
             {

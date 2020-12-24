@@ -24,9 +24,9 @@ namespace NaiveMusicUpdater
             {
                 var stream = new YamlStream();
                 stream.Load(reader);
-                var root = stream.Documents.Single().RootNode;
-                TrackOrder = (root.TryGet("order") as YamlSequenceNode)?.Children.Select(x => new SongPredicate((string)x)).ToList();
-                MetadataStrategies = (root.TryGet("set") as YamlMappingNode)?.Children.Select(x => (new SongPredicate((string)x.Key), new MetadataStrategy((YamlMappingNode)x.Value))).ToList();
+                var root = stream.Documents.SingleOrDefault()?.RootNode;
+                TrackOrder = (root?.TryGet("order") as YamlSequenceNode)?.Children.Select(x => new SongPredicate((string)x)).ToList();
+                MetadataStrategies = (root?.TryGet("set") as YamlMappingNode)?.Children.Select(x => (new SongPredicate((string)x.Key), new MetadataStrategy((YamlMappingNode)x.Value))).ToList();
             }
         }
 
@@ -53,6 +53,8 @@ namespace NaiveMusicUpdater
                 if (predicate.Matches(Item, item))
                     metadata.Add(strategy.Perform(item));
             }
+            if (!metadata.Any())
+                return first;
             return first.Combine(SongMetadata.Merge(metadata));
         }
     }
