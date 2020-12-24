@@ -16,13 +16,18 @@ namespace NaiveMusicUpdater
         public string Location { get; private set; }
         protected readonly MusicFolder _Parent;
         public MusicFolder Parent => _Parent;
+        public MusicItemConfig LocalConfig => null;
+        public LibraryCache GlobalCache => _Parent.GlobalCache;
         public Song(MusicFolder parent, string file)
         {
             _Parent = parent;
             Location = file;
         }
 
-        public void Update(LibraryCache cache)
+        public SongMetadata GetMetadata() => MusicItemImplementations.GetMetadata(this);
+
+
+        public void Update()
         {
             Logger.WriteLine($"Song: {SimpleName}");
 #if !DEBUG
@@ -30,19 +35,19 @@ namespace NaiveMusicUpdater
                 return;
 #endif
             Logger.WriteLine($"(checking)");
-            var metadata = cache.GetMetadataFor(this);
+            var metadata = GetMetadata();
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool success = true;
                 var tag_v1 = (TagLib.Id3v1.Tag)file.GetTag(TagTypes.Id3v1);
                 var tag_v2 = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
                 var path = Util.StringPathAfterRoot(this);
-                var art = cache.GetArtPathFor(this);
+                var art = GlobalCache.GetArtPathFor(this);
                 bool changed = false;
                 changed |= UpdateTag(tag_v2, metadata);
                 changed |= UpdateArt(tag_v2, art);
-                changed |= cache.WriteLyrics(path, tag_v2);
-                changed |= WipeUselessProperties(cache, tag_v2);
+                changed |= GlobalCache.WriteLyrics(path, tag_v2);
+                changed |= WipeUselessProperties(tag_v2);
                 changed |= EqualizeTags(tag_v2, tag_v1);
                 if (changed)
                 {
@@ -51,7 +56,7 @@ namespace NaiveMusicUpdater
                     catch (IOException ex)
                     {
                         Logger.WriteLine($"Save failed because {ex.Message}! Skipping...");
-                        cache.MarkNeedsUpdateNextTime(this);
+                        GlobalCache.MarkNeedsUpdateNextTime(this);
                         success = false;
                     }
                 }
@@ -66,7 +71,7 @@ namespace NaiveMusicUpdater
             // correct case of filename
             // changing filename in other ways is forbidden because stuff is derived from it
             // it's the USER's job to set the filename they want and set config to determine how to pull metadata out of it
-            var filename = cache.Config.ToFilesafe(cache.Config.CleanName(SimpleName), false);
+            var filename = GlobalCache.Config.ToFilesafe(GlobalCache.Config.CleanName(SimpleName), false);
             if (SimpleName != filename)
             {
                 Logger.WriteLine($"Renaming file: \"{filename}\"");
@@ -272,7 +277,7 @@ namespace NaiveMusicUpdater
         }
 
         // returns whether this changed anything
-        private bool WipeUselessProperties(LibraryCache cache, TagLib.Tag tag)
+        private bool WipeUselessProperties(TagLib.Tag tag)
         {
             bool changed = false;
             if (tag is TagLib.Id3v2.Tag tag_v2)
@@ -347,7 +352,7 @@ namespace NaiveMusicUpdater
                     }
                     else if (frame is PrivateFrame pf)
                     {
-                        if (cache.Config.IsIllegalPrivateOwner(pf.Owner))
+                        if (GlobalCache.Config.IsIllegalPrivateOwner(pf.Owner))
                         {
                             Logger.WriteLine($"Removed private frame with owner \"{pf.Owner}\": \"{pf.PrivateData}\"");
                             remove = true;

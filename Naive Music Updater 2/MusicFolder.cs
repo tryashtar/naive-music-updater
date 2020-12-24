@@ -13,11 +13,35 @@ namespace NaiveMusicUpdater
         string Location { get; }
         string SimpleName { get; }
         MusicFolder Parent { get; }
+        MusicItemConfig LocalConfig { get; }
+        LibraryCache GlobalCache { get; }
+        SongMetadata GetMetadata();
+    }
+
+    public static class MusicItemImplementations
+    {
+        public static SongMetadata GetMetadata(this IMusicItem item)
+        {
+            var first = item.GlobalCache.Config.GetMetadataFor(item);
+            var path = item.PathFromRoot().Reverse();
+            var metas = new List<SongMetadata>();
+            foreach (var entry in path)
+            {
+                if (entry.LocalConfig != null)
+                    metas.Add(entry.LocalConfig.GetMetadataFor(item));
+            }
+            if (!metas.Any())
+                return first;
+            return first.Combine(SongMetadata.Merge(metas));
+        }
     }
 
     public class MusicFolder : IMusicItem
     {
         public string Location { get; private set; }
+        protected readonly MusicItemConfig _LocalConfig;
+        public MusicItemConfig LocalConfig => _LocalConfig;
+        public virtual LibraryCache GlobalCache => _Parent.GlobalCache;
         protected readonly MusicFolder _Parent;
         public MusicFolder Parent => _Parent;
         protected List<MusicFolder> Children;
@@ -30,9 +54,14 @@ namespace NaiveMusicUpdater
         private MusicFolder(MusicFolder parent, string folder)
         {
             Location = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).TrimEnd('.');
+            string config = Path.Combine(folder, "config.yaml");
+            if (File.Exists(config))
+                _LocalConfig = MusicItemConfig.ParseFile(config);
             _Parent = parent;
             ScanContents();
         }
+
+        public SongMetadata GetMetadata() => MusicItemImplementations.GetMetadata(this);
 
         public IEnumerable<Song> GetAllSongs()
         {
@@ -50,10 +79,10 @@ namespace NaiveMusicUpdater
             return list;
         }
 
-        public void Update(LibraryCache cache)
+        public void Update()
         {
             Logger.WriteLine($"Folder: {SimpleName}");
-            var filename = cache.Config.ToFilesafe(cache.Config.CleanName(SimpleName), true);
+            var filename = GlobalCache.Config.ToFilesafe(GlobalCache.Config.CleanName(SimpleName), true);
             if (SimpleName != filename)
             {
                 Logger.WriteLine($"Renaming folder: \"{filename}\"");
@@ -63,7 +92,7 @@ namespace NaiveMusicUpdater
                 ScanContents();
             }
 
-            var art = cache.GetArtPathFor(this);
+            var art = GlobalCache.GetArtPathFor(this);
             ArtCache.LoadAndMakeIcon(art);
             string subalbumini = Path.Combine(Location, "desktop.ini");
             File.Delete(subalbumini);
@@ -76,11 +105,11 @@ namespace NaiveMusicUpdater
             Logger.TabIn();
             foreach (var child in Children)
             {
-                child.Update(cache);
+                child.Update();
             }
             foreach (var song in SongList)
             {
-                song.Update(cache);
+                song.Update();
             }
             Logger.TabOut();
         }
@@ -88,9 +117,12 @@ namespace NaiveMusicUpdater
         private void ScanContents()
         {
             Children = new List<MusicFolder>();
-            foreach (var dir in Directory.EnumerateDirectories(Location))
+            var info = new DirectoryInfo(Location);
+            foreach (DirectoryInfo dir in info.EnumerateDirectories())
             {
-                var child = new MusicFolder(this, dir);
+                if (dir.Attributes.HasFlag(FileAttributes.Hidden))
+                    continue;
+                var child = new MusicFolder(this, dir.FullName);
                 if (child.SongList.Any() || child.SubFolders.Any())
                     Children.Add(child);
             }

@@ -28,8 +28,8 @@ namespace NaiveMusicUpdater
             try
 #endif
             {
-                library.Update();
-                library.SourcesUpdate();
+                library.UpdateLibrary();
+                library.UpdateSources();
             }
 #if !DEBUG
             catch (Exception ex)

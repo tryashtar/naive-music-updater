@@ -67,7 +67,7 @@ namespace NaiveMusicUpdater
             {
                 var predicates = new List<SongPredicate>();
                 if (item.TryGetValue("name", out var name))
-                    predicates.Add(new SongPredicate(name));
+                    predicates.Add(new SongPredicate((string)name));
                 else if (item.TryGetValue("names", out var names))
                     predicates.AddRange(((JArray)names).Select(x => new SongPredicate((string)x)));
                 if (item.TryGetValue("reference", out var reference))
@@ -88,7 +88,7 @@ namespace NaiveMusicUpdater
             yield return DefaultStrategy;
             foreach (var (predicates, strategy) in StrategyOverrides)
             {
-                if (predicates.Any(x => x.Matches(item)))
+                if (predicates.Any(x => x.Matches(item.PathFromRoot().First(), item)))
                 {
                     yield return strategy;
                 }

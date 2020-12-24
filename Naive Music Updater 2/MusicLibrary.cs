@@ -11,7 +11,8 @@ namespace NaiveMusicUpdater
 {
     public class MusicLibrary : MusicFolder
     {
-        private LibraryCache Cache;
+        protected readonly LibraryCache Cache;
+        public override LibraryCache GlobalCache => Cache;
         public MusicLibrary(string folder) : base(folder)
         {
             var cache = GetCacheFolder();
@@ -20,17 +21,17 @@ namespace NaiveMusicUpdater
 
         private string GetCacheFolder() => Path.Combine(Location, ".music-cache");
 
-        public void Update()
+        public void UpdateLibrary()
         {
             Logger.Open(Path.Combine(GetCacheFolder(), "logs", DateTime.Now.ToString("yyyy-MM-dd HH_mm_ss") + ".txt"));
             foreach (var child in Children)
             {
-                child.Update(Cache);
+                child.Update();
             }
             Cache.Save();
         }
 
-        public void SourcesUpdate()
+        public void UpdateSources()
         {
             Logger.WriteLine("Start sources scan");
             // prepare to scan sources

@@ -85,85 +85,10 @@ namespace NaiveMusicUpdater
                 Genre.CombineWith(other.Genre)
             );
         }
-    }
 
-    public static class ItemPredicateFactory
-    {
-        public static IItemPredicate[] CreateManyFrom(JToken token)
+        public static SongMetadata Merge(IEnumerable<SongMetadata> metas)
         {
-            if (token.Type == JTokenType.String)
-                return CreateManyFrom((string)token);
-            if (token is JArray array)
-                return array.Cast<string>().Select(CreateFrom).ToArray();
-            throw new ArgumentException();
-        }
-
-        public static IItemPredicate[] CreateManyFrom(string str)
-        {
-            string[] split = str.Split('/');
-            return split.Select(CreateFrom).ToArray();
-        }
-
-        public static IItemPredicate CreateFrom(string str)
-        {
-            if (str.StartsWith(":"))
-                return new RegexItemPredicate(str.Substring(1));
-            return new ExactItemPredicate(str);
-        }
-    }
-
-    public interface IItemPredicate
-    {
-        bool Matches(IMusicItem item);
-    }
-
-    public class ExactItemPredicate : IItemPredicate
-    {
-        public readonly string Matcher;
-        public ExactItemPredicate(string str)
-        {
-            Matcher = str;
-        }
-
-        public bool Matches(IMusicItem item)
-        {
-            return item.SimpleName == Matcher;
-        }
-    }
-
-    public class RegexItemPredicate : IItemPredicate
-    {
-        public readonly Regex Matcher;
-        public RegexItemPredicate(string str)
-        {
-            Matcher = new Regex(str, RegexOptions.IgnoreCase);
-        }
-
-        public bool Matches(IMusicItem item)
-        {
-            return Matcher.IsMatch(item.SimpleName);
-        }
-    }
-
-    public class SongPredicate
-    {
-        private readonly IItemPredicate[] Path;
-        public SongPredicate(JToken json)
-        {
-            Path = ItemPredicateFactory.CreateManyFrom(json);
-        }
-
-        public bool Matches(IMusicItem song)
-        {
-            var songpath = song.PathFromRoot().Skip(1).ToArray();
-            if (Path.Length > songpath.Length)
-                return false;
-            for (int i = 0; i < Path.Length; i++)
-            {
-                if (!Path[i].Matches(songpath[i]))
-                    return false;
-            }
-            return true;
+            return metas.Aggregate((x, y) => x.Combine(y));
         }
     }
 
@@ -196,7 +121,9 @@ namespace NaiveMusicUpdater
                 string str = (string)token;
                 if (str == "<this>")
                     return new FilenameSelector(config);
-                return new ReplacementsSelector(config, str);
+                if (str == "<title>")
+                    return new GetMetadataSelector(config, x => x.Title);
+                return new LiteralSelector(config, str);
             }
             throw new ArgumentException($"Couldn't figure out what kind of metadata selector this is: {token}");
         }
@@ -390,17 +317,32 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class ReplacementsSelector : MetadataSelector
+    public class LiteralSelector : MetadataSelector
     {
-        string Specification;
-        public ReplacementsSelector(LibraryConfig config, string spec) : base(config)
+        private readonly string LiteralText;
+        public LiteralSelector(LibraryConfig config, string spec) : base(config)
         {
-            Specification = spec;
+            LiteralText = spec;
         }
 
         public override string GetRaw(IMusicItem item)
         {
-            return Specification;
+            return LiteralText;
+        }
+    }
+
+    public class GetMetadataSelector : MetadataSelector
+    {
+        public delegate OptionalProperty<string> MetadataGetter(SongMetadata meta);
+        private readonly MetadataGetter Getter;
+        public GetMetadataSelector(LibraryConfig config, MetadataGetter getter) : base(config)
+        {
+            Getter = getter;
+        }
+
+        public override string GetRaw(IMusicItem item)
+        {
+            return Getter(item.GetMetadata()).Value;
         }
     }
 

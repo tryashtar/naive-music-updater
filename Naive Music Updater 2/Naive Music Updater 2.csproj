@@ -48,14 +48,19 @@
     <Reference Include="TagLibSharp, Version=2.2.0.0, Culture=neutral, PublicKeyToken=db62eba44689b5b0, processorArchitecture=MSIL">
       <HintPath>..\packages\TagLibSharp.2.2.0\lib\net45\TagLibSharp.dll</HintPath>
     </Reference>
+    <Reference Include="YamlDotNet, Version=9.0.0.0, Culture=neutral, PublicKeyToken=ec19458f3c15af5e, processorArchitecture=MSIL">
+      <HintPath>..\packages\YamlDotNet.9.1.0\lib\net45\YamlDotNet.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ArtCache.cs" />
+    <Compile Include="ItemPredicate.cs" />
     <Compile Include="LibraryCache.cs" />
     <Compile Include="LibraryConfig.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MetadataStrategy.cs" />
     <Compile Include="MusicFolder.cs" />
+    <Compile Include="MusicItemConfig.cs" />
     <Compile Include="MusicLibrary.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
