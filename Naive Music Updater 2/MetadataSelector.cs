@@ -27,7 +27,7 @@ namespace NaiveMusicUpdater
         {
             if (item == current)
                 return item.GlobalCache.Config.CleanName(item.SimpleName);
-            return item.GlobalCache.Config.GetMetadataFor(item).Title.Value;
+            return item.Metadata.Title.Value;
         }
     }
 
@@ -315,7 +315,7 @@ namespace NaiveMusicUpdater
 
     public class GetMetadataSelector : MetadataSelector
     {
-        public delegate MetadataProperty<string> MetadataGetter(SongMetadata meta);
+        public delegate MetadataProperty<string> MetadataGetter(Metadata meta);
         private readonly MetadataGetter Getter;
         public GetMetadataSelector(MetadataGetter getter)
         {
@@ -347,7 +347,7 @@ namespace NaiveMusicUpdater
 
         public override string GetRaw(IMusicItem item)
         {
-            return Getter(item.GetMetadata()).Value;
+            return Getter(item.Metadata).Value;
         }
     }
 }

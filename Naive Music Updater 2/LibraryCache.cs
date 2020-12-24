@@ -19,7 +19,7 @@ namespace NaiveMusicUpdater
         public readonly string Folder;
         public readonly LibraryConfig Config;
         private readonly Dictionary<string, DateTime> DateCache;
-        private readonly Dictionary<IMusicItem, SongMetadata> MetadataCache = new Dictionary<IMusicItem, SongMetadata>();
+        private readonly Dictionary<IMusicItem, Metadata> MetadataCache = new Dictionary<IMusicItem, Metadata>();
         private string DateCachePath => Path.Combine(Folder, "datecache.json");
         private string ConfigPath => Path.Combine(Folder, "config.json");
         public LibraryCache(string folder)
@@ -112,15 +112,6 @@ namespace NaiveMusicUpdater
         public void MarkNeedsUpdateNextTime(IMusicItem item)
         {
             DateCache.Remove(item.Location);
-        }
-
-        public SongMetadata GetMetadataFor(IMusicItem song)
-        {
-            if (MetadataCache.TryGetValue(song, out var result))
-                return result;
-            var meta = Config.GetMetadataFor(song);
-            MetadataCache[song] = meta;
-            return meta;
         }
 
         private SynchedText[] ParseSyncedTexts(string alltext)

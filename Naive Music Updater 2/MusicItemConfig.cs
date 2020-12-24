@@ -49,20 +49,20 @@ namespace NaiveMusicUpdater
             return (predicate, strategy);
         }
 
-        public SongMetadata GetMetadataFor(IMusicItem item)
+        public IMetadataStrategy GetMetadataStrategy(IMusicItem item)
         {
-            var metadata = new List<SongMetadata>();
+            var strategies = new List<IMetadataStrategy>();
             if (TrackOrder != null)
-                metadata.Add(TrackOrder.GetOrderMetadata(item));
+                strategies.Add(TrackOrder.GetStrategy(item));
             if (LocalMetadata != null)
-                metadata.Add(LocalMetadata.Perform(item));
+                strategies.Add(LocalMetadata);
             foreach (var func in MetadataStrategies)
             {
                 var (predicate, strategy) = func();
                 if (predicate.Matches(Item, item))
-                    metadata.Add(strategy.Perform(item));
+                    strategies.Add(strategy);
             }
-            return SongMetadata.Merge(metadata);
+            return new MultipleMetadataStrategy(strategies);
         }
     }
 
@@ -78,6 +78,17 @@ namespace NaiveMusicUpdater
         }
     }
 
+    public abstract class SongOrder
+    {
+        protected readonly IMusicItem Source;
+        public SongOrder(IMusicItem source)
+        {
+            Source = source;
+        }
+
+        public abstract IMetadataStrategy GetStrategy(IMusicItem item);
+    }
+
     public class DefinedSongOrder : SongOrder
     {
         private readonly List<SongPredicate> DefinedOrder;
@@ -86,18 +97,18 @@ namespace NaiveMusicUpdater
             DefinedOrder = yaml.Children.Select(x => SongPredicate.FromNode(x)).ToList();
         }
 
-        public override SongMetadata GetOrderMetadata(IMusicItem item)
+        public override IMetadataStrategy GetStrategy(IMusicItem item)
         {
             for (int i = 0; i < DefinedOrder.Count; i++)
             {
                 if (DefinedOrder[i].Matches(Source, item))
-                    return new SongMetadataBuilder()
+                    return new ApplyMetadataStrategy(new Metadata
                     {
                         TrackNumber = MetadataProperty<uint>.Create((uint)i + 1),
                         TrackTotal = MetadataProperty<uint>.Create((uint)item.Parent.Songs.Count),
-                    }.Build();
+                    });
             }
-            return new SongMetadataBuilder().Build();
+            return new NoOpMetadataStrategy();
         }
     }
 
@@ -111,15 +122,15 @@ namespace NaiveMusicUpdater
                 Sort = SortType.Alphabetical;
         }
 
-        public override SongMetadata GetOrderMetadata(IMusicItem item)
+        public override IMetadataStrategy GetStrategy(IMusicItem item)
         {
             var all = item.Parent.Songs.OrderBy(GetSort()).ToList();
             int index = all.IndexOf((Song)item);
-            return new SongMetadataBuilder()
+            return new ApplyMetadataStrategy(new Metadata
             {
                 TrackNumber = MetadataProperty<uint>.Create((uint)index + 1),
                 TrackTotal = MetadataProperty<uint>.Create((uint)all.Count)
-            }.Build();
+            });
         }
 
         private Func<Song, string> GetSort()
@@ -133,16 +144,5 @@ namespace NaiveMusicUpdater
         {
             Alphabetical
         }
-    }
-
-    public abstract class SongOrder
-    {
-        protected readonly IMusicItem Source;
-        public SongOrder(IMusicItem source)
-        {
-            Source = source;
-        }
-
-        public abstract SongMetadata GetOrderMetadata(IMusicItem item);
     }
 }

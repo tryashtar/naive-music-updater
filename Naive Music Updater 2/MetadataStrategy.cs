@@ -12,7 +12,7 @@ namespace NaiveMusicUpdater
 {
     public interface IMetadataStrategy
     {
-        SongMetadata Perform(IMusicItem item);
+        void Update(IMusicItem item);
     }
 
     public static class MetadataStrategyFactory
@@ -38,9 +38,8 @@ namespace NaiveMusicUpdater
 
     public class NoOpMetadataStrategy : IMetadataStrategy
     {
-        public SongMetadata Perform(IMusicItem item)
+        public void Update(IMusicItem item)
         {
-            return new SongMetadataBuilder().Build();
         }
     }
 
@@ -99,18 +98,32 @@ namespace NaiveMusicUpdater
             return selector?.Get(item) ?? MetadataProperty<string>.Ignore();
         }
 
-        public SongMetadata Perform(IMusicItem item)
+        public void Update(IMusicItem item)
         {
-            var title = Get(Title, item);
-            var album = Get(Album, item);
-            var artist = Get(Artist, item);
-            var comment = Get(Comment, item);
-            var track = Get(TrackNumber, item).TryConvertTo(x => uint.Parse(x));
-            var track_total = Get(TrackTotal, item).TryConvertTo(x => uint.Parse(x));
-            var year = Get(Year, item).TryConvertTo(x => uint.Parse(x));
-            var lang = Get(Language, item);
-            var genre = Get(Genre, item);
-            return new SongMetadata(title, album, artist, comment, track, track_total, year, lang, genre);
+            var meta = item.Metadata;
+            meta.Title.CombineWith(Get(Title, item));
+            meta.Album.CombineWith(Get(Album, item));
+            meta.Artist.CombineWith(Get(Artist, item));
+            meta.Comment.CombineWith(Get(Comment, item));
+            meta.TrackNumber.CombineWith(Get(TrackNumber, item).TryConvertTo(x => uint.Parse(x)));
+            meta.TrackTotal.CombineWith(Get(TrackTotal, item).TryConvertTo(x => uint.Parse(x)));
+            meta.Year.CombineWith(Get(Year, item).TryConvertTo(x => uint.Parse(x)));
+            meta.Language.CombineWith(Get(Language, item));
+            meta.Genre.CombineWith(Get(Genre, item));
+        }
+    }
+
+    public class ApplyMetadataStrategy : IMetadataStrategy
+    {
+        public readonly Metadata Data;
+        public ApplyMetadataStrategy(Metadata meta)
+        {
+            Data = meta;
+        }
+
+        public void Update(IMusicItem item)
+        {
+            item.Metadata.Merge(Data);
         }
     }
 
@@ -140,9 +153,12 @@ namespace NaiveMusicUpdater
             Substrategies = strategies.ToList();
         }
 
-        public SongMetadata Perform(IMusicItem item)
+        public void Update(IMusicItem item)
         {
-            return SongMetadata.Merge(Substrategies.Select(x => x.Perform(item)));
+            foreach (var meta in Substrategies)
+            {
+                meta.Update(item);
+            }
         }
     }
 }

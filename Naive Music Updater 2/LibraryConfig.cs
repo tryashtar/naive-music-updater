@@ -112,12 +112,6 @@ namespace NaiveMusicUpdater
             return false;
         }
 
-        public SongMetadata GetMetadataFor(IMusicItem item)
-        {
-            var merged = new MultipleMetadataStrategy(GetApplicableStrategies(item));
-            return merged.Perform(item);
-        }
-
         public string CleanName(string name)
         {
             foreach (var skip in SkipNames)

@@ -24,8 +24,7 @@ namespace NaiveMusicUpdater
             Location = file;
         }
 
-        public SongMetadata GetMetadata() => MusicItemImplementations.GetMetadata(this);
-
+        public Metadata Metadata { get; set; } = new Metadata();
 
         public void Update()
         {
@@ -35,7 +34,6 @@ namespace NaiveMusicUpdater
                 return;
 #endif
             Logger.WriteLine($"(checking)");
-            var metadata = GetMetadata();
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool success = true;
@@ -44,7 +42,7 @@ namespace NaiveMusicUpdater
                 var path = Util.StringPathAfterRoot(this);
                 var art = GlobalCache.GetArtPathFor(this);
                 bool changed = false;
-                changed |= UpdateTag(tag_v2, metadata);
+                changed |= UpdateTag(tag_v2, Metadata);
                 changed |= UpdateArt(tag_v2, art);
                 changed |= GlobalCache.WriteLyrics(path, tag_v2);
                 changed |= WipeUselessProperties(tag_v2);
@@ -119,7 +117,7 @@ namespace NaiveMusicUpdater
                 Logger.WriteLine($"Added {thing}: \"{new_value}\"");
         }
 
-        private bool UpdateTag(TagLib.Id3v2.Tag tag, SongMetadata metadata)
+        private bool UpdateTag(TagLib.Id3v2.Tag tag, Metadata metadata)
         {
             bool changed = false;
             string title = metadata.Title.Value;

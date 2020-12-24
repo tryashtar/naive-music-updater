@@ -57,7 +57,7 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class SongMetadataBuilder
+    public class Metadata
     {
         public MetadataProperty<string> Title;
         public MetadataProperty<string> Album;
@@ -68,81 +68,31 @@ namespace NaiveMusicUpdater
         public MetadataProperty<uint> Year;
         public MetadataProperty<string> Language;
         public MetadataProperty<string> Genre;
-        public SongMetadataBuilder()
-        { }
 
-        public SongMetadata Build()
+        public Metadata()
         {
-            return new SongMetadata(
-                Title ?? MetadataProperty<string>.Ignore(),
-                Album ?? MetadataProperty<string>.Ignore(),
-                Artist ?? MetadataProperty<string>.Ignore(),
-                Comment ?? MetadataProperty<string>.Ignore(),
-                TrackNumber ?? MetadataProperty<uint>.Ignore(),
-                TrackTotal ?? MetadataProperty<uint>.Ignore(),
-                Year ?? MetadataProperty<uint>.Ignore(),
-                Language ?? MetadataProperty<string>.Ignore(),
-                Genre ?? MetadataProperty<string>.Ignore()
-            );
-        }
-    }
-
-    public class SongMetadata
-    {
-        public readonly MetadataProperty<string> Title;
-        public readonly MetadataProperty<string> Album;
-        public readonly MetadataProperty<string> Artist;
-        public readonly MetadataProperty<string> Comment;
-        public readonly MetadataProperty<uint> TrackNumber;
-        public readonly MetadataProperty<uint> TrackTotal;
-        public readonly MetadataProperty<uint> Year;
-        public readonly MetadataProperty<string> Language;
-        public readonly MetadataProperty<string> Genre;
-
-        public SongMetadata(
-           // these aren't allowed to be null
-           MetadataProperty<string> title,
-           MetadataProperty<string> album,
-           MetadataProperty<string> artist,
-           MetadataProperty<string> comment,
-           MetadataProperty<uint> track_number,
-           MetadataProperty<uint> track_total,
-           MetadataProperty<uint> year,
-           MetadataProperty<string> language,
-           MetadataProperty<string> genre
-        )
-        {
-            Title = title;
-            Album = album;
-            Artist = artist;
-            Comment = comment;
-            TrackNumber = track_number;
-            TrackTotal = track_total;
-            Year = year;
-            Language = language;
-            Genre = genre;
+            Title = MetadataProperty<string>.Ignore();
+            Album = MetadataProperty<string>.Ignore();
+            Artist = MetadataProperty<string>.Ignore();
+            Comment = MetadataProperty<string>.Ignore();
+            TrackNumber = MetadataProperty<uint>.Ignore();
+            TrackTotal = MetadataProperty<uint>.Ignore();
+            Year = MetadataProperty<uint>.Ignore();
+            Language = MetadataProperty<string>.Ignore();
+            Genre = MetadataProperty<string>.Ignore();
         }
 
-        public SongMetadata Combine(SongMetadata other)
+        public void Merge(Metadata other)
         {
-            return new SongMetadata(
-                Title.CombineWith(other.Title),
-                Album.CombineWith(other.Album),
-                Artist.CombineWith(other.Artist),
-                Comment.CombineWith(other.Comment),
-                TrackNumber.CombineWith(other.TrackNumber),
-                TrackTotal.CombineWith(other.TrackTotal),
-                Year.CombineWith(other.Year),
-                Language.CombineWith(other.Language),
-                Genre.CombineWith(other.Genre)
-            );
-        }
-
-        public static SongMetadata Merge(IEnumerable<SongMetadata> metas)
-        {
-            if (!metas.Any())
-                return new SongMetadataBuilder().Build();
-            return metas.Aggregate((x, y) => x.Combine(y));
+            Title = Title.CombineWith(other.Title);
+            Album = Album.CombineWith(other.Album);
+            Artist = Artist.CombineWith(other.Artist);
+            Comment = Comment.CombineWith(other.Comment);
+            TrackNumber = TrackNumber.CombineWith(other.TrackNumber);
+            TrackTotal = TrackTotal.CombineWith(other.TrackTotal);
+            Year = Year.CombineWith(other.Year);
+            Language = Language.CombineWith(other.Language);
+            Genre = Genre.CombineWith(other.Genre);
         }
     }
 }

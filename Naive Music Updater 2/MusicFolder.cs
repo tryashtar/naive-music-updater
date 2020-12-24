@@ -15,23 +15,7 @@ namespace NaiveMusicUpdater
         MusicFolder Parent { get; }
         MusicItemConfig LocalConfig { get; }
         LibraryCache GlobalCache { get; }
-        SongMetadata GetMetadata();
-    }
-
-    public static class MusicItemImplementations
-    {
-        public static SongMetadata GetMetadata(this IMusicItem item)
-        {
-            var path = item.PathFromRoot();
-            var metas = new List<SongMetadata>();
-            metas.Add(item.GlobalCache.Config.GetMetadataFor(item));
-            foreach (var entry in path)
-            {
-                if (entry.LocalConfig != null)
-                    metas.Add(entry.LocalConfig.GetMetadataFor(item));
-            }
-            return SongMetadata.Merge(metas);
-        }
+        Metadata Metadata { get; set; }
     }
 
     public class MusicFolder : IMusicItem
@@ -59,7 +43,7 @@ namespace NaiveMusicUpdater
             ScanContents();
         }
 
-        public SongMetadata GetMetadata() => MusicItemImplementations.GetMetadata(this);
+        public Metadata Metadata { get; set; } = new Metadata();
 
         public IEnumerable<Song> GetAllSongs()
         {
