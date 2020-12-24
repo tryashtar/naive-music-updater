@@ -95,6 +95,11 @@ namespace NaiveMusicUpdater
             }
         }
 
+        public IMetadataStrategy GetNamedStrategy(string name)
+        {
+            return NamedStrategies[name];
+        }
+
         public bool IsIllegalPrivateOwner(string owner)
         {
             if (IllegalPrivateOwners == null)

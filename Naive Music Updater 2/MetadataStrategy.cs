@@ -25,6 +25,15 @@ namespace NaiveMusicUpdater
                 return new MultipleMetadataStrategy(arr);
             throw new ArgumentException();
         }
+
+        public static IMetadataStrategy Create(YamlNode node)
+        {
+            if (node is YamlMappingNode map)
+                return new MetadataStrategy(map);
+            if (node is YamlSequenceNode list)
+                return new MultipleMetadataStrategy(list);
+            throw new ArgumentException();
+        }
     }
 
     public class NoOpMetadataStrategy : IMetadataStrategy
@@ -96,9 +105,9 @@ namespace NaiveMusicUpdater
             var album = Get(Album, item);
             var artist = Get(Artist, item);
             var comment = Get(Comment, item);
-            var track = Get(TrackNumber, item).ConvertTo(x => uint.Parse(x));
-            var track_total = Get(TrackTotal, item).ConvertTo(x => uint.Parse(x));
-            var year = Get(Year, item).ConvertTo(x => uint.Parse(x));
+            var track = Get(TrackNumber, item).TryConvertTo(x => uint.Parse(x));
+            var track_total = Get(TrackTotal, item).TryConvertTo(x => uint.Parse(x));
+            var year = Get(Year, item).TryConvertTo(x => uint.Parse(x));
             var lang = Get(Language, item);
             var genre = Get(Genre, item);
             return new SongMetadata(title, album, artist, comment, track, track_total, year, lang, genre);
@@ -112,6 +121,15 @@ namespace NaiveMusicUpdater
         {
             Substrategies = new List<IMetadataStrategy>();
             foreach (var item in json)
+            {
+                Substrategies.Add(MetadataStrategyFactory.Create(item));
+            }
+        }
+
+        public MultipleMetadataStrategy(YamlSequenceNode yaml)
+        {
+            Substrategies = new List<IMetadataStrategy>();
+            foreach (var item in yaml.Children)
             {
                 Substrategies.Add(MetadataStrategyFactory.Create(item));
             }

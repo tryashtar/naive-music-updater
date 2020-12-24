@@ -41,9 +41,19 @@ namespace NaiveMusicUpdater
 
         public MetadataProperty<U> ConvertTo<U>(Func<T, U> converter)
         {
-            if (!Overwrite)
-                return MetadataProperty<U>.Ignore();
             return new MetadataProperty<U>(converter(Value), Overwrite);
+        }
+
+        public MetadataProperty<U> TryConvertTo<U>(Func<T, U> converter)
+        {
+            try
+            {
+                return ConvertTo(converter);
+            }
+            catch
+            {
+                return new MetadataProperty<U>(default, Overwrite);
+            }
         }
     }
 

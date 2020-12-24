@@ -16,7 +16,7 @@ namespace NaiveMusicUpdater
     {
         public readonly IMusicItem Item;
         public readonly List<SongPredicate> TrackOrder;
-        public readonly List<(SongPredicate predicate, MetadataStrategy strategy)> MetadataStrategies;
+        public readonly List<(SongPredicate predicate, IMetadataStrategy strategy)> MetadataStrategies;
         public MusicItemConfig(IMusicItem item, string file)
         {
             Item = item;
@@ -26,8 +26,20 @@ namespace NaiveMusicUpdater
                 stream.Load(reader);
                 var root = stream.Documents.SingleOrDefault()?.RootNode;
                 TrackOrder = (root?.TryGet("order") as YamlSequenceNode)?.Children.Select(x => new SongPredicate((string)x)).ToList();
-                MetadataStrategies = (root?.TryGet("set") as YamlMappingNode)?.Children.Select(x => (new SongPredicate((string)x.Key), new MetadataStrategy((YamlMappingNode)x.Value))).ToList();
+                MetadataStrategies = (root?.TryGet("set") as YamlMappingNode)?.Children.Select(x => ParseStrategy(x.Key, x.Value)).ToList();
             }
+        }
+
+        private (SongPredicate predicate, IMetadataStrategy strategy) ParseStrategy(YamlNode key, YamlNode value)
+        {
+            var predicate = new SongPredicate((string)key);
+            var reference = value.TryGet("reference");
+            IMetadataStrategy strategy;
+            if (reference != null)
+                strategy = Item.GlobalCache.Config.GetNamedStrategy((string)reference);
+            else
+                strategy = MetadataStrategyFactory.Create(value);
+            return (predicate, strategy);
         }
 
         private SongMetadata GetOrderMetadata(IMusicItem item)

@@ -55,10 +55,9 @@ namespace NaiveMusicUpdater
                 string str = (string)token;
                 if (str == "<this>")
                     return new FilenameSelector();
-                if (str == "<title>")
-                    return new GetMetadataSelector(x => x.Title);
                 return new LiteralSelector(str);
             }
+
             throw new ArgumentException($"Couldn't figure out what kind of metadata selector this is: {token}");
         }
 
@@ -73,8 +72,6 @@ namespace NaiveMusicUpdater
                 {
                     if (val == "<this>")
                         return new FilenameSelector();
-                    if (val == "<title>")
-                        return new GetMetadataSelector(x => x.Title);
                     return new LiteralSelector(val);
                 }
             }
@@ -89,6 +86,8 @@ namespace NaiveMusicUpdater
                         return new JoinOperationSelector(map);
                     else if (operation == "regex")
                         return new RegexSelector(map);
+                    else if (operation == "copy")
+                        return new GetMetadataSelector(map);
                 }
             }
 
@@ -321,6 +320,29 @@ namespace NaiveMusicUpdater
         public GetMetadataSelector(MetadataGetter getter)
         {
             Getter = getter;
+        }
+
+        public GetMetadataSelector(YamlMappingNode yaml)
+        {
+            var get = (string)yaml["get"];
+            if (get == "title")
+                Getter = x => x.Title;
+            if (get == "album")
+                Getter = x => x.Album;
+            if (get == "artist")
+                Getter = x => x.Artist;
+            if (get == "comment")
+                Getter = x => x.Comment;
+            if (get == "track")
+                Getter = x => x.TrackNumber.TryConvertTo(y => y.ToString());
+            if (get == "track_count")
+                Getter = x => x.TrackTotal.TryConvertTo(y => y.ToString());
+            if (get == "year")
+                Getter = x => x.Year.TryConvertTo(y => y.ToString());
+            if (get == "language")
+                Getter = x => x.Language;
+            if (get == "genre")
+                Getter = x => x.Genre;
         }
 
         public override string GetRaw(IMusicItem item)
