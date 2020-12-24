@@ -495,23 +495,23 @@ namespace NaiveMusicUpdater
             return value.Equals(array[0]);
         }
 
+        private static bool IsSingleValue(IPicture[] array, IPicture value)
+        {
+            if (array == null)
+                return false;
+            if (value == null)
+                return array.Length == 0;
+            if (array.Length != 1)
+                return false;
+
+            return value.Data == array[0].Data;
+        }
+
         private static T[] SingleValue<T>(T value)
         {
             if (value == null)
                 return new T[0];
             return new T[] { value };
-        }
-
-        private static bool IsSingleValue(IPicture[] array, IPicture value)
-        {
-            if (array == null)
-                return value == null;
-            if (value == null)
-                return false;
-            if (array.Length != 1)
-                return false;
-
-            return value.Data == array[0].Data;
         }
 
         public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);

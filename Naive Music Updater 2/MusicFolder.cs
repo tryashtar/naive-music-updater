@@ -22,17 +22,15 @@ namespace NaiveMusicUpdater
     {
         public static SongMetadata GetMetadata(this IMusicItem item)
         {
-            var first = item.GlobalCache.Config.GetMetadataFor(item);
             var path = item.PathFromRoot();
             var metas = new List<SongMetadata>();
+            metas.Add(item.GlobalCache.Config.GetMetadataFor(item));
             foreach (var entry in path)
             {
                 if (entry.LocalConfig != null)
                     metas.Add(entry.LocalConfig.GetMetadataFor(item));
             }
-            if (!metas.Any())
-                return first;
-            return first.Combine(SongMetadata.Merge(metas));
+            return SongMetadata.Merge(metas);
         }
     }
 
@@ -44,9 +42,9 @@ namespace NaiveMusicUpdater
         public virtual LibraryCache GlobalCache => _Parent.GlobalCache;
         protected readonly MusicFolder _Parent;
         public MusicFolder Parent => _Parent;
-        protected List<MusicFolder> Children;
+        protected List<MusicFolder> ChildFolders;
         protected List<Song> SongList;
-        public IReadOnlyList<MusicFolder> SubFolders { get { return Children.AsReadOnly(); } }
+        public IReadOnlyList<MusicFolder> SubFolders { get { return ChildFolders.AsReadOnly(); } }
         public IReadOnlyList<Song> Songs { get { return SongList.AsReadOnly(); } }
         public MusicFolder(string folder) : this(null, folder)
         { }
@@ -65,7 +63,7 @@ namespace NaiveMusicUpdater
 
         public IEnumerable<Song> GetAllSongs()
         {
-            return SongList.Concat(Children.SelectMany(x => x.GetAllSongs()));
+            return SongList.Concat(ChildFolders.SelectMany(x => x.GetAllSongs()));
         }
 
         public string SimpleName => Path.GetFileName(Location);
@@ -103,7 +101,7 @@ namespace NaiveMusicUpdater
             }
 
             Logger.TabIn();
-            foreach (var child in Children)
+            foreach (var child in ChildFolders)
             {
                 child.Update();
             }
@@ -116,7 +114,7 @@ namespace NaiveMusicUpdater
 
         private void ScanContents()
         {
-            Children = new List<MusicFolder>();
+            ChildFolders = new List<MusicFolder>();
             var info = new DirectoryInfo(Location);
             foreach (DirectoryInfo dir in info.EnumerateDirectories())
             {
@@ -124,7 +122,7 @@ namespace NaiveMusicUpdater
                     continue;
                 var child = new MusicFolder(this, dir.FullName);
                 if (child.SongList.Any() || child.SubFolders.Any())
-                    Children.Add(child);
+                    ChildFolders.Add(child);
             }
             SongList = new List<Song>();
             foreach (var file in Directory.EnumerateFiles(Location, "*.mp3"))

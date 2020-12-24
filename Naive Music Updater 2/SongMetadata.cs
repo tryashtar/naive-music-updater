@@ -140,6 +140,8 @@ namespace NaiveMusicUpdater
 
         public static SongMetadata Merge(IEnumerable<SongMetadata> metas)
         {
+            if (!metas.Any())
+                return new SongMetadataBuilder().Build();
             return metas.Aggregate((x, y) => x.Combine(y));
         }
     }

@@ -24,7 +24,7 @@ namespace NaiveMusicUpdater
         public void UpdateLibrary()
         {
             Logger.Open(Path.Combine(GetCacheFolder(), "logs", DateTime.Now.ToString("yyyy-MM-dd HH_mm_ss") + ".txt"));
-            foreach (var child in Children)
+            foreach (var child in ChildFolders)
             {
                 child.Update();
             }
