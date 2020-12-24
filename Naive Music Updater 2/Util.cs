@@ -6,7 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-
+using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -47,6 +47,18 @@ namespace NaiveMusicUpdater
             var temp_windows_hack = to + "_TEMPORARY_FOLDER";
             Directory.Move(from, temp_windows_hack);
             Directory.Move(temp_windows_hack, to);
+        }
+
+        public static YamlNode TryGet(this YamlNode node, string key)
+        {
+            try
+            {
+                return node[key];
+            }
+            catch (KeyNotFoundException)
+            {
+                return null;
+            }
         }
     }
 }

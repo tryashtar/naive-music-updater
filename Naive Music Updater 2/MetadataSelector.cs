@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -59,6 +60,39 @@ namespace NaiveMusicUpdater
                 return new LiteralSelector(str);
             }
             throw new ArgumentException($"Couldn't figure out what kind of metadata selector this is: {token}");
+        }
+
+        public static MetadataSelector FromToken(YamlNode yaml)
+        {
+            if (yaml.NodeType == YamlNodeType.Scalar)
+            {
+                string val = (string)yaml;
+                if (int.TryParse(val, out int number))
+                    return new SimpleParentSelector(number);
+                else
+                {
+                    if (val == "<this>")
+                        return new FilenameSelector();
+                    if (val == "<title>")
+                        return new GetMetadataSelector(x => x.Title);
+                    return new LiteralSelector(val);
+                }
+            }
+            if (yaml is YamlMappingNode map)
+            {
+                var operation = (string)map.TryGet("operation");
+                if (operation != null)
+                {
+                    if (operation == "split")
+                        return new SplitOperationSelector(map);
+                    else if (operation == "join")
+                        return new JoinOperationSelector(map);
+                    else if (operation == "regex")
+                        return new RegexSelector(map);
+                }
+            }
+
+            throw new ArgumentException($"Couldn't figure out what kind of metadata selector this is: {yaml}");
         }
     }
 
@@ -134,6 +168,23 @@ namespace NaiveMusicUpdater
             }
         }
 
+        public SplitOperationSelector(YamlMappingNode yaml)
+        {
+            From = MetadataSelectorFactory.FromToken(yaml["from"]);
+            Separator = (string)yaml["separator"];
+            Index = int.Parse((string)yaml["index"]);
+            NoSeparator = NoSeparatorDecision.Ignore;
+            var no_separator = (string)yaml.TryGet("no_separator");
+            if (no_separator == "exit")
+                NoSeparator = NoSeparatorDecision.Exit;
+            OutofBounds = OutofBoundsDecision.Exit;
+            var bounds = (string)yaml.TryGet("out_of_bounds");
+            if (bounds == "wrap")
+                OutofBounds = OutofBoundsDecision.Wrap;
+            if (bounds == "clamp")
+                OutofBounds = OutofBoundsDecision.Clamp;
+        }
+
         public override string GetRaw(IMusicItem item)
         {
             var basetext = From.GetRaw(item);
@@ -180,6 +231,17 @@ namespace NaiveMusicUpdater
                 MatchFail = MatchFailDecision.Exit;
         }
 
+        public RegexSelector(YamlMappingNode yaml)
+        {
+            From = MetadataSelectorFactory.FromToken(yaml["from"]);
+            Regex = new Regex((string)yaml["regex"]);
+            Group = (string)yaml["group"];
+            MatchFail = MatchFailDecision.Ignore;
+            var fail = (string)yaml.TryGet("fail");
+            if (fail == "exit")
+                MatchFail = MatchFailDecision.Exit;
+        }
+
         public override string GetRaw(IMusicItem item)
         {
             var basetext = From.GetRaw(item);
@@ -204,6 +266,13 @@ namespace NaiveMusicUpdater
             From1 = MetadataSelectorFactory.FromToken(data["from1"]);
             From2 = MetadataSelectorFactory.FromToken(data["from2"]);
             With = (string)data["with"];
+        }
+
+        public JoinOperationSelector(YamlMappingNode yaml)
+        {
+            From1 = MetadataSelectorFactory.FromToken(yaml["from1"]);
+            From2 = MetadataSelectorFactory.FromToken(yaml["from2"]);
+            With = (string)yaml["with"];
         }
 
         public override string GetRaw(IMusicItem item)

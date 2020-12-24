@@ -57,7 +57,7 @@ namespace NaiveMusicUpdater
             _Parent = parent;
             string config = Path.Combine(folder, "config.yaml");
             if (File.Exists(config))
-                _LocalConfig = MusicItemConfig.ParseFile(this, config);
+                _LocalConfig = new MusicItemConfig(this, config);
             ScanContents();
         }
 

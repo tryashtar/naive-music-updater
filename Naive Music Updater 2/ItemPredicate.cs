@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -18,6 +19,15 @@ namespace NaiveMusicUpdater
         public static IItemPredicate CreateFrom(Regex regex)
         {
             return new RegexItemPredicate(regex);
+        }
+
+        public static IItemPredicate FromNode(YamlNode node)
+        {
+            if (node.NodeType == YamlNodeType.Scalar)
+                return CreateFrom((string)node);
+            if (node is YamlMappingNode map)
+                return CreateFrom((string)map["regex"]);
+            throw new ArgumentException();
         }
     }
 
@@ -65,6 +75,15 @@ namespace NaiveMusicUpdater
         public SongPredicate(string slash_delimited)
         {
             Path = slash_delimited.Split('/').Select(x => ItemPredicateFactory.CreateFrom(x)).ToArray();
+        }
+
+        public static SongPredicate FromNode(YamlNode node)
+        {
+            if (node.NodeType == YamlNodeType.Scalar)
+                return new SongPredicate((string)node);
+            if (node.NodeType == YamlNodeType.Sequence)
+                return new SongPredicate(((YamlSequenceNode)node).Children.Select(x => ItemPredicateFactory.FromNode(x)).ToArray());
+            throw new ArgumentException();
         }
 
         public bool Matches(IMusicItem start, IMusicItem song)

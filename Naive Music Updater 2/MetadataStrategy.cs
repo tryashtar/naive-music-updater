@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TagLib.Flac;
+using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -36,15 +37,15 @@ namespace NaiveMusicUpdater
 
     public class MetadataStrategy : IMetadataStrategy
     {
-        private readonly MetadataSelector Title;
-        private readonly MetadataSelector Album;
-        private readonly MetadataSelector Artist;
-        private readonly MetadataSelector Comment;
-        private readonly MetadataSelector TrackNumber;
-        private readonly MetadataSelector TrackTotal;
-        private readonly MetadataSelector Year;
-        private readonly MetadataSelector Language;
-        private readonly MetadataSelector Genre;
+        public readonly MetadataSelector Title;
+        public readonly MetadataSelector Album;
+        public readonly MetadataSelector Artist;
+        public readonly MetadataSelector Comment;
+        public readonly MetadataSelector TrackNumber;
+        public readonly MetadataSelector TrackTotal;
+        public readonly MetadataSelector Year;
+        public readonly MetadataSelector Language;
+        public readonly MetadataSelector Genre;
         public MetadataStrategy(JObject json)
         {
             MetadataSelector FromJson(string key)
@@ -62,6 +63,26 @@ namespace NaiveMusicUpdater
             Year = FromJson("year");
             Language = FromJson("language");
             Genre = FromJson("genre");
+        }
+
+        public MetadataStrategy(YamlMappingNode yaml)
+        {
+            MetadataSelector FromYaml(string key)
+            {
+                var item = yaml.TryGet(key);
+                if (item == null)
+                    return null;
+                return MetadataSelectorFactory.FromToken(item);
+            }
+            Title = FromYaml("title");
+            Album = FromYaml("album");
+            Artist = FromYaml("artist");
+            Comment = FromYaml("comment");
+            TrackNumber = FromYaml("track");
+            TrackTotal = FromYaml("track_count");
+            Year = FromYaml("year");
+            Language = FromYaml("language");
+            Genre = FromYaml("genre");
         }
 
         private MetadataProperty<string> Get(MetadataSelector selector, IMusicItem item)
