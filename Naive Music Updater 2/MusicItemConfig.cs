@@ -16,6 +16,7 @@ namespace NaiveMusicUpdater
     {
         public readonly IMusicItem Item;
         public readonly SongOrder TrackOrder;
+        public readonly IMetadataStrategy LocalMetadata;
         // have to defer these because some of the data needed isn't ready until after constructor is done
         public readonly List<Func<(SongPredicate predicate, IMetadataStrategy strategy)>> MetadataStrategies;
         public MusicItemConfig(IMusicItem item, string file)
@@ -29,6 +30,9 @@ namespace NaiveMusicUpdater
                 var order = root?.TryGet("order");
                 if (order != null)
                     TrackOrder = SongOrderFactory.FromNode(Item, order);
+                var local = root?.TryGet("this");
+                if (local != null)
+                    LocalMetadata = MetadataStrategyFactory.Create(local);
                 MetadataStrategies = (root?.TryGet("set") as YamlMappingNode)?.Children.Select(x => (Func<(SongPredicate, IMetadataStrategy)>)(() => ParseStrategy(x.Key, x.Value))).ToList() ?? new List<Func<(SongPredicate, IMetadataStrategy)>>();
             }
         }
@@ -50,6 +54,8 @@ namespace NaiveMusicUpdater
             var metadata = new List<SongMetadata>();
             if (TrackOrder != null)
                 metadata.Add(TrackOrder.GetOrderMetadata(item));
+            if (LocalMetadata != null)
+                metadata.Add(LocalMetadata.Perform(item));
             foreach (var func in MetadataStrategies)
             {
                 var (predicate, strategy) = func();
@@ -67,11 +73,7 @@ namespace NaiveMusicUpdater
             if (yaml is YamlSequenceNode sequence)
                 return new DefinedSongOrder(source, sequence);
             if (yaml is YamlMappingNode map)
-            {
-                var mode = yaml.TryGet("mode");
-                if ((string)mode == "alphabetical")
-                    return new AlphabeticalSongOrder(source, map);
-            }
+                return new FolderSongOrder(source, map);
             throw new ArgumentException();
         }
     }
@@ -81,7 +83,7 @@ namespace NaiveMusicUpdater
         private readonly List<SongPredicate> DefinedOrder;
         public DefinedSongOrder(IMusicItem source, YamlSequenceNode yaml) : base(source)
         {
-            DefinedOrder = yaml.Children.Select(x => new SongPredicate((string)x)).ToList();
+            DefinedOrder = yaml.Children.Select(x => SongPredicate.FromNode(x)).ToList();
         }
 
         public override SongMetadata GetOrderMetadata(IMusicItem item)
@@ -99,21 +101,37 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class AlphabeticalSongOrder : SongOrder
+    public class FolderSongOrder : SongOrder
     {
-        public AlphabeticalSongOrder(IMusicItem source, YamlMappingNode yaml) : base(source)
+        private readonly SortType Sort;
+        public FolderSongOrder(IMusicItem source, YamlMappingNode yaml) : base(source)
         {
+            var sort = yaml.TryGet("sort");
+            if ((string)sort == "alphabetical")
+                Sort = SortType.Alphabetical;
         }
 
         public override SongMetadata GetOrderMetadata(IMusicItem item)
         {
-            var all = item.Parent.Songs.OrderBy(x => x.SimpleName).ToList();
+            var all = item.Parent.Songs.OrderBy(GetSort()).ToList();
             int index = all.IndexOf((Song)item);
             return new SongMetadataBuilder()
             {
                 TrackNumber = MetadataProperty<uint>.Create((uint)index + 1),
                 TrackTotal = MetadataProperty<uint>.Create((uint)all.Count)
             }.Build();
+        }
+
+        private Func<Song, string> GetSort()
+        {
+            if (Sort == SortType.Alphabetical)
+                return x => x.SimpleName;
+            throw new ArgumentException();
+        }
+
+        private enum SortType
+        {
+            Alphabetical
         }
     }
 

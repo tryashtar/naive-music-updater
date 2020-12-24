@@ -31,7 +31,7 @@ namespace NaiveMusicUpdater
         {
             Logger.WriteLine($"Song: {SimpleName}");
 #if !DEBUG
-            if (!cache.NeedsUpdate(this))
+            if (!GlobalCache.NeedsUpdate(this))
                 return;
 #endif
             Logger.WriteLine($"(checking)");
@@ -63,8 +63,8 @@ namespace NaiveMusicUpdater
                 if (success)
                 {
 #if !DEBUG
-                    cache.Config.NormalizeAudio(this);
-                    cache.MarkUpdatedRecently(this);
+                    GlobalCache.Config.NormalizeAudio(this);
+                    GlobalCache.MarkUpdatedRecently(this);
 #endif
                 }
             }

@@ -66,14 +66,9 @@ namespace NaiveMusicUpdater
             if (yaml.NodeType == YamlNodeType.Scalar)
             {
                 string val = (string)yaml;
-                if (int.TryParse(val, out int number))
-                    return new SimpleParentSelector(number);
-                else
-                {
-                    if (val == "<this>")
-                        return new FilenameSelector();
-                    return new LiteralSelector(val);
-                }
+                if (val == "<this>")
+                    return new FilenameSelector();
+                return new LiteralSelector(val);
             }
             if (yaml is YamlMappingNode map)
             {
@@ -88,6 +83,11 @@ namespace NaiveMusicUpdater
                         return new RegexSelector(map);
                     else if (operation == "copy")
                         return new GetMetadataSelector(map);
+                    else if (operation == "parent")
+                    {
+                        var up = map.TryGet("up");
+                        return new SimpleParentSelector(int.Parse((string)up));
+                    }
                 }
             }
 

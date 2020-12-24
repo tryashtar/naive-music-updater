@@ -142,13 +142,7 @@ namespace NaiveMusicUpdater
 
         public SongMetadata Perform(IMusicItem item)
         {
-            var metadata = Substrategies.First().Perform(item);
-            foreach (var strategy in Substrategies.Skip(1))
-            {
-                var extra = strategy.Perform(item);
-                metadata = metadata.Combine(extra);
-            }
-            return metadata;
+            return SongMetadata.Merge(Substrategies.Select(x => x.Perform(item)));
         }
     }
 }
