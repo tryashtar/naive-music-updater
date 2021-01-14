@@ -2,20 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using TagLib.Flac;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public enum MetadataFieldType
-    {
-        String,
-        StringList,
-        Number
-    }
-
+    // represents a type/key of metadata, like "title"
+    // handles conversions from string identifiers
     public class MetadataField
     {
         public readonly string Name;
@@ -77,84 +69,10 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public interface IMetadataStrategy
+    public enum MetadataFieldType
     {
-        Metadata Get(IMusicItem item, Predicate<MetadataField> desired);
-    }
-
-    public static class MetadataStrategyFactory
-    {
-        public static IMetadataStrategy Create(YamlNode node)
-        {
-            if (node is YamlMappingNode map)
-                return new MetadataStrategy(map);
-            if (node is YamlSequenceNode list)
-                return new MultipleMetadataStrategy(list);
-            throw new ArgumentException();
-        }
-    }
-
-    public class NoOpMetadataStrategy : IMetadataStrategy
-    {
-        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
-        {
-            return new Metadata();
-        }
-    }
-
-    public class MetadataStrategy : IMetadataStrategy
-    {
-        private readonly Dictionary<MetadataField, MetadataSelector> Fields = new Dictionary<MetadataField, MetadataSelector>();
-        
-        public MetadataStrategy(YamlMappingNode yaml)
-        {
-            foreach (var pair in yaml)
-            {
-                var field = MetadataField.FromID((string)pair.Key);
-                if (field != null)
-                    Fields[field] = MetadataSelectorFactory.FromToken(pair.Value);
-            }
-        }
-
-        private MetadataProperty Get(MetadataSelector selector, IMusicItem item)
-        {
-            return selector?.Get(item) ?? MetadataProperty.Ignore();
-        }
-
-        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
-        {
-            var meta = new Metadata();
-            foreach (var pair in Fields)
-            {
-                if (desired(pair.Key))
-                    meta.Register(pair.Key, Get(pair.Value, item));
-            }
-            return meta;
-        }
-    }
-
-    public class MultipleMetadataStrategy : IMetadataStrategy
-    {
-        private readonly List<IMetadataStrategy> Substrategies;
-
-        public MultipleMetadataStrategy(YamlSequenceNode yaml)
-        {
-            Substrategies = new List<IMetadataStrategy>();
-            foreach (var item in yaml.Children)
-            {
-                Substrategies.Add(MetadataStrategyFactory.Create(item));
-            }
-        }
-
-        public MultipleMetadataStrategy(IEnumerable<IMetadataStrategy> strategies)
-        {
-            Substrategies = strategies.ToList();
-        }
-
-        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
-        {
-            var datas = Substrategies.Select(x => x.Get(item, desired));
-            return Metadata.FromMany(datas);
-        }
+        String,
+        StringList,
+        Number
     }
 }

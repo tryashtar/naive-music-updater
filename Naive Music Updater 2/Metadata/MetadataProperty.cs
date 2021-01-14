@@ -6,6 +6,11 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
+    // an actual value of some kind of metadata
+    // can be both a list, like artists, or not, like year
+    // when a list, you can still access the first value with Value
+    // and when not a list, you can still access the singular value with ListValue
+    // CombineMode determines whether this replaces other properties when merging
     public class MetadataProperty
     {
         public readonly bool IsList;
@@ -68,55 +73,5 @@ namespace NaiveMusicUpdater
         Replace,
         Append,
         Prepend
-    }
-
-    public class Metadata
-    {
-        private readonly Dictionary<MetadataField, MetadataProperty> SavedFields = new Dictionary<MetadataField, MetadataProperty>();
-        public Metadata()
-        { }
-
-        public void Register(MetadataField field, MetadataProperty value)
-        {
-            SavedFields[field] = value;
-        }
-
-        public MetadataProperty Get(MetadataField field)
-        {
-            if (SavedFields.TryGetValue(field, out var result))
-                return result;
-            return MetadataProperty.Ignore();
-        }
-
-        public void Merge(Metadata other)
-        {
-            foreach (var pair in other.SavedFields)
-            {
-                if (SavedFields.TryGetValue(pair.Key, out var existing))
-                    existing.CombineWith(pair.Value);
-                else
-                    SavedFields[pair.Key] = pair.Value;
-            }
-        }
-
-        public static Metadata FromMany(IEnumerable<Metadata> many)
-        {
-            var result = new Metadata();
-            foreach (var item in many)
-            {
-                result.Merge(item);
-            }
-            return result;
-        }
-
-        public override string ToString()
-        {
-            var builder = new StringBuilder();
-            foreach (var item in SavedFields)
-            {
-                builder.AppendLine($"{item.Key.Name}: {String.Join(";", item.Value.ListValue)}");
-            }
-            return builder.ToString();
-        }
     }
 }

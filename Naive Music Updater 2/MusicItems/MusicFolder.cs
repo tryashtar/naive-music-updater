@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,43 +6,6 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    public interface IMusicItem
-    {
-        IEnumerable<IMusicItem> PathFromRoot();
-        string Location { get; }
-        string SimpleName { get; }
-        MusicFolder Parent { get; }
-        MusicItemConfig LocalConfig { get; }
-        LibraryCache GlobalCache { get; }
-        MusicLibrary RootLibrary { get; }
-    }
-
-    public static class MusicItemUtils
-    {
-        public static Metadata GetMetadata(this IMusicItem item, Predicate<MetadataField> desired)
-        {
-            var metadata = new Metadata();
-            foreach (var parent in item.PathFromRoot())
-            {
-                if (parent.LocalConfig != null)
-                    metadata.Merge(parent.LocalConfig.GetMetadata(item, desired));
-            }
-            return metadata;
-        }
-
-        public static IEnumerable<IMusicItem> PathFromRoot(this IMusicItem item)
-        {
-            var list = new List<IMusicItem>();
-            while (item != null)
-            {
-                list.Add(item);
-                item = item.Parent;
-            }
-            list.Reverse();
-            return list;
-        }
-    }
-
     public class MusicFolder : IMusicItem
     {
         public string Location { get; private set; }
