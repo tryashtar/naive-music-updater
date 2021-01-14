@@ -19,9 +19,8 @@ namespace NaiveMusicUpdater
         public readonly string Folder;
         public readonly LibraryConfig Config;
         private readonly Dictionary<string, DateTime> DateCache;
-        private readonly Dictionary<IMusicItem, Metadata> MetadataCache = new Dictionary<IMusicItem, Metadata>();
         private string DateCachePath => Path.Combine(Folder, "datecache.json");
-        private string ConfigPath => Path.Combine(Folder, "config.json");
+        private string ConfigPath => Path.Combine(Folder, "library.yaml");
         public LibraryCache(string folder)
         {
             Folder = folder;

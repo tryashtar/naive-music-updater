@@ -59,16 +59,6 @@ namespace NaiveMusicUpdater
             {
                 NamedStrategies.Add((string)item.Key, MetadataStrategyFactory.Create(item.Value));
             }
-            foreach (YamlMappingNode item in (YamlSequenceNode)yaml["strategies"]["overrides"])
-            {
-                var predicates = new List<ItemSelector>();
-                var name = item.TryGet("name");
-                var names = item.TryGet("names");
-                if (name != null)
-                    predicates.Add(new ItemSelector((string)name));
-                else if (names != null)
-                    predicates.AddRange(((YamlSequenceNode)names).Select(x => new ItemSelector((string)x)));
-            }
             var mp3path = yaml.TryGet("mp3gain_path");
             var cpo = yaml.TryGet("clear_private_owners");
             if (mp3path != null)
