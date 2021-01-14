@@ -14,9 +14,9 @@ namespace NaiveMusicUpdater
 {
     public class MusicItemConfig
     {
-        public readonly SongOrder TrackOrder;
-        public readonly Func<IMetadataStrategy> MainStrategy;
         // have to defer these because some of the data needed isn't ready until after constructor is done
+        public readonly Func<SongOrder> TrackOrder;
+        public readonly Func<IMetadataStrategy> MainStrategy;
         public readonly List<Func<(ItemSelector selector, IMetadataStrategy strategy)>> MetadataStrategies;
         private readonly IMusicItem ConfiguredItem;
         public MusicItemConfig(string file, IMusicItem configured_item)
@@ -26,8 +26,8 @@ namespace NaiveMusicUpdater
             if (root != null)
             {
                 var order = root.TryGet("order");
-                if (order != null)
-                    TrackOrder = SongOrderFactory.FromNode(order);
+                if (order != null && configured_item is MusicFolder folder)
+                    TrackOrder = () => SongOrderFactory.FromNode(order, folder);
                 var local = root.TryGet("this");
                 if (local != null)
                     MainStrategy = () => LiteralOrReference(local);
@@ -44,6 +44,8 @@ namespace NaiveMusicUpdater
             var metadata = new Metadata();
             if (MainStrategy != null)
                 metadata.Merge(MainStrategy().Get(item, desired));
+            if (TrackOrder != null)
+                metadata.Merge(TrackOrder().Get(item));
             foreach (var strat in MetadataStrategies)
             {
                 var (selector, strategy) = strat();
@@ -76,48 +78,71 @@ namespace NaiveMusicUpdater
 
     public static class SongOrderFactory
     {
-        public static SongOrder FromNode(YamlNode yaml)
+        public static SongOrder FromNode(YamlNode yaml, MusicFolder folder)
         {
             if (yaml is YamlSequenceNode sequence)
-                return new DefinedSongOrder(sequence);
+                return new DefinedSongOrder(sequence, folder);
             if (yaml is YamlMappingNode map)
-                return new FolderSongOrder(map);
+                return new DirectorySongOrder(map);
             throw new ArgumentException();
         }
     }
 
     public abstract class SongOrder
     {
-        public abstract void ApplyAll(MusicFolder folder);
+        public abstract Metadata Get(IMusicItem item);
     }
 
     public class DefinedSongOrder : SongOrder
     {
+        private readonly MusicFolder Folder;
         private readonly List<ItemSelector> DefinedOrder;
-        public DefinedSongOrder(YamlSequenceNode yaml)
+        public DefinedSongOrder(YamlSequenceNode yaml, MusicFolder folder)
         {
+            Folder = folder;
             DefinedOrder = yaml.Children.Select(x => ItemSelector.FromNode(x)).ToList();
         }
 
-        public override void ApplyAll(MusicFolder folder)
+        public override Metadata Get(IMusicItem item)
         {
-
+            var metadata = new Metadata();
+            for (int i = 0; i < DefinedOrder.Count; i++)
+            {
+                if (DefinedOrder[i].IsSelectedFrom(Folder, item))
+                {
+                    metadata.Register(MetadataField.Track, MetadataProperty.Single((i + 1).ToString(), CombineMode.Replace));
+                    metadata.Register(MetadataField.TrackTotal, MetadataProperty.Single(DefinedOrder.Count.ToString(), CombineMode.Replace));
+                    break;
+                }
+            }
+            return metadata;
         }
     }
 
-    public class FolderSongOrder : SongOrder
+    public class DirectorySongOrder : SongOrder
     {
         private readonly SortType Sort;
-        public FolderSongOrder(YamlMappingNode yaml)
+        public DirectorySongOrder(YamlMappingNode yaml)
         {
             var sort = yaml.TryGet("sort");
             if ((string)sort == "alphabetical")
                 Sort = SortType.Alphabetical;
         }
 
-        public override void ApplyAll(MusicFolder folder)
+        public override Metadata Get(IMusicItem item)
         {
-
+            List<Song> Sorted = item.Parent.Songs.OrderBy(GetSort()).ToList();
+            var metadata = new Metadata();
+            for (int i = 0; i < Sorted.Count; i++)
+            {
+                if (Sorted[i] == item)
+                {
+                    metadata.Register(MetadataField.Track, MetadataProperty.Single((i + 1).ToString(), CombineMode.Replace));
+                    metadata.Register(MetadataField.TrackTotal, MetadataProperty.Single(Sorted.Count.ToString(), CombineMode.Replace));
+                    break;
+                }
+            }
+            return metadata;
         }
 
         private Func<Song, string> GetSort()

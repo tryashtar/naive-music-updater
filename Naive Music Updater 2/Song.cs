@@ -113,7 +113,7 @@ namespace NaiveMusicUpdater
             if (old_value != null)
                 Logger.WriteLine($"Deleted {thing}: \"{String.Join(";", old_value)}\"");
             if (new_value != null)
-                Logger.WriteLine($"Added {thing}: \"{String.Join(";", old_value)}\"");
+                Logger.WriteLine($"Added {thing}: \"{String.Join(";", new_value)}\"");
         }
 
         private uint NullableParse(string val)
