@@ -196,6 +196,13 @@ namespace NaiveMusicUpdater
                 tag.Performers = performers;
                 changed = true;
             }
+            string arranger = metadata.Get(MetadataField.Arranger).Value;
+            if (metadata.Get(MetadataField.Arranger).CombineMode == CombineMode.Replace && tag.RemixedBy != arranger)
+            {
+                ChangedThing("arranger", tag.RemixedBy, arranger);
+                tag.RemixedBy = arranger;
+                changed = true;
+            }
             string language = metadata.Get(MetadataField.Language).Value;
             if (metadata.Get(MetadataField.Language).CombineMode == CombineMode.Replace)
             {
@@ -251,12 +258,28 @@ namespace NaiveMusicUpdater
                 v1.Title = v2.Title;
                 changed = true;
             }
-            if (Resize(v2.FirstPerformer, 30) != Resize(v1.FirstPerformer, 30))
+            if (!v2.Performers.Select(x => Resize(x, 30)).SequenceEqual(v1.Performers.Select(x => Resize(x, 30))))
             {
-                Logger.WriteLine($"Updated artist in V1 tag ({v1.FirstPerformer}) to match V2 ({v2.FirstPerformer})");
+                Logger.WriteLine($"Updated performer in V1 tag ({String.Join(";", v1.Performers)}) to match V2 ({String.Join(";", v2.Performers)})");
                 v1.Performers = v2.Performers;
+                changed = true;
+            }
+            if (!v2.AlbumArtists.Select(x => Resize(x, 30)).SequenceEqual(v1.AlbumArtists.Select(x => Resize(x, 30))))
+            {
+                Logger.WriteLine($"Updated album artist in V1 tag ({String.Join(";", v1.AlbumArtists)}) to match V2 ({String.Join(";", v2.AlbumArtists)})");
                 v1.AlbumArtists = v2.AlbumArtists;
+                changed = true;
+            }
+            if (!v2.Composers.Select(x => Resize(x, 30)).SequenceEqual(v1.Composers.Select(x => Resize(x, 30))))
+            {
+                Logger.WriteLine($"Updated album artist in V1 tag ({String.Join(";", v1.Composers)}) to match V2 ({String.Join(";", v2.Composers)})");
                 v1.Composers = v2.Composers;
+                changed = true;
+            }
+            if (Resize(v2.RemixedBy, 30) != Resize(v1.RemixedBy, 30))
+            {
+                Logger.WriteLine($"Updated arranger in V1 tag ({v1.RemixedBy}) to match V2 ({v2.RemixedBy})");
+                v1.RemixedBy = v2.RemixedBy;
                 changed = true;
             }
             if (Resize(v2.Album, 30) != Resize(v1.Album, 30))
@@ -283,9 +306,9 @@ namespace NaiveMusicUpdater
                 v1.Track = v2.Track;
                 changed = true;
             }
-            if (v2.FirstGenre != v1.FirstGenre)
+            if (!v2.Genres.SequenceEqual(v1.Genres))
             {
-                Logger.WriteLine($"Updated genre in V1 tag ({v1.FirstGenre}) to match V2 ({v2.FirstGenre})");
+                Logger.WriteLine($"Updated genre in V1 tag ({String.Join(";", v1.Genres)}) to match V2 ({String.Join(";", v2.Genres)})");
                 v1.Genres = v2.Genres;
                 changed = true;
             }
@@ -405,12 +428,6 @@ namespace NaiveMusicUpdater
                 tag.Grouping = null;
                 changed = true;
             }
-            if (tag.RemixedBy != null)
-            {
-                ChangedThing("remixer", tag.RemixedBy, null);
-                tag.RemixedBy = null;
-                changed = true;
-            }
             if (tag.Subtitle != null)
             {
                 ChangedThing("subtitle", tag.Subtitle, null);
@@ -445,12 +462,6 @@ namespace NaiveMusicUpdater
             {
                 ChangedThing("disc count", tag.DiscCount, null);
                 tag.DiscCount = 0;
-                changed = true;
-            }
-            if (tag.FirstGenre != null)
-            {
-                ChangedThing("genre", tag.Genres, null);
-                tag.Genres = new string[0];
                 changed = true;
             }
             if (tag.MusicBrainzArtistId != null ||
