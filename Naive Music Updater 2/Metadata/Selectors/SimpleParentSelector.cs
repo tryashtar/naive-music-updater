@@ -15,7 +15,7 @@ namespace NaiveMusicUpdater
             Number = number;
         }
 
-        public override string GetRaw(IMusicItem item)
+        public override MetadataProperty GetRaw(IMusicItem item)
         {
             IMusicItem found;
             var list = item.PathFromRoot().ToList();
@@ -34,7 +34,7 @@ namespace NaiveMusicUpdater
             }
             if (found == item)
                 return null;
-            return ResolveNameOrDefault(found, item);
+            return MetadataProperty.Single(ResolveNameOrDefault(found, item), CombineMode.Replace);
         }
     }
 }

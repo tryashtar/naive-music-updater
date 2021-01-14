@@ -33,15 +33,15 @@ namespace NaiveMusicUpdater
                 MatchFail = MatchFailDecision.Exit;
         }
 
-        public override string GetRaw(IMusicItem item)
+        public override MetadataProperty GetRaw(IMusicItem item)
         {
             var basetext = From.GetRaw(item);
             if (basetext == null)
                 return null;
-            var match = Regex.Match((string)basetext);
+            var match = Regex.Match(basetext.Value);
             if (!match.Success)
                 return MatchFail == MatchFailDecision.Ignore ? basetext : null;
-            return match.Groups[Group].Value;
+            return MetadataProperty.Single(match.Groups[Group].Value, CombineMode.Replace);
         }
     }
 }

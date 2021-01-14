@@ -25,14 +25,9 @@ namespace NaiveMusicUpdater
             Desired = field.Only;
         }
 
-        public override string GetRaw(IMusicItem item)
+        public override MetadataProperty GetRaw(IMusicItem item)
         {
-            return Getter(item.GetMetadata(Desired)).Value;
-        }
-
-        public override string[] GetRawList(IMusicItem item)
-        {
-            return Getter(item.GetMetadata(Desired)).ListValue.ToArray();
+            return Getter(item.GetMetadata(Desired));
         }
     }
 }

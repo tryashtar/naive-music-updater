@@ -46,12 +46,12 @@ namespace NaiveMusicUpdater
                 OutofBounds = OutofBoundsDecision.Clamp;
         }
 
-        public override string GetRaw(IMusicItem item)
+        public override MetadataProperty GetRaw(IMusicItem item)
         {
             var basetext = From.GetRaw(item);
             if (basetext == null)
                 return null;
-            string[] parts = basetext.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = basetext.Value.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 1 && NoSeparator == NoSeparatorDecision.Exit)
                 return null;
             int index = Index;
@@ -64,7 +64,7 @@ namespace NaiveMusicUpdater
                 if (OutofBounds == OutofBoundsDecision.Clamp)
                     index = Math.Max(0, Math.Min(parts.Length - 1, index));
             }
-            return parts[index];
+            return MetadataProperty.Single(parts[index], CombineMode.Replace);
         }
     }
 }

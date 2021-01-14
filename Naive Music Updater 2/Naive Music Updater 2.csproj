@@ -60,6 +60,7 @@
     <Compile Include="Metadata\Selectors\CopyMetadataSelector.cs" />
     <Compile Include="Metadata\Selectors\FileNameSelector.cs" />
     <Compile Include="Metadata\Selectors\JoinOperationSelector.cs" />
+    <Compile Include="Metadata\Selectors\RemoveSelector.cs" />
     <Compile Include="Metadata\Selectors\LiteralSelector.cs" />
     <Compile Include="Metadata\Selectors\MetadataSelector.cs" />
     <Compile Include="Metadata\Strategies\MetadataStrategy.cs" />

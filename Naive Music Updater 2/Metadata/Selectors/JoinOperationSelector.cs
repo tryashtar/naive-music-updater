@@ -21,7 +21,7 @@ namespace NaiveMusicUpdater
             With = (string)yaml["with"];
         }
 
-        public override string GetRaw(IMusicItem item)
+        public override MetadataProperty GetRaw(IMusicItem item)
         {
             var text1 = From1.GetRaw(item);
             var text2 = From2.GetRaw(item);
@@ -31,7 +31,7 @@ namespace NaiveMusicUpdater
                 return text2;
             if (text2 == null)
                 return text1;
-            return text1 + With + text2;
+            return MetadataProperty.Single(text1.Value + With + text2.Value, CombineMode.Replace);
         }
     }
 }

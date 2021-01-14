@@ -14,9 +14,9 @@ namespace NaiveMusicUpdater
             LiteralText = spec;
         }
 
-        public override string GetRaw(IMusicItem item)
+        public override MetadataProperty GetRaw(IMusicItem item)
         {
-            return LiteralText;
+            return MetadataProperty.Single(LiteralText, CombineMode.Replace);
         }
     }
 }

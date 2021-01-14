@@ -36,6 +36,8 @@ namespace NaiveMusicUpdater
                         var up = map.TryGet("up");
                         return new SimpleParentSelector(int.Parse((string)up));
                     }
+                    else if (operation == "remove")
+                        return new RemoveSelector();
                 }
             }
 

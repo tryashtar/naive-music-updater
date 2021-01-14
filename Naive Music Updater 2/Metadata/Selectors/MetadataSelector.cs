@@ -10,21 +10,14 @@ namespace NaiveMusicUpdater
 {
     public abstract class MetadataSelector
     {
-        public abstract string GetRaw(IMusicItem item);
-        public virtual string[] GetRawList(IMusicItem item)
-        {
-            return new[] { GetRaw(item) };
-        }
+        public abstract MetadataProperty GetRaw(IMusicItem item);
 
         public MetadataProperty Get(IMusicItem item)
         {
             var result = GetRaw(item);
             if (result == null)
                 return MetadataProperty.Ignore();
-            if (result == "<remove>")
-                return MetadataProperty.Delete();
-            var results = GetRawList(item).ToList();
-            return MetadataProperty.List(results, CombineMode.Replace);
+            return result;
         }
 
         protected string ResolveNameOrDefault(IMusicItem item, IMusicItem current)
