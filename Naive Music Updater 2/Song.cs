@@ -32,7 +32,7 @@ namespace NaiveMusicUpdater
                 return;
 #endif
             Logger.WriteLine($"(checking)");
-            var metadata = MusicItemUtils.GetMetadata(this);
+            var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool success = true;
@@ -108,89 +108,96 @@ namespace NaiveMusicUpdater
                 Logger.WriteLine($"Added {thing}: \"{new_value}\"");
         }
 
-        private void ChangedThing(string thing, IEnumerable<string> old_value, string new_value)
+        private void ChangedThing(string thing, IEnumerable<string> old_value, IEnumerable<string> new_value)
         {
             if (old_value != null)
                 Logger.WriteLine($"Deleted {thing}: \"{String.Join(";", old_value)}\"");
             if (new_value != null)
-                Logger.WriteLine($"Added {thing}: \"{new_value}\"");
+                Logger.WriteLine($"Added {thing}: \"{String.Join(";", old_value)}\"");
+        }
+
+        private uint NullableParse(string val)
+        {
+            if (val == null)
+                return 0;
+            return uint.Parse(val);
         }
 
         private bool UpdateTag(TagLib.Id3v2.Tag tag, Metadata metadata)
         {
             bool changed = false;
-            string title = metadata.Title.Value;
-            if (metadata.Title.Overwrite && tag.Title != title)
+            string title = metadata.Get(MetadataField.Title).Value;
+            if (metadata.Get(MetadataField.Title).CombineMode == CombineMode.Replace && tag.Title != title)
             {
                 ChangedThing("title", tag.Title, title);
                 tag.Title = title;
                 changed = true;
             }
-            string album = metadata.Album.Value;
-            if (metadata.Album.Overwrite && tag.Album != album)
+            string album = metadata.Get(MetadataField.Album).Value;
+            if (metadata.Get(MetadataField.Album).CombineMode == CombineMode.Replace && tag.Album != album)
             {
                 ChangedThing("album", tag.Album, album);
                 tag.Album = album;
                 changed = true;
             }
-            string comment = metadata.Comment.Value;
-            if ((tag.Comment == "" || metadata.Comment.Overwrite) && tag.Comment != comment)
+            string comment = metadata.Get(MetadataField.Comment).Value;
+            if ((tag.Comment == "" || metadata.Get(MetadataField.Comment).CombineMode == CombineMode.Replace) && tag.Comment != comment)
             {
                 ChangedThing("comment", tag.Comment, comment);
                 tag.Comment = comment;
                 changed = true;
             }
-            uint track_number = metadata.TrackNumber.Value;
-            if (metadata.TrackNumber.Overwrite && tag.Track != track_number)
+            uint track_number = NullableParse(metadata.Get(MetadataField.Track).Value);
+            if (metadata.Get(MetadataField.Track).CombineMode == CombineMode.Replace && tag.Track != track_number)
             {
                 ChangedThing("track number", tag.Track, track_number);
                 tag.Track = track_number;
                 changed = true;
             }
-            uint track_count = metadata.TrackTotal.Value;
-            if (metadata.TrackTotal.Overwrite && tag.TrackCount != track_count)
+            uint track_count = NullableParse(metadata.Get(MetadataField.TrackTotal).Value);
+            if (metadata.Get(MetadataField.TrackTotal).CombineMode == CombineMode.Replace && tag.TrackCount != track_count)
             {
                 ChangedThing("track count", tag.TrackCount, track_count);
                 tag.TrackCount = track_count;
                 changed = true;
             }
-            uint year = metadata.Year.Value;
-            if (metadata.Year.Overwrite && tag.Year != year)
+            uint year = NullableParse(metadata.Get(MetadataField.Year).Value);
+            if (metadata.Get(MetadataField.Year).CombineMode == CombineMode.Replace && tag.Year != year)
             {
                 ChangedThing("year", tag.Year, year);
                 tag.Year = year;
                 changed = true;
             }
-            string[] genres = metadata.Genres.Values.ToArray();
-            if (metadata.Genres.CombineMode == ListCombineMode.Replace && !tag.Genres.SequenceEqual(genres))
+            string[] genres = metadata.Get(MetadataField.Genres).ListValue.ToArray();
+            if (metadata.Get(MetadataField.Genres).CombineMode == CombineMode.Replace && !tag.Genres.SequenceEqual(genres))
             {
                 ChangedThing("genre", tag.Genres, genres);
                 tag.Genres = genres;
                 changed = true;
             }
-            string[] album_artists = metadata.AlbumArtists.Values.ToArray();
-            if (metadata.AlbumArtists.CombineMode == ListCombineMode.Replace && !tag.AlbumArtists.SequenceEqual(album_artists))
+            string[] album_artists = metadata.Get(MetadataField.AlbumArtists).ListValue.ToArray();
+            if (metadata.Get(MetadataField.AlbumArtists).CombineMode == CombineMode.Replace && !tag.AlbumArtists.SequenceEqual(album_artists))
             {
                 ChangedThing("album artist", tag.AlbumArtists, album_artists);
                 tag.AlbumArtists = album_artists;
                 changed = true;
             }
-            string[] composers = metadata.Composers.Values.ToArray();
-            if (metadata.Composers.CombineMode == ListCombineMode.Replace && !tag.Composers.SequenceEqual(composers))
+            string[] composers = metadata.Get(MetadataField.Composers).ListValue.ToArray();
+            if (metadata.Get(MetadataField.Composers).CombineMode == CombineMode.Replace && !tag.Composers.SequenceEqual(composers))
             {
                 ChangedThing("composer", tag.Composers, composers);
                 tag.Composers = composers;
                 changed = true;
             }
-            string[] performers = metadata.Performers.Values.ToArray();
-            if (metadata.Performers.CombineMode == ListCombineMode.Replace && !tag.Performers.SequenceEqual(performers))
+            string[] performers = metadata.Get(MetadataField.Performers).ListValue.ToArray();
+            if (metadata.Get(MetadataField.Performers).CombineMode == CombineMode.Replace && !tag.Performers.SequenceEqual(performers))
             {
                 ChangedThing("performer", tag.Performers, performers);
                 tag.Performers = performers;
                 changed = true;
             }
-            string language = metadata.Language.Value;
-            if (metadata.Language.Overwrite)
+            string language = metadata.Get(MetadataField.Language).Value;
+            if (metadata.Get(MetadataField.Language).CombineMode == CombineMode.Replace)
             {
                 bool found_language = language == null;
                 foreach (var frame in tag.GetFrames().ToList())

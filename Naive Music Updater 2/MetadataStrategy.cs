@@ -10,9 +10,77 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
+    public enum MetadataFieldType
+    {
+        String,
+        StringList,
+        Number
+    }
+
+    public class MetadataField
+    {
+        public readonly string Name;
+        public readonly MetadataFieldType Type;
+        public readonly string[] Aliases;
+        public Predicate<MetadataField> Only => x => x == this;
+        public static Predicate<MetadataField> All => x => true;
+        private static readonly Dictionary<string, MetadataField> AliasCache = new Dictionary<string, MetadataField>();
+        private MetadataField(string name, MetadataFieldType type, params string[] aliases)
+        {
+            Name = name;
+            Type = type;
+            Aliases = aliases;
+            foreach (var value in aliases)
+            {
+                AliasCache.Add(value, this);
+            }
+        }
+
+        public static MetadataField FromID(string id)
+        {
+            if (AliasCache.TryGetValue(id, out var result))
+                return result;
+            return null;
+        }
+
+        public static MetadataField Title = new MetadataField("Title", MetadataFieldType.String, "title");
+        public static MetadataField Album = new MetadataField("Album", MetadataFieldType.String, "album");
+        public static MetadataField Performers = new MetadataField("Performers", MetadataFieldType.StringList, "performer", "performers");
+        public static MetadataField AlbumArtists = new MetadataField("Album Artists", MetadataFieldType.StringList, "album artist", "album artists");
+        public static MetadataField Composers = new MetadataField("Composers", MetadataFieldType.StringList, "composer", "composers");
+        public static MetadataField Arranger = new MetadataField("Arranger", MetadataFieldType.String, "arranger");
+        public static MetadataField Comment = new MetadataField("Comment", MetadataFieldType.String, "comment");
+        public static MetadataField Track = new MetadataField("Track Number", MetadataFieldType.Number, "track");
+        public static MetadataField TrackTotal = new MetadataField("Track Total", MetadataFieldType.Number, "track count", "track total");
+        public static MetadataField Year = new MetadataField("Year", MetadataFieldType.Number, "year");
+        public static MetadataField Language = new MetadataField("Language", MetadataFieldType.String, "lang", "language");
+        public static MetadataField Genres = new MetadataField("Genres", MetadataFieldType.StringList, "genre", "genres");
+
+        public static MetadataField[] Values;
+
+        static MetadataField()
+        {
+            Values = new MetadataField[]
+            {
+                Title,
+                Album,
+                Performers,
+                AlbumArtists,
+                Composers,
+                Arranger,
+                Comment,
+                Track,
+                TrackTotal,
+                Year,
+                Language,
+                Genres
+            };
+        }
+    }
+
     public interface IMetadataStrategy
     {
-        Metadata Get(IMusicItem item);
+        Metadata Get(IMusicItem item, Predicate<MetadataField> desired);
     }
 
     public static class MetadataStrategyFactory
@@ -38,7 +106,7 @@ namespace NaiveMusicUpdater
 
     public class NoOpMetadataStrategy : IMetadataStrategy
     {
-        public Metadata Get(IMusicItem item)
+        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
         {
             return new Metadata();
         }
@@ -46,105 +114,41 @@ namespace NaiveMusicUpdater
 
     public class MetadataStrategy : IMetadataStrategy
     {
-        public readonly MetadataSelector Title;
-        public readonly MetadataSelector Album;
-        public readonly MetadataSelector Performers;
-        public readonly MetadataSelector AlbumArtists;
-        public readonly MetadataSelector Composers;
-        public readonly MetadataSelector Arranger;
-        public readonly MetadataSelector Comment;
-        public readonly MetadataSelector TrackNumber;
-        public readonly MetadataSelector TrackTotal;
-        public readonly MetadataSelector Year;
-        public readonly MetadataSelector Language;
-        public readonly MetadataSelector Genres;
+        private readonly Dictionary<MetadataField, MetadataSelector> Fields = new Dictionary<MetadataField, MetadataSelector>();
         public MetadataStrategy(JObject json)
         {
-            MetadataSelector FromJson(string key)
+            foreach (var pair in json)
             {
-                if (json.TryGetValue(key, out var item))
-                    return MetadataSelectorFactory.FromToken(item);
-                return null;
+                var field = MetadataField.FromID(pair.Key);
+                if (field != null)
+                    Fields[field] = MetadataSelectorFactory.FromToken(pair.Value);
             }
-            Title = FromJson("title");
-            Album = FromJson("album");
-            Performers = FromJson("artist");
-            AlbumArtists = FromJson("artist");
-            Composers = FromJson("artist");
-            Arranger = FromJson("artist");
-            Comment = FromJson("comment");
-            TrackNumber = FromJson("track");
-            TrackTotal = FromJson("track_count");
-            Year = FromJson("year");
-            Language = FromJson("language");
-            Genres = FromJson("genre");
         }
 
         public MetadataStrategy(YamlMappingNode yaml)
         {
-            MetadataSelector FromYaml(string key)
+            foreach (var pair in yaml)
             {
-                var item = yaml.TryGet(key);
-                if (item == null)
-                    return null;
-                return MetadataSelectorFactory.FromToken(item);
+                var field = MetadataField.FromID((string)pair.Key);
+                if (field != null)
+                    Fields[field] = MetadataSelectorFactory.FromToken(pair.Value);
             }
-            Title = FromYaml("title");
-            Album = FromYaml("album");
-            Performers = FromYaml("artist");
-            AlbumArtists = FromYaml("artist");
-            Composers = FromYaml("artist");
-            Arranger = FromYaml("artist");
-            Comment = FromYaml("comment");
-            TrackNumber = FromYaml("track");
-            TrackTotal = FromYaml("track_count");
-            Year = FromYaml("year");
-            Language = FromYaml("language");
-            Genres = FromYaml("genre");
         }
 
-        private MetadataProperty<string> Get(MetadataSelector selector, IMusicItem item)
+        private MetadataProperty Get(MetadataSelector selector, IMusicItem item)
         {
-            return selector?.Get(item) ?? MetadataProperty<string>.Ignore();
+            return selector?.Get(item) ?? MetadataProperty.Ignore();
         }
 
-        private MetadataListProperty<string> GetList(MetadataSelector selector, IMusicItem item)
+        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
         {
-            return selector?.GetList(item) ?? MetadataListProperty<string>.Ignore();
-        }
-
-        public Metadata Get(IMusicItem item)
-        {
-            var meta = new Metadata()
+            var meta = new Metadata();
+            foreach (var pair in Fields)
             {
-                Title = Get(Title, item),
-                Album = Get(Album, item),
-                Performers = GetList(Performers, item),
-                AlbumArtists = GetList(AlbumArtists, item),
-                Composers = GetList(Composers, item),
-                Arranger = Get(Arranger, item),
-                Comment = Get(Comment, item),
-                TrackNumber = Get(TrackNumber, item).TryConvertTo(x => uint.Parse(x)),
-                TrackTotal = Get(TrackTotal, item).TryConvertTo(x => uint.Parse(x)),
-                Year = Get(Year, item).TryConvertTo(x => uint.Parse(x)),
-                Language = Get(Language, item),
-                Genres = GetList(Genres, item)
-            };
+                if (desired(pair.Key))
+                    meta.Register(pair.Key, Get(pair.Value, item));
+            }
             return meta;
-        }
-    }
-
-    public class ApplyMetadataStrategy : IMetadataStrategy
-    {
-        public readonly Metadata Data;
-        public ApplyMetadataStrategy(Metadata meta)
-        {
-            Data = meta;
-        }
-
-        public Metadata Get(IMusicItem item)
-        {
-            return Data;
         }
     }
 
@@ -174,9 +178,9 @@ namespace NaiveMusicUpdater
             Substrategies = strategies.ToList();
         }
 
-        public Metadata Get(IMusicItem item)
+        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
         {
-            var datas = Substrategies.Select(x => x.Get(item));
+            var datas = Substrategies.Select(x => x.Get(item, desired));
             return Metadata.FromMany(datas);
         }
     }

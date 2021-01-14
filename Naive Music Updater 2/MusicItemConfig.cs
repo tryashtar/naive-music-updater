@@ -35,6 +35,13 @@ namespace NaiveMusicUpdater
             }
         }
 
+        public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
+        {
+            if (LocalMetadata == null)
+                return new Metadata();
+            return LocalMetadata.Get(item, desired);
+        }
+
         private (ItemSelector selector, IMetadataStrategy strategy) ParseStrategy(MusicFolder folder, YamlNode key, YamlNode value)
         {
             var selector = ItemSelector.FromNode(key);

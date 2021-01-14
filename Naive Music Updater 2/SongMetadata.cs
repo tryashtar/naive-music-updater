@@ -6,65 +6,63 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    public interface IMetadataProperty<T>
+    public class MetadataProperty
     {
-        T Value { get; }
-        List<T> ListValue { get; }
-    }
+        public readonly bool IsList;
+        public string Value { get; private set; }
+        public readonly List<string> ListValue;
+        public readonly CombineMode CombineMode;
 
-    public class MetadataProperty<T> : IMetadataProperty<T>
-    {
-        public T Value { get; private set; }
-        public List<T> ListValue => default;
-        public readonly bool Overwrite;
-
-        private MetadataProperty(T item, bool overwrite)
+        public static MetadataProperty Single(string value, CombineMode mode)
         {
+            return new MetadataProperty(false, value, new List<string> { value }, mode);
+        }
+
+        public static MetadataProperty List(List<string> value, CombineMode mode)
+        {
+            return new MetadataProperty(true, value.FirstOrDefault(), value, mode);
+        }
+
+        public static MetadataProperty Delete()
+        {
+            return new MetadataProperty(false, null, new List<string>(), CombineMode.Replace);
+        }
+
+        public static MetadataProperty Ignore()
+        {
+            return new MetadataProperty(false, null, new List<string>(), CombineMode.Ignore);
+        }
+
+        private MetadataProperty(bool is_list, string item, List<string> list, CombineMode mode)
+        {
+            IsList = is_list;
             Value = item;
-            Overwrite = overwrite;
+            ListValue = list;
+            CombineMode = mode;
         }
 
-        public static MetadataProperty<T> Create(T item)
+        public void CombineWith(MetadataProperty other)
         {
-            return new MetadataProperty<T>(item, true);
-        }
-
-        public static MetadataProperty<T> Delete()
-        {
-            return new MetadataProperty<T>(default, true);
-        }
-
-        public static MetadataProperty<T> Ignore()
-        {
-            return new MetadataProperty<T>(default, false);
-        }
-
-        public MetadataProperty<T> CombineWith(MetadataProperty<T> other)
-        {
-            if (other.Overwrite)
-                return other;
-            return this;
-        }
-
-        public MetadataProperty<U> ConvertTo<U>(Func<T, U> converter)
-        {
-            return new MetadataProperty<U>(converter(Value), Overwrite);
-        }
-
-        public MetadataProperty<U> TryConvertTo<U>(Func<T, U> converter)
-        {
-            try
+            if (other.CombineMode == CombineMode.Replace)
             {
-                return ConvertTo(converter);
+                ListValue.Clear();
+                ListValue.AddRange(other.ListValue);
+                Value = other.Value;
             }
-            catch
+            if (other.CombineMode == CombineMode.Append)
             {
-                return new MetadataProperty<U>(default, Overwrite);
+                ListValue.AddRange(other.ListValue);
+                Value = ListValue.FirstOrDefault();
+            }
+            if (other.CombineMode == CombineMode.Prepend)
+            {
+                ListValue.InsertRange(0, other.ListValue);
+                Value = ListValue.FirstOrDefault();
             }
         }
     }
 
-    public enum ListCombineMode
+    public enum CombineMode
     {
         Ignore,
         Replace,
@@ -72,115 +70,33 @@ namespace NaiveMusicUpdater
         Prepend
     }
 
-    public class MetadataListProperty<T> : IMetadataProperty<T>
-    {
-        public T Value => default;
-        public List<T> ListValue => Values;
-        public readonly List<T> Values;
-        public readonly ListCombineMode CombineMode;
-
-        private MetadataListProperty(IEnumerable<T> items, ListCombineMode mode)
-        {
-            Values = items.ToList();
-            CombineMode = mode;
-        }
-
-        public static MetadataListProperty<T> Create(T item, ListCombineMode mode)
-        {
-            return new MetadataListProperty<T>(new[] { item }, mode);
-        }
-
-        public static MetadataListProperty<T> Create(IEnumerable<T> items, ListCombineMode mode)
-        {
-            return new MetadataListProperty<T>(items, mode);
-        }
-
-        public static MetadataListProperty<T> Delete()
-        {
-            return new MetadataListProperty<T>(new List<T>(), ListCombineMode.Replace);
-        }
-
-        public static MetadataListProperty<T> Ignore()
-        {
-            return new MetadataListProperty<T>(new List<T>(), ListCombineMode.Ignore);
-        }
-
-        public MetadataListProperty<T> CombineWith(MetadataListProperty<T> other)
-        {
-            if (other.CombineMode == ListCombineMode.Replace)
-            {
-                Values.Clear();
-                Values.AddRange(other.Values);
-            }
-            if (other.CombineMode == ListCombineMode.Append)
-                Values.AddRange(other.Values);
-            if (other.CombineMode == ListCombineMode.Prepend)
-                Values.InsertRange(0, other.Values);
-            return this;
-        }
-
-        public MetadataListProperty<U> ConvertTo<U>(Func<T, U> converter)
-        {
-            return new MetadataListProperty<U>(Values.Select(converter).ToList(), CombineMode);
-        }
-
-        public MetadataListProperty<U> TryConvertTo<U>(Func<T, U> converter)
-        {
-            try
-            {
-                return ConvertTo(converter);
-            }
-            catch
-            {
-                return new MetadataListProperty<U>(default, CombineMode);
-            }
-        }
-    }
-
     public class Metadata
     {
-        public MetadataProperty<string> Title;
-        public MetadataProperty<string> Album;
-        public MetadataListProperty<string> Performers;
-        public MetadataListProperty<string> AlbumArtists;
-        public MetadataListProperty<string> Composers;
-        public MetadataProperty<string> Arranger;
-        public MetadataProperty<string> Comment;
-        public MetadataProperty<uint> TrackNumber;
-        public MetadataProperty<uint> TrackTotal;
-        public MetadataProperty<uint> Year;
-        public MetadataProperty<string> Language;
-        public MetadataListProperty<string> Genres;
-
+        private readonly Dictionary<MetadataField, MetadataProperty> SavedFields = new Dictionary<MetadataField, MetadataProperty>();
         public Metadata()
+        { }
+
+        public void Register(MetadataField field, MetadataProperty value)
         {
-            Title = MetadataProperty<string>.Ignore();
-            Album = MetadataProperty<string>.Ignore();
-            Performers = MetadataListProperty<string>.Ignore();
-            AlbumArtists = MetadataListProperty<string>.Ignore();
-            Composers = MetadataListProperty<string>.Ignore();
-            Arranger = MetadataProperty<string>.Ignore();
-            Comment = MetadataProperty<string>.Ignore();
-            TrackNumber = MetadataProperty<uint>.Ignore();
-            TrackTotal = MetadataProperty<uint>.Ignore();
-            Year = MetadataProperty<uint>.Ignore();
-            Language = MetadataProperty<string>.Ignore();
-            Genres = MetadataListProperty<string>.Ignore();
+            SavedFields[field] = value;
+        }
+
+        public MetadataProperty Get(MetadataField field)
+        {
+            if (SavedFields.TryGetValue(field, out var result))
+                return result;
+            return MetadataProperty.Ignore();
         }
 
         public void Merge(Metadata other)
         {
-            Title = Title.CombineWith(other.Title);
-            Album = Album.CombineWith(other.Album);
-            Performers = Performers.CombineWith(other.Performers);
-            AlbumArtists = AlbumArtists.CombineWith(other.AlbumArtists);
-            Composers = Composers.CombineWith(other.Composers);
-            Comment = Comment.CombineWith(other.Comment);
-            TrackNumber = TrackNumber.CombineWith(other.TrackNumber);
-            TrackTotal = TrackTotal.CombineWith(other.TrackTotal);
-            Year = Year.CombineWith(other.Year);
-            Language = Language.CombineWith(other.Language);
-            Genres = Genres.CombineWith(other.Genres);
+            foreach (var pair in other.SavedFields)
+            {
+                if (SavedFields.TryGetValue(pair.Key, out var existing))
+                    existing.CombineWith(pair.Value);
+                else
+                    SavedFields[pair.Key] = pair.Value;
+            }
         }
 
         public static Metadata FromMany(IEnumerable<Metadata> many)
@@ -191,6 +107,16 @@ namespace NaiveMusicUpdater
                 result.Merge(item);
             }
             return result;
+        }
+
+        public override string ToString()
+        {
+            var builder = new StringBuilder();
+            foreach (var item in SavedFields)
+            {
+                builder.AppendLine($"{item.Key.Name}: {String.Join(";", item.Value.ListValue)}");
+            }
+            return builder.ToString();
         }
     }
 }

@@ -19,9 +19,15 @@ namespace NaiveMusicUpdater
 
     public static class MusicItemUtils
     {
-        public static Metadata GetMetadata(this IMusicItem item)
+        public static Metadata GetMetadata(this IMusicItem item, Predicate<MetadataField> desired)
         {
-            return new Metadata();
+            var metadata = item.GlobalCache.Config.GetMetadata(item, desired);
+            foreach (var parent in item.PathFromRoot())
+            {
+                if (parent.LocalConfig != null)
+                    metadata.Merge(parent.LocalConfig.GetMetadata(item, desired));
+            }
+            return metadata;
         }
     }
 
@@ -50,8 +56,6 @@ namespace NaiveMusicUpdater
             if (File.Exists(config))
                 _LocalConfig = new MusicItemConfig(config);
         }
-
-        public Metadata Metadata { get; set; } = new Metadata();
 
         public IEnumerable<Song> GetAllSongs()
         {
@@ -87,7 +91,7 @@ namespace NaiveMusicUpdater
                 ScanContents();
             }
 
-            var metadata = MusicItemUtils.GetMetadata(this);
+            var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
             var art = GlobalCache.GetArtPathFor(this);
             ArtCache.LoadAndMakeIcon(art);
             string subalbumini = Path.Combine(Location, "desktop.ini");

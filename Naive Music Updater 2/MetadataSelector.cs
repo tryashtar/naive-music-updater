@@ -17,32 +17,22 @@ namespace NaiveMusicUpdater
             return new[] { GetRaw(item) };
         }
 
-        public MetadataProperty<string> Get(IMusicItem item)
+        public MetadataProperty Get(IMusicItem item)
         {
             var result = GetRaw(item);
             if (result == null)
-                return MetadataProperty<string>.Ignore();
+                return MetadataProperty.Ignore();
             if (result == "<remove>")
-                return MetadataProperty<string>.Delete();
-            return MetadataProperty<string>.Create(result);
-        }
-
-        public MetadataListProperty<string> GetList(IMusicItem item)
-        {
-            var result = GetRaw(item);
-            if (result == null)
-                return MetadataListProperty<string>.Ignore();
-            if (result == "<remove>")
-                return MetadataListProperty<string>.Delete();
-            var results = GetRawList(item);
-            return MetadataListProperty<string>.Create(results, ListCombineMode.Replace);
+                return MetadataProperty.Delete();
+            var results = GetRawList(item).ToList();
+            return MetadataProperty.List(results, CombineMode.Replace);
         }
 
         protected string ResolveNameOrDefault(IMusicItem item, IMusicItem current)
         {
             if (item == current)
                 return item.GlobalCache.Config.CleanName(item.SimpleName);
-            return item.GetMetadata().Title.Value;
+            return item.GetMetadata(MetadataField.Title.Only).Get(MetadataField.Title).Value;
         }
     }
 
@@ -330,8 +320,9 @@ namespace NaiveMusicUpdater
 
     public class GetMetadataSelector : MetadataSelector
     {
-        public delegate IMetadataProperty<string> MetadataGetter(Metadata meta);
+        public delegate MetadataProperty MetadataGetter(Metadata meta);
         private readonly MetadataGetter Getter;
+        private readonly Predicate<MetadataField> Desired;
         public GetMetadataSelector(MetadataGetter getter)
         {
             Getter = getter;
@@ -340,40 +331,19 @@ namespace NaiveMusicUpdater
         public GetMetadataSelector(YamlMappingNode yaml)
         {
             var get = (string)yaml["get"];
-            if (get == "title")
-                Getter = x => x.Title;
-            if (get == "album")
-                Getter = x => x.Album;
-            if (get == "performer" || get == "performers")
-                Getter = x => x.Performers;
-            if (get == "album_artist" || get == "album_artists")
-                Getter = x => x.AlbumArtists;
-            if (get == "composer" || get == "composers")
-                Getter = x => x.Composers;
-            if (get == "arranger")
-                Getter = x => x.Arranger;
-            if (get == "comment")
-                Getter = x => x.Comment;
-            if (get == "track")
-                Getter = x => x.TrackNumber.TryConvertTo(y => y.ToString());
-            if (get == "track_count")
-                Getter = x => x.TrackTotal.TryConvertTo(y => y.ToString());
-            if (get == "year")
-                Getter = x => x.Year.TryConvertTo(y => y.ToString());
-            if (get == "language")
-                Getter = x => x.Language;
-            if (get == "genre" || get == "genres")
-                Getter = x => x.Genres;
+            var field = MetadataField.FromID(get);
+            Getter = x => x.Get(field);
+            Desired = field.Only;
         }
 
         public override string GetRaw(IMusicItem item)
         {
-            return Getter(item.GetMetadata()).Value;
+            return Getter(item.GetMetadata(Desired)).Value;
         }
 
         public override string[] GetRawList(IMusicItem item)
         {
-            return Getter(item.GetMetadata()).ListValue.ToArray();
+            return Getter(item.GetMetadata(Desired)).ListValue.ToArray();
         }
     }
 }
