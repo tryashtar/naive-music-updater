@@ -15,31 +15,32 @@ namespace NaiveMusicUpdater
     public class MusicItemConfig
     {
         public readonly SongOrder TrackOrder;
-        public readonly IMetadataStrategy LocalMetadata;
+        public readonly IMetadataStrategy MainStrategy;
         // have to defer these because some of the data needed isn't ready until after constructor is done
         public readonly List<Func<MusicFolder, (ItemSelector selector, IMetadataStrategy strategy)>> MetadataStrategies;
         public MusicItemConfig(string file)
         {
-            using (var reader = new StreamReader(File.OpenRead(file)))
+            var root = YamlHelper.ParseFile(file);
+            if (root != null)
             {
-                var stream = new YamlStream();
-                stream.Load(reader);
-                var root = stream.Documents.SingleOrDefault()?.RootNode;
-                var order = root?.TryGet("order");
+                var order = root.TryGet("order");
                 if (order != null)
                     TrackOrder = SongOrderFactory.FromNode(order);
-                var local = root?.TryGet("this");
+                var local = root.TryGet("this");
                 if (local != null)
-                    LocalMetadata = MetadataStrategyFactory.Create(local);
-                MetadataStrategies = (root?.TryGet("set") as YamlMappingNode)?.Children.Select(x => (Func<MusicFolder, (ItemSelector, IMetadataStrategy)>)(f => ParseStrategy(f, x.Key, x.Value))).ToList() ?? new List<Func<MusicFolder, (ItemSelector, IMetadataStrategy)>>();
+                    MainStrategy = MetadataStrategyFactory.Create(local);
+                MetadataStrategies = (root.TryGet("set") as YamlMappingNode)?.Children.Select(x => (Func<MusicFolder, (ItemSelector, IMetadataStrategy)>)(f => ParseStrategy(f, x.Key, x.Value))).ToList();
             }
+            if (MetadataStrategies == null)
+                MetadataStrategies = new List<Func<MusicFolder, (ItemSelector, IMetadataStrategy)>>();
+
         }
 
         public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
         {
-            if (LocalMetadata == null)
+            if (MainStrategy == null)
                 return new Metadata();
-            return LocalMetadata.Get(item, desired);
+            return MainStrategy.Get(item, desired);
         }
 
         private (ItemSelector selector, IMetadataStrategy strategy) ParseStrategy(MusicFolder folder, YamlNode key, YamlNode value)
@@ -82,7 +83,7 @@ namespace NaiveMusicUpdater
 
         public override void ApplyAll(MusicFolder folder)
         {
-            
+
         }
     }
 
@@ -98,7 +99,7 @@ namespace NaiveMusicUpdater
 
         public override void ApplyAll(MusicFolder folder)
         {
-            
+
         }
 
         private Func<Song, string> GetSort()

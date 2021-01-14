@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -85,15 +84,6 @@ namespace NaiveMusicUpdater
 
     public static class MetadataStrategyFactory
     {
-        public static IMetadataStrategy Create(JToken token)
-        {
-            if (token is JObject obj)
-                return new MetadataStrategy(obj);
-            else if (token is JArray arr)
-                return new MultipleMetadataStrategy(arr);
-            throw new ArgumentException();
-        }
-
         public static IMetadataStrategy Create(YamlNode node)
         {
             if (node is YamlMappingNode map)
@@ -115,16 +105,7 @@ namespace NaiveMusicUpdater
     public class MetadataStrategy : IMetadataStrategy
     {
         private readonly Dictionary<MetadataField, MetadataSelector> Fields = new Dictionary<MetadataField, MetadataSelector>();
-        public MetadataStrategy(JObject json)
-        {
-            foreach (var pair in json)
-            {
-                var field = MetadataField.FromID(pair.Key);
-                if (field != null)
-                    Fields[field] = MetadataSelectorFactory.FromToken(pair.Value);
-            }
-        }
-
+        
         public MetadataStrategy(YamlMappingNode yaml)
         {
             foreach (var pair in yaml)
@@ -155,14 +136,6 @@ namespace NaiveMusicUpdater
     public class MultipleMetadataStrategy : IMetadataStrategy
     {
         private readonly List<IMetadataStrategy> Substrategies;
-        public MultipleMetadataStrategy(JArray json)
-        {
-            Substrategies = new List<IMetadataStrategy>();
-            foreach (var item in json)
-            {
-                Substrategies.Add(MetadataStrategyFactory.Create(item));
-            }
-        }
 
         public MultipleMetadataStrategy(YamlSequenceNode yaml)
         {

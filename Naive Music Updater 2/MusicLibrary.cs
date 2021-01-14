@@ -1,11 +1,11 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -36,7 +36,7 @@ namespace NaiveMusicUpdater
             Logger.WriteLine("Start sources scan");
             // prepare to scan sources
             string sourcesjson = Path.Combine(this.Location, "sources.json");
-            var sources = JObject.Parse(File.ReadAllText(sourcesjson));
+            var sources = (YamlMappingNode)YamlHelper.ParseFile(sourcesjson);
 
             AddBlankSources(sources, this);
             CheckSources(sources, this);
@@ -44,40 +44,42 @@ namespace NaiveMusicUpdater
             File.WriteAllText(sourcesjson, sources.ToString());
         }
 
-        private void AddBlankSources(JObject obj, MusicFolder folder)
+        private void AddBlankSources(YamlMappingNode obj, MusicFolder folder)
         {
             Logger.TabIn();
             foreach (var item in folder.SubFolders)
             {
-                if (!obj.TryGetValue(item.SimpleName, out var token))
+                var token = (YamlMappingNode)obj.TryGet(item.SimpleName);
+                if (token == null)
                 {
-                    token = new JObject();
+                    token = new YamlMappingNode();
                     obj.Add(item.SimpleName, token);
                     Logger.WriteLine($"Added new folder to sources: {item.SimpleName}");
                 }
-                AddBlankSources((JObject)token, item);
+                AddBlankSources(token, item);
             }
             Logger.TabOut();
         }
 
-        private void CheckSources(JObject obj, MusicFolder folder)
+        private void CheckSources(YamlMappingNode obj, MusicFolder folder)
         {
             Logger.WriteLine(folder.SimpleName);
             Logger.TabIn();
             List<string> no_sources;
-            if (obj.TryGetValue("", out var no_sources_token))
-                no_sources = no_sources_token.ToObject<List<string>>();
-            else
+            var no_sources_token = (YamlSequenceNode)obj.TryGet("?");
+            if (no_sources_token == null)
                 no_sources = new List<string>();
+            else
+                no_sources = YamlHelper.ToStringArray(no_sources_token).ToList();
             var songs = folder.Songs.Select(x => x.SimpleName).ToList();
             foreach (var item in obj)
             {
-                if (item.Key == "")
+                if ((string)item.Key == "?")
                     continue;
-                if (item.Value.Type == JTokenType.Array || item.Value.Type == JTokenType.String)
+                if (item.Value.NodeType == YamlNodeType.Sequence || item.Value.NodeType == YamlNodeType.Scalar)
                 {
                     // this is a song source
-                    string[] sourced = item.Value is JArray j ? j.ToObject<string[]>() : new string[] { (string)item.Value };
+                    string[] sourced = item.Value is YamlSequenceNode j ? YamlHelper.ToStringArray(j) : new string[] { (string)item.Value };
 
                     foreach (string song in sourced)
                     {
@@ -93,11 +95,11 @@ namespace NaiveMusicUpdater
                 else
                 {
                     // this is a folder object
-                    var associated_folder = folder.SubFolders.FirstOrDefault(x => x.SimpleName == item.Key);
+                    var associated_folder = folder.SubFolders.FirstOrDefault(x => x.SimpleName == (string)item.Key);
                     if (associated_folder == null)
                         Logger.WriteLine($"Folder in sources but not library: {item.Key}");
                     else
-                        CheckSources((JObject)item.Value, associated_folder);
+                        CheckSources((YamlMappingNode)item.Value, associated_folder);
                 }
             }
             foreach (var song in songs)
@@ -107,9 +109,9 @@ namespace NaiveMusicUpdater
             }
             no_sources = no_sources.Distinct().ToList();
             if (no_sources.Any())
-                obj[""] = new JArray(no_sources);
+                obj.Add("MISSING", new YamlSequenceNode(no_sources.Select(x => new YamlScalarNode(x))));
             else
-                obj.Remove("");
+                obj.Children.Remove("MISSING");
             Logger.TabOut();
         }
     }

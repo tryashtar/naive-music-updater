@@ -21,7 +21,7 @@ namespace NaiveMusicUpdater
     {
         public static Metadata GetMetadata(this IMusicItem item, Predicate<MetadataField> desired)
         {
-            var metadata = item.GlobalCache.Config.GetMetadata(item, desired);
+            var metadata = new Metadata();
             foreach (var parent in item.PathFromRoot())
             {
                 if (parent.LocalConfig != null)

@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -9,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TagLib.Id3v2;
+using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -20,9 +20,7 @@ namespace NaiveMusicUpdater
         private readonly Dictionary<string, string> MapNames = new Dictionary<string, string>();
         private readonly Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
         private readonly Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
-        private readonly IMetadataStrategy DefaultStrategy;
         private readonly Dictionary<string, IMetadataStrategy> NamedStrategies = new Dictionary<string, IMetadataStrategy>();
-        private readonly List<(List<ItemSelector>, IMetadataStrategy)> StrategyOverrides = new List<(List<ItemSelector>, IMetadataStrategy)>();
         private readonly string MP3GainPath;
         private readonly List<string> IllegalPrivateOwners;
         public LibraryConfig(string file)
@@ -30,57 +28,53 @@ namespace NaiveMusicUpdater
             if (!File.Exists(file))
             {
                 Logger.WriteLine($"Couldn't find config file {file}, using blank config!!!");
-                DefaultStrategy = new NoOpMetadataStrategy();
                 return;
             }
-            var json = JObject.Parse(File.ReadAllText(file));
-            foreach (string item in (JArray)json["lowercase"])
+            var yaml = YamlHelper.ParseFile(file);
+            foreach (string item in (YamlSequenceNode)yaml["lowercase"])
             {
                 LowercaseWords.Add(item.ToLower());
             }
-            foreach (string item in (JArray)json["skip"])
+            foreach (string item in (YamlSequenceNode)yaml["skip"])
             {
                 SkipNames.Add(item);
             }
-            foreach (var item in (JObject)json["find_replace"])
+            foreach (var item in (YamlMappingNode)yaml["find_replace"])
             {
-                FindReplace.Add(item.Key, (string)item.Value);
+                FindReplace.Add((string)item.Key, (string)item.Value);
             }
-            foreach (var item in (JObject)json["map"])
+            foreach (var item in (YamlMappingNode)yaml["map"])
             {
-                MapNames.Add(item.Key, (string)item.Value);
+                MapNames.Add((string)item.Key, (string)item.Value);
             }
-            foreach (var item in (JObject)json["title_to_filename"])
+            foreach (var item in (YamlMappingNode)yaml["title_to_filename"])
             {
-                FilesafeConversions.Add(item.Key, (string)item.Value);
+                FilesafeConversions.Add((string)item.Key, (string)item.Value);
             }
-            foreach (var item in (JObject)json["title_to_foldername"])
+            foreach (var item in (YamlMappingNode)yaml["title_to_foldername"])
             {
-                FoldersafeConversions.Add(item.Key, (string)item.Value);
+                FoldersafeConversions.Add((string)item.Key, (string)item.Value);
             }
-            DefaultStrategy = MetadataStrategyFactory.Create(json["strategies"]["default"]);
-            foreach (var item in (JObject)json["strategies"]["named"])
+            foreach (var item in (YamlMappingNode)yaml["strategies"]["named"])
             {
-                NamedStrategies.Add(item.Key, MetadataStrategyFactory.Create(item.Value));
+                NamedStrategies.Add((string)item.Key, MetadataStrategyFactory.Create(item.Value));
             }
-            foreach (JObject item in (JArray)json["strategies"]["overrides"])
+            foreach (YamlMappingNode item in (YamlSequenceNode)yaml["strategies"]["overrides"])
             {
                 var predicates = new List<ItemSelector>();
-                if (item.TryGetValue("name", out var name))
+                var name = item.TryGet("name");
+                var names = item.TryGet("names");
+                if (name != null)
                     predicates.Add(new ItemSelector((string)name));
-                else if (item.TryGetValue("names", out var names))
-                    predicates.AddRange(((JArray)names).Select(x => new ItemSelector((string)x)));
-                if (item.TryGetValue("reference", out var reference))
-                    StrategyOverrides.Add((predicates, NamedStrategies[(string)reference]));
-                if (item.TryGetValue("set", out var set))
-                    StrategyOverrides.Add((predicates, MetadataStrategyFactory.Create(set)));
+                else if (names != null)
+                    predicates.AddRange(((YamlSequenceNode)names).Select(x => new ItemSelector((string)x)));
             }
-            json.TryGetValue("mp3gain_path", out var mp3path);
-            if (mp3path.Type == JTokenType.String)
+            var mp3path = yaml.TryGet("mp3gain_path");
+            var cpo = yaml.TryGet("clear_private_owners");
+            if (mp3path != null)
                 MP3GainPath = (string)mp3path;
-            json.TryGetValue("clear_private_owners", out var cpo);
-            if (cpo.Type == JTokenType.Array)
-                IllegalPrivateOwners = cpo.ToObject<List<string>>();
+            if (cpo != null)
+                IllegalPrivateOwners = YamlHelper.ToStringArray((YamlSequenceNode)cpo).ToList();
         }
 
         public IMetadataStrategy GetNamedStrategy(string name)
@@ -98,17 +92,6 @@ namespace NaiveMusicUpdater
                     return true;
             }
             return false;
-        }
-
-        public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
-        {
-            var metadata = DefaultStrategy.Get(item, desired);
-            foreach (var (selectors, strategy) in StrategyOverrides)
-            {
-                if (selectors.Any(x => x.IsSelectedFrom((MusicLibrary)item.PathFromRoot().First(), item)))
-                    metadata.Merge(strategy.Get(item, desired));
-            }
-            return metadata;
         }
 
         public string CleanName(string name)

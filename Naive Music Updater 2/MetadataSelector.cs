@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -38,34 +37,6 @@ namespace NaiveMusicUpdater
 
     public static class MetadataSelectorFactory
     {
-        public static MetadataSelector FromToken(JToken token)
-        {
-            if (token.Type == JTokenType.Integer)
-                return new SimpleParentSelector((int)token);
-            if (token.Type == JTokenType.Object)
-            {
-                var obj = (JObject)token;
-                if (obj.TryGetValue("operation", out var operation))
-                {
-                    if ((string)operation == "split")
-                        return new SplitOperationSelector(obj);
-                    else if ((string)operation == "join")
-                        return new JoinOperationSelector(obj);
-                    else if ((string)operation == "regex")
-                        return new RegexSelector(obj);
-                }
-            }
-            if (token.Type == JTokenType.String)
-            {
-                string str = (string)token;
-                if (str == "<this>")
-                    return new FilenameSelector();
-                return new LiteralSelector(str);
-            }
-
-            throw new ArgumentException($"Couldn't figure out what kind of metadata selector this is: {token}");
-        }
-
         public static MetadataSelector FromToken(YamlNode yaml)
         {
             if (yaml.NodeType == YamlNodeType.Scalar)
@@ -154,38 +125,20 @@ namespace NaiveMusicUpdater
         }
 
         // gets metadata "From" somewhere else and extracts a part of it by splitting the string and taking one of its pieces
-        public SplitOperationSelector(JObject data)
-        {
-            From = MetadataSelectorFactory.FromToken(data["from"]);
-            Separator = (string)data["separator"];
-            Index = (int)data["index"];
-            NoSeparator = NoSeparatorDecision.Ignore;
-            if (data.TryGetValue("no_separator", out var sep) && (string)sep == "exit")
-                NoSeparator = NoSeparatorDecision.Exit;
-            OutofBounds = OutofBoundsDecision.Exit;
-            if (data.TryGetValue("out_of_bounds", out var bounds))
-            {
-                if ((string)bounds == "wrap")
-                    OutofBounds = OutofBoundsDecision.Wrap;
-                if ((string)bounds == "clamp")
-                    OutofBounds = OutofBoundsDecision.Clamp;
-            }
-        }
-
         public SplitOperationSelector(YamlMappingNode yaml)
         {
             From = MetadataSelectorFactory.FromToken(yaml["from"]);
             Separator = (string)yaml["separator"];
             Index = int.Parse((string)yaml["index"]);
             NoSeparator = NoSeparatorDecision.Ignore;
-            var no_separator = (string)yaml.TryGet("no_separator");
-            if (no_separator == "exit")
+            var no_separator = yaml.TryGet("no_separator");
+            if (no_separator != null && (string)no_separator == "exit")
                 NoSeparator = NoSeparatorDecision.Exit;
             OutofBounds = OutofBoundsDecision.Exit;
-            var bounds = (string)yaml.TryGet("out_of_bounds");
-            if (bounds == "wrap")
+            var bounds = yaml.TryGet("out_of_bounds");
+            if (bounds != null && (string)bounds == "wrap")
                 OutofBounds = OutofBoundsDecision.Wrap;
-            if (bounds == "clamp")
+            if (bounds != null && (string)bounds == "clamp")
                 OutofBounds = OutofBoundsDecision.Clamp;
         }
 
@@ -225,16 +178,6 @@ namespace NaiveMusicUpdater
         }
 
         // gets metadata "From" somewhere else and extracts a part of it by splitting the string and taking one of its pieces
-        public RegexSelector(JObject data)
-        {
-            From = MetadataSelectorFactory.FromToken(data["from"]);
-            Regex = new Regex((string)data["regex"]);
-            Group = (string)data["group"];
-            MatchFail = MatchFailDecision.Ignore;
-            if (data.TryGetValue("fail", out var fail) && (string)fail == "exit")
-                MatchFail = MatchFailDecision.Exit;
-        }
-
         public RegexSelector(YamlMappingNode yaml)
         {
             From = MetadataSelectorFactory.FromToken(yaml["from"]);
@@ -265,13 +208,6 @@ namespace NaiveMusicUpdater
         private readonly string With;
 
         // gets metadata "From" two other places and combines them with "With" in between
-        public JoinOperationSelector(JObject data)
-        {
-            From1 = MetadataSelectorFactory.FromToken(data["from1"]);
-            From2 = MetadataSelectorFactory.FromToken(data["from2"]);
-            With = (string)data["with"];
-        }
-
         public JoinOperationSelector(YamlMappingNode yaml)
         {
             From1 = MetadataSelectorFactory.FromToken(yaml["from1"]);

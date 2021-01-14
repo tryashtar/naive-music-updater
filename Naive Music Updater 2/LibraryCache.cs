@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -10,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TagLib;
 using TagLib.Id3v2;
+using YamlDotNet.Serialization;
 using File = System.IO.File;
 
 namespace NaiveMusicUpdater
@@ -29,7 +29,8 @@ namespace NaiveMusicUpdater
             if (File.Exists(DateCachePath))
             {
                 var datecache = File.ReadAllText(DateCachePath);
-                DateCache = JsonConvert.DeserializeObject<Dictionary<string, DateTime>>(datecache) ?? new Dictionary<string, DateTime>();
+                var deserializer = new DeserializerBuilder().Build();
+                DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache);
             }
             else
             {
@@ -44,7 +45,8 @@ namespace NaiveMusicUpdater
             {
                 DateCache[item] = DateTime.Now;
             }
-            File.WriteAllText(DateCachePath, JsonConvert.SerializeObject(DateCache));
+            var serializer = new SerializerBuilder().Build();
+            File.WriteAllText(DateCachePath, serializer.Serialize(DateCache));
         }
 
         public bool NeedsUpdate(IMusicItem item)

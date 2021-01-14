@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -48,6 +47,11 @@ namespace NaiveMusicUpdater
         {
             return String.Equals(item.SimpleName, Matcher, StringComparison.OrdinalIgnoreCase);
         }
+
+        public override string ToString()
+        {
+            return Matcher;
+        }
     }
 
     public class RegexItemPredicate : IItemPredicate
@@ -61,6 +65,11 @@ namespace NaiveMusicUpdater
         public bool Matches(IMusicItem item)
         {
             return Matcher.IsMatch(item.SimpleName);
+        }
+
+        public override string ToString()
+        {
+            return Matcher.ToString();
         }
     }
 
@@ -86,23 +95,11 @@ namespace NaiveMusicUpdater
             throw new ArgumentException();
         }
 
-        public List<IMusicItem> SelectFrom(MusicFolder start)
-        {
-            var start_path = start.PathFromRoot().ToArray();
-            var results = new List<IMusicItem>();
-            var all = start.SubItems;
-            foreach (var item in all)
-            {
-                var item_path = item.PathFromRoot().Skip(start_path.Length).ToArray();
-                if (IsMatch(item_path))
-                    results.Add(item);
-            }
-            return results;
-        }
-
         public bool IsSelectedFrom(MusicFolder start, IMusicItem item)
         {
-            return SelectFrom(start).Contains(item);
+            var start_path = start.PathFromRoot().ToArray();
+            var item_path = item.PathFromRoot().Skip(start_path.Length).ToArray();
+            return IsMatch(item_path);
         }
 
         private bool IsMatch(IMusicItem[] item_path)
@@ -116,6 +113,11 @@ namespace NaiveMusicUpdater
                     return false;
             }
             return true;
+        }
+
+        public override string ToString()
+        {
+            return String.Join("/", Path.Select(x => x.ToString()));
         }
     }
 }
