@@ -19,6 +19,7 @@ namespace NaiveMusicUpdater
         public readonly string Folder;
         public readonly LibraryConfig Config;
         private readonly Dictionary<string, DateTime> DateCache;
+        private readonly Dictionary<string, DateTime> PendingDateCache;
         private string DateCachePath => Path.Combine(Folder, "datecache.yaml");
         private string ConfigPath => Path.Combine(Folder, "library.yaml");
         public LibraryCache(string folder)
@@ -30,11 +31,13 @@ namespace NaiveMusicUpdater
                 var datecache = File.ReadAllText(DateCachePath);
                 var deserializer = new DeserializerBuilder().Build();
                 DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache);
+                PendingDateCache = DateCache.ToDictionary(x => x.Key, x => x.Value);
             }
             else
             {
                 Logger.WriteLine($"Couldn't find date cache {DateCachePath}, starting fresh");
                 DateCache = new Dictionary<string, DateTime>();
+                PendingDateCache = new Dictionary<string, DateTime>();
             }
         }
 
@@ -42,37 +45,39 @@ namespace NaiveMusicUpdater
         {
             foreach (var item in ArtCache.Cached.Keys)
             {
-                DateCache[item] = DateTime.Now;
+                PendingDateCache[item] = DateTime.Now;
             }
             var serializer = new SerializerBuilder().Build();
-            File.WriteAllText(DateCachePath, serializer.Serialize(DateCache));
+            File.WriteAllText(DateCachePath, serializer.Serialize(PendingDateCache));
         }
 
         public bool NeedsUpdate(IMusicItem item)
         {
-            var location = item.Location;
-            if (!File.Exists(location))
-                return false;
-            var date = TouchedTime(location);
-            if (DateCache.TryGetValue(location, out DateTime cached))
+            foreach (var path in RelevantPaths(item))
             {
-                if (date - TimeSpan.FromSeconds(5) > cached)
-                    return true;
-                var art = GetArtPathFor(item);
-                if (art == null)
-                    return false;
-                if (DateCache.TryGetValue(art, out DateTime cached2))
+                var date = TouchedTime(path);
+                if (DateCache.TryGetValue(path, out var cached))
                 {
-                    var artdate = TouchedTime(art);
-                    if (artdate - TimeSpan.FromSeconds(5) > cached2)
+                    if (date - TimeSpan.FromSeconds(5) > cached)
                         return true;
                 }
                 else
                     return true;
-                return false;
             }
-            else
-                return true;
+            return false;
+        }
+
+        private IEnumerable<string> RelevantPaths(IMusicItem item)
+        {
+            yield return item.Location;
+            var art = GetArtPathFor(item);
+            if (art != null)
+                yield return art;
+            foreach (var parent in item.PathFromRoot())
+            {
+                if (parent.LocalConfig != null)
+                    yield return parent.LocalConfig.Location;
+            }
         }
 
         private static DateTime TouchedTime(string filepath)
@@ -107,12 +112,15 @@ namespace NaiveMusicUpdater
 
         public void MarkUpdatedRecently(IMusicItem item)
         {
-            DateCache[item.Location] = DateTime.Now;
+            foreach (var path in RelevantPaths(item))
+            {
+                PendingDateCache[path] = DateTime.Now;
+            }
         }
 
         public void MarkNeedsUpdateNextTime(IMusicItem item)
         {
-            DateCache.Remove(item.Location);
+            PendingDateCache.Remove(item.Location);
         }
 
         private SynchedText[] ParseSyncedTexts(string alltext)

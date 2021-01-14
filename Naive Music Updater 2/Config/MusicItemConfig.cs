@@ -14,6 +14,7 @@ namespace NaiveMusicUpdater
 {
     public class MusicItemConfig
     {
+        public readonly string Location;
         // have to defer these because some of the data needed isn't ready until after constructor is done
         public readonly Func<SongOrder> TrackOrder;
         public readonly Func<IMetadataStrategy> MainStrategy;
@@ -21,6 +22,7 @@ namespace NaiveMusicUpdater
         private readonly IMusicItem ConfiguredItem;
         public MusicItemConfig(string file, IMusicItem configured_item)
         {
+            Location = file;
             ConfiguredItem = configured_item;
             var root = YamlHelper.ParseFile(file);
             if (root != null)
