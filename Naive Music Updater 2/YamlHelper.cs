@@ -21,6 +21,16 @@ namespace NaiveMusicUpdater
             }
         }
 
+        public static void SaveToFile(YamlNode node, string file_path)
+        {
+            var doc = new YamlDocument(node);
+            var stream = new YamlStream(doc);
+            using (var writer = File.CreateText(file_path))
+            {
+                stream.Save(writer, false);
+            }
+        }
+
         public static string[] ToStringArray(YamlSequenceNode node)
         {
             return node.Select(x => (string)x).ToArray();

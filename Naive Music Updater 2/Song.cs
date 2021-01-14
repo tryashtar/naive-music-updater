@@ -264,18 +264,6 @@ namespace NaiveMusicUpdater
                 v1.Performers = v2.Performers;
                 changed = true;
             }
-            if (!v2.AlbumArtists.Select(x => Resize(x, 30)).SequenceEqual(v1.AlbumArtists.Select(x => Resize(x, 30))))
-            {
-                Logger.WriteLine($"Updated album artist in V1 tag ({String.Join(";", v1.AlbumArtists)}) to match V2 ({String.Join(";", v2.AlbumArtists)})");
-                v1.AlbumArtists = v2.AlbumArtists;
-                changed = true;
-            }
-            if (!v2.Composers.Select(x => Resize(x, 30)).SequenceEqual(v1.Composers.Select(x => Resize(x, 30))))
-            {
-                Logger.WriteLine($"Updated album artist in V1 tag ({String.Join(";", v1.Composers)}) to match V2 ({String.Join(";", v2.Composers)})");
-                v1.Composers = v2.Composers;
-                changed = true;
-            }
             if (Resize(v2.RemixedBy, 30) != Resize(v1.RemixedBy, 30))
             {
                 Logger.WriteLine($"Updated arranger in V1 tag ({v1.RemixedBy}) to match V2 ({v2.RemixedBy})");

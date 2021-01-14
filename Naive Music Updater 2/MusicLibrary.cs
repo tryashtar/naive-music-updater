@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using YamlDotNet.RepresentationModel;
+using YamlDotNet.Serialization;
 
 namespace NaiveMusicUpdater
 {
@@ -35,13 +36,13 @@ namespace NaiveMusicUpdater
         {
             Logger.WriteLine("Start sources scan");
             // prepare to scan sources
-            string sourcesjson = Path.Combine(this.Location, "sources.json");
-            var sources = (YamlMappingNode)YamlHelper.ParseFile(sourcesjson);
+            string sourcesfile = Path.Combine(this.Location, "sources.yaml");
+            var sources = (YamlMappingNode)YamlHelper.ParseFile(sourcesfile);
 
             AddBlankSources(sources, this);
             CheckSources(sources, this);
 
-            File.WriteAllText(sourcesjson, sources.ToString());
+            YamlHelper.SaveToFile(sources, sourcesfile);
         }
 
         private void AddBlankSources(YamlMappingNode obj, MusicFolder folder)
