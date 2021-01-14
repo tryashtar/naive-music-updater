@@ -134,7 +134,7 @@ namespace NaiveMusicUpdater
                 changed = true;
             }
             string comment = metadata.Comment.Value;
-            if (metadata.Comment.Overwrite && tag.Comment != comment)
+            if ((tag.Comment == "" || metadata.Comment.Overwrite) && tag.Comment != comment)
             {
                 ChangedThing("comment", tag.Comment, comment);
                 tag.Comment = comment;
@@ -161,30 +161,32 @@ namespace NaiveMusicUpdater
                 tag.Year = year;
                 changed = true;
             }
-            string genre = metadata.Genre.Value;
-            if (metadata.Title.Overwrite && !IsSingleValue(tag.Genres, genre))
+            string[] genres = metadata.Genres.Values.ToArray();
+            if (metadata.Genres.CombineMode == ListCombineMode.Replace && !tag.Genres.SequenceEqual(genres))
             {
-                ChangedThing("genres", tag.Genres, genre);
-                tag.Genres = SingleValue(genre);
+                ChangedThing("genre", tag.Genres, genres);
+                tag.Genres = genres;
                 changed = true;
             }
-            string artist = metadata.Artist.Value;
-            if (metadata.Artist.Overwrite && !IsSingleValue(tag.AlbumArtists, artist))
+            string[] album_artists = metadata.AlbumArtists.Values.ToArray();
+            if (metadata.AlbumArtists.CombineMode == ListCombineMode.Replace && !tag.AlbumArtists.SequenceEqual(album_artists))
             {
-                ChangedThing("album artists", tag.AlbumArtists, artist);
-                tag.AlbumArtists = SingleValue(artist);
+                ChangedThing("album artist", tag.AlbumArtists, album_artists);
+                tag.AlbumArtists = album_artists;
                 changed = true;
             }
-            if (metadata.Artist.Overwrite && !IsSingleValue(tag.Composers, artist))
+            string[] composers = metadata.Composers.Values.ToArray();
+            if (metadata.Composers.CombineMode == ListCombineMode.Replace && !tag.Composers.SequenceEqual(composers))
             {
-                ChangedThing("composers", tag.Composers, artist);
-                tag.Composers = SingleValue(artist);
+                ChangedThing("composer", tag.Composers, composers);
+                tag.Composers = composers;
                 changed = true;
             }
-            if (metadata.Artist.Overwrite && !IsSingleValue(tag.Performers, artist))
+            string[] performers = metadata.Performers.Values.ToArray();
+            if (metadata.Performers.CombineMode == ListCombineMode.Replace && !tag.Performers.SequenceEqual(performers))
             {
-                ChangedThing("performers", tag.Performers, artist);
-                tag.Performers = SingleValue(artist);
+                ChangedThing("performer", tag.Performers, performers);
+                tag.Performers = performers;
                 changed = true;
             }
             string language = metadata.Language.Value;

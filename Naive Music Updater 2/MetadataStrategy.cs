@@ -48,13 +48,16 @@ namespace NaiveMusicUpdater
     {
         public readonly MetadataSelector Title;
         public readonly MetadataSelector Album;
-        public readonly MetadataSelector Artist;
+        public readonly MetadataSelector Performers;
+        public readonly MetadataSelector AlbumArtists;
+        public readonly MetadataSelector Composers;
+        public readonly MetadataSelector Arranger;
         public readonly MetadataSelector Comment;
         public readonly MetadataSelector TrackNumber;
         public readonly MetadataSelector TrackTotal;
         public readonly MetadataSelector Year;
         public readonly MetadataSelector Language;
-        public readonly MetadataSelector Genre;
+        public readonly MetadataSelector Genres;
         public MetadataStrategy(JObject json)
         {
             MetadataSelector FromJson(string key)
@@ -65,13 +68,16 @@ namespace NaiveMusicUpdater
             }
             Title = FromJson("title");
             Album = FromJson("album");
-            Artist = FromJson("artist");
+            Performers = FromJson("artist");
+            AlbumArtists = FromJson("artist");
+            Composers = FromJson("artist");
+            Arranger = FromJson("artist");
             Comment = FromJson("comment");
             TrackNumber = FromJson("track");
             TrackTotal = FromJson("track_count");
             Year = FromJson("year");
             Language = FromJson("language");
-            Genre = FromJson("genre");
+            Genres = FromJson("genre");
         }
 
         public MetadataStrategy(YamlMappingNode yaml)
@@ -85,18 +91,26 @@ namespace NaiveMusicUpdater
             }
             Title = FromYaml("title");
             Album = FromYaml("album");
-            Artist = FromYaml("artist");
+            Performers = FromYaml("artist");
+            AlbumArtists = FromYaml("artist");
+            Composers = FromYaml("artist");
+            Arranger = FromYaml("artist");
             Comment = FromYaml("comment");
             TrackNumber = FromYaml("track");
             TrackTotal = FromYaml("track_count");
             Year = FromYaml("year");
             Language = FromYaml("language");
-            Genre = FromYaml("genre");
+            Genres = FromYaml("genre");
         }
 
         private MetadataProperty<string> Get(MetadataSelector selector, IMusicItem item)
         {
             return selector?.Get(item) ?? MetadataProperty<string>.Ignore();
+        }
+
+        private MetadataListProperty<string> GetList(MetadataSelector selector, IMusicItem item)
+        {
+            return selector?.GetList(item) ?? MetadataListProperty<string>.Ignore();
         }
 
         public Metadata Get(IMusicItem item)
@@ -105,13 +119,16 @@ namespace NaiveMusicUpdater
             {
                 Title = Get(Title, item),
                 Album = Get(Album, item),
-                Artist = Get(Artist, item),
+                Performers = GetList(Performers, item),
+                AlbumArtists = GetList(AlbumArtists, item),
+                Composers = GetList(Composers, item),
+                Arranger = Get(Arranger, item),
                 Comment = Get(Comment, item),
                 TrackNumber = Get(TrackNumber, item).TryConvertTo(x => uint.Parse(x)),
                 TrackTotal = Get(TrackTotal, item).TryConvertTo(x => uint.Parse(x)),
                 Year = Get(Year, item).TryConvertTo(x => uint.Parse(x)),
                 Language = Get(Language, item),
-                Genre = Get(Genre, item)
+                Genres = GetList(Genres, item)
             };
             return meta;
         }
