@@ -100,17 +100,15 @@ namespace NaiveMusicUpdater
             return false;
         }
 
-        public void ApplyMetadata(IMusicItem item)
+        public Metadata GetMetadata(IMusicItem item)
         {
-            DefaultStrategy.Update(item);
+            var metadata = DefaultStrategy.Get(item);
             foreach (var (selectors, strategy) in StrategyOverrides)
             {
-                var selected = selectors.SelectMany(x => x.SelectFrom(library));
-                foreach (var item in selected)
-                {
-                    strategy.Update(item);
-                }
+                if (selectors.Any(x => x.IsSelectedFrom((MusicLibrary)item.PathFromRoot().First(), item)))
+                    metadata.Merge(strategy.Get(item));
             }
+            return metadata;
         }
 
         public string CleanName(string name)

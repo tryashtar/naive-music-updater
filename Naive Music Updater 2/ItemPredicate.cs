@@ -100,6 +100,11 @@ namespace NaiveMusicUpdater
             return results;
         }
 
+        public bool IsSelectedFrom(MusicFolder start, IMusicItem item)
+        {
+            return SelectFrom(start).Contains(item);
+        }
+
         private bool IsMatch(IMusicItem[] item_path)
         {
             // fail if the song isn't deep enough

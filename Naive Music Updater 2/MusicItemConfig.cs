@@ -46,26 +46,6 @@ namespace NaiveMusicUpdater
                 strategy = MetadataStrategyFactory.Create(value);
             return (selector, strategy);
         }
-
-        public void ApplyMetadata(MusicFolder folder)
-        {
-            // untargeted stuff
-            if (TrackOrder != null)
-                TrackOrder.ApplyAll(folder);
-            if (LocalMetadata != null)
-                LocalMetadata.UpdateAll(folder);
-
-            // targeted stuff
-            foreach (var func in MetadataStrategies)
-            {
-                var (selector, strategy) = func(folder);
-                var matches = selector.SelectFrom(folder);
-                foreach (var item in matches)
-                {
-                    strategy.Update(item);
-                }
-            }
-        }
     }
 
     public static class SongOrderFactory
@@ -95,20 +75,7 @@ namespace NaiveMusicUpdater
 
         public override void ApplyAll(MusicFolder folder)
         {
-            var items = folder.Songs;
-            for (int i = 0; i < DefinedOrder.Count; i++)
-            {
-                var matches = DefinedOrder[i].SelectFrom(folder);
-                foreach (var match in matches)
-                {
-                    var strategy = new ApplyMetadataStrategy(new Metadata
-                    {
-                        TrackNumber = MetadataProperty<uint>.Create((uint)i + 1),
-                        TrackTotal = MetadataProperty<uint>.Create((uint)items.Count),
-                    });
-                    strategy.Update(match);
-                }
-            }
+            
         }
     }
 
@@ -124,16 +91,7 @@ namespace NaiveMusicUpdater
 
         public override void ApplyAll(MusicFolder folder)
         {
-            var all = folder.Songs.OrderBy(GetSort()).ToList();
-            for (int i = 0; i < all.Count; i++)
-            {
-                var strategy = new ApplyMetadataStrategy(new Metadata
-                {
-                    TrackNumber = MetadataProperty<uint>.Create((uint)i + 1),
-                    TrackTotal = MetadataProperty<uint>.Create((uint)all.Count)
-                });
-                strategy.Update(all[i]);
-            }
+            
         }
 
         private Func<Song, string> GetSort()

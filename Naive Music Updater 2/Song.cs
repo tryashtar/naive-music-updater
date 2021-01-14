@@ -24,8 +24,6 @@ namespace NaiveMusicUpdater
             Location = file;
         }
 
-        public Metadata Metadata { get; set; } = new Metadata();
-
         public void Update()
         {
             Logger.WriteLine($"Song: {SimpleName}");
@@ -34,7 +32,7 @@ namespace NaiveMusicUpdater
                 return;
 #endif
             Logger.WriteLine($"(checking)");
-            MusicItemUtils.UpdateMetadata(this);
+            var metadata = MusicItemUtils.GetMetadata(this);
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool success = true;
@@ -43,7 +41,7 @@ namespace NaiveMusicUpdater
                 var path = Util.StringPathAfterRoot(this);
                 var art = GlobalCache.GetArtPathFor(this);
                 bool changed = false;
-                changed |= UpdateTag(tag_v2, Metadata);
+                changed |= UpdateTag(tag_v2, metadata);
                 changed |= UpdateArt(tag_v2, art);
                 changed |= GlobalCache.WriteLyrics(path, tag_v2);
                 changed |= WipeUselessProperties(tag_v2);

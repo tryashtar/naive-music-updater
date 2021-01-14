@@ -94,5 +94,15 @@ namespace NaiveMusicUpdater
             Language = Language.CombineWith(other.Language);
             Genre = Genre.CombineWith(other.Genre);
         }
+
+        public static Metadata FromMany(IEnumerable<Metadata> many)
+        {
+            var result = new Metadata();
+            foreach (var item in many)
+            {
+                result.Merge(item);
+            }
+            return result;
+        }
     }
 }

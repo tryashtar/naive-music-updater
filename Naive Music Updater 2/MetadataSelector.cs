@@ -27,7 +27,7 @@ namespace NaiveMusicUpdater
         {
             if (item == current)
                 return item.GlobalCache.Config.CleanName(item.SimpleName);
-            return item.Metadata.Title.Value;
+            return item.GetMetadata().Title.Value;
         }
     }
 
@@ -347,7 +347,7 @@ namespace NaiveMusicUpdater
 
         public override string GetRaw(IMusicItem item)
         {
-            return Getter(item.Metadata).Value;
+            return Getter(item.GetMetadata()).Value;
         }
     }
 }

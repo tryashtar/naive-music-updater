@@ -15,14 +15,13 @@ namespace NaiveMusicUpdater
         MusicFolder Parent { get; }
         MusicItemConfig LocalConfig { get; }
         LibraryCache GlobalCache { get; }
-        Metadata Metadata { get; set; }
     }
 
     public static class MusicItemUtils
     {
-        public static void UpdateMetadata(this IMusicItem item)
+        public static Metadata GetMetadata(this IMusicItem item)
         {
-            item.Metadata.Merge(item.GlobalCache.Config.GlobalMetadata(item));
+            return new Metadata();
         }
     }
 
@@ -88,7 +87,7 @@ namespace NaiveMusicUpdater
                 ScanContents();
             }
 
-            MusicItemUtils.UpdateMetadata(this);
+            var metadata = MusicItemUtils.GetMetadata(this);
             var art = GlobalCache.GetArtPathFor(this);
             ArtCache.LoadAndMakeIcon(art);
             string subalbumini = Path.Combine(Location, "desktop.ini");
@@ -100,8 +99,6 @@ namespace NaiveMusicUpdater
             }
 
             Logger.TabIn();
-            if (_LocalConfig != null)
-                _LocalConfig.ApplyMetadata(this);
             foreach (var child in ChildFolders)
             {
                 child.Update();
