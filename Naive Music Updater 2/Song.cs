@@ -490,17 +490,6 @@ namespace NaiveMusicUpdater
             return changed;
         }
 
-        private static bool IsSingleValue<T>(T[] array, T value)
-        {
-            if (array == null)
-                return false;
-            if (value == null)
-                return array.Length == 0;
-            if (array.Length != 1)
-                return false;
-            return value.Equals(array[0]);
-        }
-
         private static bool IsSingleValue(IPicture[] array, IPicture value)
         {
             if (array == null)
@@ -513,22 +502,9 @@ namespace NaiveMusicUpdater
             return value.Data == array[0].Data;
         }
 
-        private static T[] SingleValue<T>(T value)
-        {
-            if (value == null)
-                return new T[0];
-            return new T[] { value };
-        }
-
         public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);
 
-        public IEnumerable<IMusicItem> PathFromRoot()
-        {
-            var list = new List<IMusicItem>();
-            if (this._Parent != null)
-                list.AddRange(this._Parent.PathFromRoot());
-            list.Add(this);
-            return list;
-        }
+        public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
+        public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
     }
 }

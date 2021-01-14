@@ -95,7 +95,7 @@ namespace NaiveMusicUpdater
             throw new ArgumentException();
         }
 
-        public bool IsSelectedFrom(MusicFolder start, IMusicItem item)
+        public bool IsSelectedFrom(IMusicItem start, IMusicItem item)
         {
             var start_path = start.PathFromRoot().ToArray();
             var item_path = item.PathFromRoot().Skip(start_path.Length).ToArray();

@@ -15,6 +15,7 @@ namespace NaiveMusicUpdater
         MusicFolder Parent { get; }
         MusicItemConfig LocalConfig { get; }
         LibraryCache GlobalCache { get; }
+        MusicLibrary RootLibrary { get; }
     }
 
     public static class MusicItemUtils
@@ -28,6 +29,18 @@ namespace NaiveMusicUpdater
                     metadata.Merge(parent.LocalConfig.GetMetadata(item, desired));
             }
             return metadata;
+        }
+
+        public static IEnumerable<IMusicItem> PathFromRoot(this IMusicItem item)
+        {
+            var list = new List<IMusicItem>();
+            while (item != null)
+            {
+                list.Add(item);
+                item = item.Parent;
+            }
+            list.Reverse();
+            return list;
         }
     }
 
@@ -54,7 +67,7 @@ namespace NaiveMusicUpdater
             ScanContents();
             string config = Path.Combine(folder, "config.yaml");
             if (File.Exists(config))
-                _LocalConfig = new MusicItemConfig(config);
+                _LocalConfig = new MusicItemConfig(config, this);
         }
 
         public IEnumerable<Song> GetAllSongs()
@@ -69,14 +82,8 @@ namespace NaiveMusicUpdater
 
         public string SimpleName => Path.GetFileName(Location);
 
-        public IEnumerable<IMusicItem> PathFromRoot()
-        {
-            var list = new List<IMusicItem>();
-            if (this._Parent != null)
-                list.AddRange(this._Parent.PathFromRoot());
-            list.Add(this);
-            return list;
-        }
+        public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
+        public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
 
         public void Update()
         {

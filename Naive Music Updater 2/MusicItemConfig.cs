@@ -15,11 +15,13 @@ namespace NaiveMusicUpdater
     public class MusicItemConfig
     {
         public readonly SongOrder TrackOrder;
-        public readonly IMetadataStrategy MainStrategy;
+        public readonly Func<IMetadataStrategy> MainStrategy;
         // have to defer these because some of the data needed isn't ready until after constructor is done
-        public readonly List<Func<MusicFolder, (ItemSelector selector, IMetadataStrategy strategy)>> MetadataStrategies;
-        public MusicItemConfig(string file)
+        public readonly List<Func<(ItemSelector selector, IMetadataStrategy strategy)>> MetadataStrategies;
+        private readonly IMusicItem ConfiguredItem;
+        public MusicItemConfig(string file, IMusicItem configured_item)
         {
+            ConfiguredItem = configured_item;
             var root = YamlHelper.ParseFile(file);
             if (root != null)
             {
@@ -28,31 +30,47 @@ namespace NaiveMusicUpdater
                     TrackOrder = SongOrderFactory.FromNode(order);
                 var local = root.TryGet("this");
                 if (local != null)
-                    MainStrategy = MetadataStrategyFactory.Create(local);
-                MetadataStrategies = (root.TryGet("set") as YamlMappingNode)?.Children.Select(x => (Func<MusicFolder, (ItemSelector, IMetadataStrategy)>)(f => ParseStrategy(f, x.Key, x.Value))).ToList();
+                    MainStrategy = () => LiteralOrReference(local);
+                var set = root.TryGet("set") as YamlMappingNode;
+                if (set != null)
+                    MetadataStrategies = set.Children.Select(x => (Func<(ItemSelector, IMetadataStrategy)>)(() => ParseStrategy(x.Key, x.Value))).ToList();
             }
             if (MetadataStrategies == null)
-                MetadataStrategies = new List<Func<MusicFolder, (ItemSelector, IMetadataStrategy)>>();
-
+                MetadataStrategies = new List<Func<(ItemSelector, IMetadataStrategy)>>();
         }
 
         public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
         {
-            if (MainStrategy == null)
-                return new Metadata();
-            return MainStrategy.Get(item, desired);
+            var metadata = new Metadata();
+            if (MainStrategy != null)
+                metadata.Merge(MainStrategy().Get(item, desired));
+            foreach (var strat in MetadataStrategies)
+            {
+                var (selector, strategy) = strat();
+                if (selector.IsSelectedFrom(ConfiguredItem, item))
+                    metadata.Merge(strategy.Get(item, desired));
+            }
+            return metadata;
         }
 
-        private (ItemSelector selector, IMetadataStrategy strategy) ParseStrategy(MusicFolder folder, YamlNode key, YamlNode value)
+        private (ItemSelector selector, IMetadataStrategy strategy) ParseStrategy(YamlNode key, YamlNode value)
         {
             var selector = ItemSelector.FromNode(key);
-            var reference = value.TryGet("reference");
-            IMetadataStrategy strategy;
-            if (reference != null)
-                strategy = folder.GlobalCache.Config.GetNamedStrategy((string)reference);
-            else
-                strategy = MetadataStrategyFactory.Create(value);
+            var strategy = LiteralOrReference(value);
             return (selector, strategy);
+        }
+
+        private IMetadataStrategy LiteralOrReference(YamlNode node)
+        {
+            if (node.NodeType == YamlNodeType.Scalar)
+                return ConfiguredItem.GlobalCache.Config.GetNamedStrategy((string)node);
+            else
+            {
+                if (node.NodeType == YamlNodeType.Sequence)
+                    return new MultipleMetadataStrategy(((YamlSequenceNode)node).Select(LiteralOrReference));
+                else
+                    return MetadataStrategyFactory.Create(node);
+            }
         }
     }
 
