@@ -34,6 +34,7 @@ namespace NaiveMusicUpdater
                 return;
 #endif
             Logger.WriteLine($"(checking)");
+            MusicItemUtils.UpdateMetadata(this);
             using (TagLib.File file = TagLib.File.Create(Location))
             {
                 bool success = true;

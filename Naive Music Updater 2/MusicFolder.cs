@@ -18,6 +18,14 @@ namespace NaiveMusicUpdater
         Metadata Metadata { get; set; }
     }
 
+    public static class MusicItemUtils
+    {
+        public static void UpdateMetadata(this IMusicItem item)
+        {
+            item.Metadata.Merge(item.GlobalCache.Config.GlobalMetadata(item));
+        }
+    }
+
     public class MusicFolder : IMusicItem
     {
         public string Location { get; private set; }
@@ -80,6 +88,7 @@ namespace NaiveMusicUpdater
                 ScanContents();
             }
 
+            MusicItemUtils.UpdateMetadata(this);
             var art = GlobalCache.GetArtPathFor(this);
             ArtCache.LoadAndMakeIcon(art);
             string subalbumini = Path.Combine(Location, "desktop.ini");

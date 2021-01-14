@@ -100,12 +100,9 @@ namespace NaiveMusicUpdater
             return false;
         }
 
-        public void ApplyMetadata(MusicLibrary library)
+        public void ApplyMetadata(IMusicItem item)
         {
-            foreach (var item in library.GetAllSubItems())
-            {
-                DefaultStrategy.Update(item);
-            }
+            DefaultStrategy.Update(item);
             foreach (var (selectors, strategy) in StrategyOverrides)
             {
                 var selected = selectors.SelectMany(x => x.SelectFrom(library));
