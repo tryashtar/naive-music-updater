@@ -109,10 +109,9 @@ namespace NaiveMusicUpdater
                 no_sources.Add(song);
             }
             no_sources = no_sources.Distinct().ToList();
+            obj.Children.Remove("MISSING");
             if (no_sources.Any())
                 obj.Add("MISSING", new YamlSequenceNode(no_sources.Select(x => new YamlScalarNode(x))));
-            else
-                obj.Children.Remove("MISSING");
             Logger.TabOut();
         }
     }

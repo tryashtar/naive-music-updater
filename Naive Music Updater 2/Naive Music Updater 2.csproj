@@ -51,7 +51,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ArtCache.cs" />
-    <Compile Include="ItemPredicate.cs" />
+    <Compile Include="MusicItems\Selectors\ExactItemPredicate.cs" />
+    <Compile Include="MusicItems\Selectors\IItemPredicate.cs" />
     <Compile Include="Config\LibraryCache.cs" />
     <Compile Include="Config\LibraryConfig.cs" />
     <Compile Include="Logger.cs" />
@@ -76,6 +77,9 @@
     <Compile Include="Config\MusicItemConfig.cs" />
     <Compile Include="MusicItems\MusicItemUtils.cs" />
     <Compile Include="MusicItems\MusicLibrary.cs" />
+    <Compile Include="MusicItems\Selectors\ItemPredicateFactory.cs" />
+    <Compile Include="MusicItems\Selectors\ItemSelector.cs" />
+    <Compile Include="MusicItems\Selectors\RegexItemPredicate.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MusicItems\Song.cs" />
