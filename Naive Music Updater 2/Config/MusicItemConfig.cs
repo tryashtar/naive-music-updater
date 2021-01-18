@@ -20,6 +20,7 @@ namespace NaiveMusicUpdater
         public readonly Func<IMetadataStrategy> SongsStrategy;
         public readonly Func<IMetadataStrategy> FoldersStrategy;
         public readonly List<Func<(ItemSelector selector, IMetadataStrategy strategy)>> MetadataStrategies;
+        public readonly List<Func<(List<ItemSelector> selectors, IMetadataStrategy strategy)>> SharedStrategies;
         private readonly IMusicItem ConfiguredItem;
         public MusicItemConfig(string file, IMusicItem configured_item)
         {
@@ -40,9 +41,22 @@ namespace NaiveMusicUpdater
                 var set = root.TryGet("set") as YamlMappingNode;
                 if (set != null)
                     MetadataStrategies = set.Children.Select(x => (Func<(ItemSelector, IMetadataStrategy)>)(() => ParseStrategy(x.Key, x.Value))).ToList();
+                var shared = root.TryGet("set all") as YamlSequenceNode;
+                if (shared != null)
+                {
+                    SharedStrategies = new List<Func<(List<ItemSelector> selectors, IMetadataStrategy strategy)>>();
+                    foreach (var item in shared)
+                    {
+                        var names = item.TryGet("names") as YamlSequenceNode;
+                        var setting = item.TryGet("set");
+                        SharedStrategies.Add(() => ParseMultiple(names, setting));
+                    }
+                }
             }
             if (MetadataStrategies == null)
                 MetadataStrategies = new List<Func<(ItemSelector, IMetadataStrategy)>>();
+            if (SharedStrategies == null)
+                SharedStrategies = new List<Func<(List<ItemSelector> selectors, IMetadataStrategy strategy)>>();
         }
 
         public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
@@ -54,6 +68,12 @@ namespace NaiveMusicUpdater
                 metadata.Merge(FoldersStrategy().Get(item, desired));
             if (TrackOrder != null && item is Song)
                 metadata.Merge(TrackOrder().Get(item));
+            foreach (var strat in SharedStrategies)
+            {
+                var (selectors, strategy) = strat();
+                if (selectors.Any(x => x.IsSelectedFrom(ConfiguredItem, item)))
+                    metadata.Merge(strategy.Get(item, desired));
+            }
             foreach (var strat in MetadataStrategies)
             {
                 var (selector, strategy) = strat();
@@ -68,6 +88,13 @@ namespace NaiveMusicUpdater
             var selector = ItemSelector.FromNode(key);
             var strategy = LiteralOrReference(value);
             return (selector, strategy);
+        }
+
+        private (List<ItemSelector> selectors, IMetadataStrategy strategy) ParseMultiple(YamlSequenceNode names, YamlNode value)
+        {
+            var selectors = names.Select(x => ItemSelector.FromNode(x)).ToList();
+            var strategy = LiteralOrReference(value);
+            return (selectors, strategy);
         }
 
         private IMetadataStrategy LiteralOrReference(YamlNode node)
