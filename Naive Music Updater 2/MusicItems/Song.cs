@@ -288,12 +288,18 @@ namespace NaiveMusicUpdater
                 v1.Year = v2.Year;
                 changed = true;
             }
-            if (v2.Track != v1.Track)
+            uint track = v2.Track;
+            if (track > 255)
+                track = 0;
+            if (track != v1.Track)
             {
-                Logger.WriteLine($"Updated track in V1 tag ({v1.Track}) to match V2 ({v2.Track})");
-                v1.Track = v2.Track;
+                Logger.WriteLine($"Updated track in V1 tag ({v1.Track}) to match V2 ({track})");
+                if (track != v2.Track)
+                    Logger.WriteLine($"(Couldn't store real value of {v2.Track})");
+                v1.Track = track;
                 changed = true;
             }
+            // don't copy track count, it doesn't actually save
             if (!v2.Genres.SequenceEqual(v1.Genres))
             {
                 Logger.WriteLine($"Updated genre in V1 tag ({String.Join(";", v1.Genres)}) to match V2 ({String.Join(";", v2.Genres)})");
