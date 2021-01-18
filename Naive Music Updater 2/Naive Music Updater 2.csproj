@@ -48,6 +48,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ArtCache.cs" />
+    <Compile Include="Config\Sorting\DefinedSongOrder.cs" />
+    <Compile Include="Config\Sorting\DirectorySongOrder.cs" />
+    <Compile Include="Config\Sorting\SongOrder.cs" />
+    <Compile Include="Config\Sorting\SongOrderFactory.cs" />
     <Compile Include="MusicItems\Selectors\ExactItemPredicate.cs" />
     <Compile Include="MusicItems\Selectors\IItemPredicate.cs" />
     <Compile Include="Config\LibraryCache.cs" />
