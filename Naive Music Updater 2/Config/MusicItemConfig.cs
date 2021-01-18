@@ -17,7 +17,8 @@ namespace NaiveMusicUpdater
         public readonly string Location;
         // have to defer these because some of the data needed isn't ready until after constructor is done
         public readonly Func<SongOrder> TrackOrder;
-        public readonly Func<IMetadataStrategy> MainStrategy;
+        public readonly Func<IMetadataStrategy> SongsStrategy;
+        public readonly Func<IMetadataStrategy> FoldersStrategy;
         public readonly List<Func<(ItemSelector selector, IMetadataStrategy strategy)>> MetadataStrategies;
         private readonly IMusicItem ConfiguredItem;
         public MusicItemConfig(string file, IMusicItem configured_item)
@@ -30,9 +31,12 @@ namespace NaiveMusicUpdater
                 var order = root.TryGet("order");
                 if (order != null && configured_item is MusicFolder folder)
                     TrackOrder = () => SongOrderFactory.FromNode(order, folder);
-                var local = root.TryGet("this");
-                if (local != null)
-                    MainStrategy = () => LiteralOrReference(local);
+                var songs = root.TryGet("songs");
+                if (songs != null)
+                    SongsStrategy = () => LiteralOrReference(songs);
+                var folders = root.TryGet("folders");
+                if (folders != null)
+                    FoldersStrategy = () => LiteralOrReference(folders);
                 var set = root.TryGet("set") as YamlMappingNode;
                 if (set != null)
                     MetadataStrategies = set.Children.Select(x => (Func<(ItemSelector, IMetadataStrategy)>)(() => ParseStrategy(x.Key, x.Value))).ToList();
@@ -44,9 +48,11 @@ namespace NaiveMusicUpdater
         public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
         {
             var metadata = new Metadata();
-            if (MainStrategy != null)
-                metadata.Merge(MainStrategy().Get(item, desired));
-            if (TrackOrder != null)
+            if (SongsStrategy != null && item is Song)
+                metadata.Merge(SongsStrategy().Get(item, desired));
+            if (FoldersStrategy != null && item is MusicFolder)
+                metadata.Merge(FoldersStrategy().Get(item, desired));
+            if (TrackOrder != null && item is Song)
                 metadata.Merge(TrackOrder().Get(item));
             foreach (var strat in MetadataStrategies)
             {

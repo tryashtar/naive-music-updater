@@ -30,8 +30,8 @@ namespace NaiveMusicUpdater
             {
                 var datecache = File.ReadAllText(DateCachePath);
                 var deserializer = new DeserializerBuilder().Build();
-                DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache);
-                PendingDateCache = DateCache.ToDictionary(x => x.Key, x => x.Value);
+                DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache) ?? new Dictionary<string, DateTime>();
+                PendingDateCache = new Dictionary<string, DateTime>(DateCache);
             }
             else
             {
