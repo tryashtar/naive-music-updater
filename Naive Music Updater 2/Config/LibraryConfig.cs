@@ -23,6 +23,7 @@ namespace NaiveMusicUpdater
         private readonly Dictionary<string, IMetadataStrategy> NamedStrategies = new Dictionary<string, IMetadataStrategy>();
         private readonly string MP3GainPath;
         private readonly List<string> IllegalPrivateOwners;
+        public readonly int SourceAutoMaxDistance;
         public LibraryConfig(string file)
         {
             if (!File.Exists(file))
@@ -61,10 +62,13 @@ namespace NaiveMusicUpdater
             }
             var mp3path = yaml.TryGet("mp3gain_path");
             var cpo = yaml.TryGet("clear_private_owners");
+            var samd = yaml.TryGet("source_auto_max_distance");
             if (mp3path != null)
                 MP3GainPath = (string)mp3path;
             if (cpo != null)
                 IllegalPrivateOwners = YamlHelper.ToStringArray((YamlSequenceNode)cpo).ToList();
+            if (samd != null)
+                SourceAutoMaxDistance = int.Parse((string)samd);
         }
 
         public IMetadataStrategy GetNamedStrategy(string name)

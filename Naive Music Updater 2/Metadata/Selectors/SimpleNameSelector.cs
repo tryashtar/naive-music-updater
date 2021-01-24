@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    public class FileNameSelector : MetadataSelector
+    public class SimpleNameSelector : MetadataSelector
     {
-        public FileNameSelector()
+        public SimpleNameSelector()
         { }
 
         public override MetadataProperty GetRaw(IMusicItem item)
         {
-            return MetadataProperty.Single(ResolveNameOrDefault(item, item), CombineMode.Replace);
+            return MetadataProperty.Single(item.SimpleName, CombineMode.Replace);
         }
     }
 }

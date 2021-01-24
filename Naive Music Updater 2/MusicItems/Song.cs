@@ -65,17 +65,6 @@ namespace NaiveMusicUpdater
 #endif
                 }
             }
-            // correct case of filename
-            // changing filename in other ways is forbidden because stuff is derived from it
-            // it's the USER's job to set the filename they want and set config to determine how to pull metadata out of it
-            var filename = GlobalCache.Config.ToFilesafe(GlobalCache.Config.CleanName(SimpleName), false);
-            if (SimpleName != filename)
-            {
-                Logger.WriteLine($"Renaming file: \"{filename}\"");
-                var newpath = Path.Combine(Path.GetDirectoryName(Location), filename + Path.GetExtension(Location));
-                File.Move(Location, newpath);
-                Location = newpath;
-            }
         }
 
         private bool UpdateArt(TagLib.Tag tag, string art_path)
@@ -326,14 +315,14 @@ namespace NaiveMusicUpdater
                     bool remove = false;
                     if (frame is TextInformationFrame tif)
                     {
-                        if (tif.Text.Length != 1)
+                        if (tif.Text.Length == 0)
                         {
                             Logger.WriteLine($"Removed text information frame with length {tif.Text.Length}: \"{tif}\"");
                             remove = true;
                         }
                         else
                         {
-                            var tiftext = tif.Text.Single();
+                            var tiftext = tif.Text.First();
                             var id = tif.FrameId.ToString();
                             if (!new string[] {
                                 "TIT2", // title

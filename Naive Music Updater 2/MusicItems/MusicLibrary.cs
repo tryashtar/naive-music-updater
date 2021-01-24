@@ -62,20 +62,20 @@ namespace NaiveMusicUpdater
             Logger.TabOut();
         }
 
+        private const string MISSING_SOURCE = "MISSING";
         private void CheckSources(YamlMappingNode obj, MusicFolder folder)
         {
             Logger.WriteLine(folder.SimpleName);
             Logger.TabIn();
-            List<string> no_sources;
-            var no_sources_token = (YamlSequenceNode)obj.TryGet("?");
-            if (no_sources_token == null)
-                no_sources = new List<string>();
-            else
-                no_sources = YamlHelper.ToStringArray(no_sources_token).ToList();
-            var songs = folder.Songs.Select(x => x.SimpleName).ToList();
+
+            var reverse_sources = new Dictionary<string, YamlNode>();
+            var songs_to_check = folder.Songs.Select(x => x.SimpleName).ToList();
+            var redundant_songs = new List<string>();
+            var conversions = new Dictionary<string, string>();
+
             foreach (var item in obj)
             {
-                if ((string)item.Key == "?")
+                if ((string)item.Key == MISSING_SOURCE)
                     continue;
                 if (item.Value.NodeType == YamlNodeType.Sequence || item.Value.NodeType == YamlNodeType.Scalar)
                 {
@@ -84,13 +84,14 @@ namespace NaiveMusicUpdater
 
                     foreach (string song in sourced)
                     {
-                        if (songs.Contains(song))
-                        {
-                            songs.Remove(song);
-                            no_sources.Remove(song);
-                        }
+                        reverse_sources[song] = item.Value;
+                        if (songs_to_check.Contains(song))
+                            songs_to_check.Remove(song);
                         else
+                        {
                             Logger.WriteLine($"Song in sources but not library: {song}");
+                            redundant_songs.Add(song);
+                        }
                     }
                 }
                 else
@@ -103,16 +104,104 @@ namespace NaiveMusicUpdater
                         CheckSources((YamlMappingNode)item.Value, associated_folder);
                 }
             }
-            foreach (var song in songs)
+            foreach (var song in songs_to_check)
             {
                 Logger.WriteLine($"Song missing source: {song}");
-                no_sources.Add(song);
+                if (redundant_songs.Any())
+                {
+                    var search = MinLevenshtein(song, redundant_songs.Except(conversions.Values));
+                    if (search != null && search.Value.distance <= Cache.Config.SourceAutoMaxDistance)
+                        conversions[song] = search.Value.result;
+                }
             }
-            no_sources = no_sources.Distinct().ToList();
-            obj.Children.Remove("MISSING");
-            if (no_sources.Any())
-                obj.Add("MISSING", new YamlSequenceNode(no_sources.Select(x => new YamlScalarNode(x))));
+            if (conversions.Any())
+            {
+                Logger.WriteLine("");
+                Logger.WriteLine("Possible source autocorrections:");
+                Logger.TabIn();
+                foreach (var item in conversions)
+                {
+                    Logger.WriteLine("┎ " + item.Value);
+                    Logger.WriteLine("┖ " + item.Key);
+                }
+                Logger.TabOut();
+                Logger.WriteLine("Accept?");
+                var input = Logger.ReadLine();
+                if (input == "")
+                    Logger.WriteLine("Skipped");
+                else
+                {
+                    Logger.WriteLine("Converting...");
+                    foreach (var item in conversions)
+                    {
+                        songs_to_check.Remove(item.Key);
+                        var redundant_location = reverse_sources[item.Value];
+                        if (redundant_location is YamlScalarNode simple)
+                            simple.Value = item.Key;
+                        else if (redundant_location is YamlSequenceNode list)
+                        {
+                            int index = list.Children.IndexOf(list.Children.First(x => (string)x == item.Value));
+                            list.Children[index] = new YamlScalarNode(item.Key);
+                        }
+                    }
+                }
+            }
+            songs_to_check = songs_to_check.Distinct().ToList();
+            obj.Children.Remove(MISSING_SOURCE);
+            if (songs_to_check.Any())
+                obj.Add(MISSING_SOURCE, new YamlSequenceNode(songs_to_check.Select(x => new YamlScalarNode(x))));
             Logger.TabOut();
+        }
+
+        private static (string result, int distance)? MinLevenshtein(string template, IEnumerable<string> options)
+        {
+            string result = null;
+            int min = int.MaxValue;
+            foreach (var item in options)
+            {
+                var distance = CalcLevenshteinDistance(template, item);
+                if (distance < min)
+                {
+                    min = distance;
+                    result = item;
+                }
+            }
+            if (result == null)
+                return null;
+            return (result, min);
+        }
+
+        private static int CalcLevenshteinDistance(string a, string b)
+        {
+            if (String.IsNullOrEmpty(a) && String.IsNullOrEmpty(b))
+            {
+                return 0;
+            }
+            if (String.IsNullOrEmpty(a))
+            {
+                return b.Length;
+            }
+            if (String.IsNullOrEmpty(b))
+            {
+                return a.Length;
+            }
+            int lengthA = a.Length;
+            int lengthB = b.Length;
+            var distances = new int[lengthA + 1, lengthB + 1];
+            for (int i = 0; i <= lengthA; distances[i, 0] = i++) ;
+            for (int j = 0; j <= lengthB; distances[0, j] = j++) ;
+
+            for (int i = 1; i <= lengthA; i++)
+                for (int j = 1; j <= lengthB; j++)
+                {
+                    int cost = b[j - 1] == a[i - 1] ? 0 : 1;
+                    distances[i, j] = Math.Min
+                        (
+                        Math.Min(distances[i - 1, j] + 1, distances[i, j - 1] + 1),
+                        distances[i - 1, j - 1] + cost
+                        );
+                }
+            return distances[lengthA, lengthB];
         }
     }
 }

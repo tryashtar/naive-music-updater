@@ -23,17 +23,30 @@ namespace NaiveMusicUpdater
 
         public static void Close()
         {
-            Writer.Close();
+            Writer?.Close();
+        }
+
+        private static void Write(string text)
+        {
+            if (Writer == null)
+                UnwrittenData += text + Environment.NewLine;
+            else
+                Writer.WriteLine(text);
         }
 
         public static void WriteLine(string text)
         {
             string tabs = new string('\t', TabCount);
             Console.WriteLine(tabs + text);
-            if (Writer == null)
-                UnwrittenData += tabs + text + Environment.NewLine;
-            else
-                Writer.WriteLine(tabs + text);
+            Write(tabs + text);
+        }
+
+        public static string ReadLine()
+        {
+            string text = Console.ReadLine();
+            string tabs = new string('\t', TabCount);
+            Write(tabs + text);
+            return text;
         }
 
         public static void TabIn() => TabCount++;

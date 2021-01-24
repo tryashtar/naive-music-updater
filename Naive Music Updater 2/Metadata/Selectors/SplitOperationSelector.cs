@@ -60,7 +60,11 @@ namespace NaiveMusicUpdater
                 if (OutofBounds == OutofBoundsDecision.Exit)
                     return null;
                 if (OutofBounds == OutofBoundsDecision.Wrap)
+                {
                     index %= parts.Length;
+                    index += parts.Length;
+                    index %= parts.Length;
+                }
                 if (OutofBounds == OutofBoundsDecision.Clamp)
                     index = Math.Max(0, Math.Min(parts.Length - 1, index));
             }

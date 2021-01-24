@@ -15,10 +15,12 @@ namespace NaiveMusicUpdater
             {
                 string val = (string)yaml;
                 if (val == "<this>")
-                    return new FilenameSelector();
+                    return new FileNameSelector();
+                if (val == "<exact>")
+                    return new SimpleNameSelector();
                 return new LiteralSelector(val);
             }
-            if (yaml is YamlMappingNode map)
+            else if (yaml is YamlMappingNode map)
             {
                 var operation = (string)map.TryGet("operation");
                 if (operation != null)
@@ -39,6 +41,10 @@ namespace NaiveMusicUpdater
                     else if (operation == "remove")
                         return new RemoveSelector();
                 }
+            }
+            else if (yaml is YamlSequenceNode sequence)
+            {
+                return new ListSelector(sequence);
             }
 
             throw new ArgumentException($"Couldn't figure out what kind of metadata selector this is: {yaml}");
