@@ -83,23 +83,20 @@ namespace NaiveMusicUpdater
             return metadata;
         }
 
-        public void CheckSelectors()
+        public CheckSelectorResults CheckSelectors()
         {
+            var results = new CheckSelectorResults();
             var all_selectors = SharedStrategies.SelectMany(x => x().selectors)
                 .Concat(MetadataStrategies.Select(x => x().selector));
             if (TrackOrder != null && TrackOrder() is DefinedSongOrder defined)
                 all_selectors = all_selectors.Concat(defined.Order);
             foreach (var selector in all_selectors)
             {
-                Logger.WriteLine(selector.ToString());
                 var find = selector.AllMatchesFrom(ConfiguredItem);
                 if (!find.Any())
-                {
-                    Logger.TabIn();
-                    Logger.WriteLine("No matches found!");
-                    Logger.TabOut();
-                }
+                    results.UnusedSelectors.Add(selector);
             }
+            return results;
         }
 
         private (ItemSelector selector, IMetadataStrategy strategy) ParseStrategy(YamlNode key, YamlNode value)

@@ -65,9 +65,6 @@ namespace NaiveMusicUpdater
         private const string MISSING_SOURCE = "MISSING";
         private void CheckSources(YamlMappingNode obj, MusicFolder folder)
         {
-            Logger.WriteLine(folder.SimpleName);
-            Logger.TabIn();
-
             var reverse_sources = new Dictionary<string, KeyValuePair<YamlNode, YamlNode>>();
             var songs_to_check = folder.Songs.Select(x => x.SimpleName).ToList();
             var redundant_songs = new List<string>();
@@ -99,23 +96,39 @@ namespace NaiveMusicUpdater
                     // this is a folder object
                     var associated_folder = folder.SubFolders.FirstOrDefault(x => x.SimpleName == (string)item.Key);
                     if (associated_folder == null)
-                        Logger.WriteLine($"Folder in sources but not library: {item.Key}");
+                        redundant_songs.Add((string)item.Key);
                     else
                         CheckSources((YamlMappingNode)item.Value, associated_folder);
                 }
             }
-            foreach (var song in songs_to_check)
+            if (redundant_songs.Any())
             {
-                Logger.WriteLine($"Song missing source: {song}");
-                if (redundant_songs.Any())
+                Logger.WriteLine($"{folder} has songs in sources but not library:");
+                Logger.TabIn();
+                foreach (var song in redundant_songs)
                 {
-                    var search = MinLevenshtein(song, redundant_songs.Except(conversions.Values));
-                    if (search != null && search.Value.distance <= Cache.Config.SourceAutoMaxDistance)
+                    Logger.WriteLine(song);
+                }
+                Logger.TabOut();
+            }
+            if (songs_to_check.Any())
+            {
+                Logger.WriteLine($"{folder} has songs missing sources:");
+                Logger.TabIn();
+                foreach (var song in songs_to_check)
+                {
+                    Logger.WriteLine(song);
+                    if (redundant_songs.Any())
                     {
-                        conversions[song] = search.Value.result;
-                        redundant_songs.Remove(search.Value.result);
+                        var search = MinLevenshtein(song, redundant_songs.Except(conversions.Values));
+                        if (search != null && search.Value.distance <= Cache.Config.SourceAutoMaxDistance)
+                        {
+                            conversions[song] = search.Value.result;
+                            redundant_songs.Remove(search.Value.result);
+                        }
                     }
                 }
+                Logger.TabOut();
             }
             if (conversions.Any() || redundant_songs.Any())
             {
@@ -169,7 +182,6 @@ namespace NaiveMusicUpdater
             obj.Children.Remove(MISSING_SOURCE);
             if (songs_to_check.Any())
                 obj.Add(MISSING_SOURCE, new YamlSequenceNode(songs_to_check.Select(x => new YamlScalarNode(x))));
-            Logger.TabOut();
         }
 
         private static (string result, int distance)? MinLevenshtein(string template, IEnumerable<string> options)

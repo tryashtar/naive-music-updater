@@ -54,6 +54,7 @@
     <Compile Include="Config\Sorting\SongOrderFactory.cs" />
     <Compile Include="Metadata\Selectors\ListSelector.cs" />
     <Compile Include="Metadata\Selectors\SimpleNameSelector.cs" />
+    <Compile Include="MusicItems\Selectors\CheckSelectorResults.cs" />
     <Compile Include="MusicItems\Selectors\ExactItemPredicate.cs" />
     <Compile Include="MusicItems\Selectors\IItemPredicate.cs" />
     <Compile Include="Config\LibraryCache.cs" />

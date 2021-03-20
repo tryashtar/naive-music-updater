@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -104,14 +105,29 @@ namespace NaiveMusicUpdater
 
         public virtual void CheckSelectors()
         {
-            Logger.WriteLine(SimpleName + ":");
-            LocalConfig?.CheckSelectors();
-            Logger.TabIn();
+            if (LocalConfig != null)
+            {
+                var results = LocalConfig.CheckSelectors();
+                if (results.UnusedSelectors.Any())
+                {
+                    Logger.WriteLine($"{this} has unused selectors:");
+                    Logger.TabIn();
+                    foreach (var unused in results.UnusedSelectors)
+                    {
+                        Logger.WriteLine(unused.ToString());
+                    }
+                    Logger.TabOut();
+                }
+            }
             foreach (var item in SubFolders)
             {
                 item.CheckSelectors();
             }
-            Logger.TabOut();
+        }
+
+        public override string ToString()
+        {
+            return String.Join("/", MusicItemUtils.PathFromRoot(this).Select(x => x.SimpleName));
         }
     }
 }
