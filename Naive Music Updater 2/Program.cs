@@ -30,6 +30,7 @@ namespace NaiveMusicUpdater
             {
                 library.UpdateLibrary();
                 library.UpdateSources();
+                library.CheckSelectors();
             }
 #if !DEBUG
             catch (Exception ex)

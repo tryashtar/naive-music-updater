@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using YamlDotNet.RepresentationModel;
 
@@ -8,6 +9,7 @@ namespace NaiveMusicUpdater
     {
         private readonly MusicFolder Folder;
         private readonly List<ItemSelector> DefinedOrder;
+        public ReadOnlyCollection<ItemSelector> Order => DefinedOrder.AsReadOnly();
         public DefinedSongOrder(YamlSequenceNode yaml, MusicFolder folder)
         {
             Folder = folder;

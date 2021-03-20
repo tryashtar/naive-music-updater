@@ -101,5 +101,17 @@ namespace NaiveMusicUpdater
                 SongList.Add(new Song(this, file));
             }
         }
+
+        public virtual void CheckSelectors()
+        {
+            Logger.WriteLine(SimpleName + ":");
+            LocalConfig?.CheckSelectors();
+            Logger.TabIn();
+            foreach (var item in SubFolders)
+            {
+                item.CheckSelectors();
+            }
+            Logger.TabOut();
+        }
     }
 }

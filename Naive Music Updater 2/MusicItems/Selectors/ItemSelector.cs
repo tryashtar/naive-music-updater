@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using YamlDotNet.RepresentationModel;
 
@@ -24,6 +25,16 @@ namespace NaiveMusicUpdater
             if (node.NodeType == YamlNodeType.Sequence)
                 return new ItemSelector(((YamlSequenceNode)node).Children.Select(x => ItemPredicateFactory.FromNode(x)).ToArray());
             throw new ArgumentException();
+        }
+
+        public IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start)
+        {
+            IEnumerable<IMusicItem> from = new IMusicItem[] { start };
+            foreach (var item in Path)
+            {
+                from = from.OfType<MusicFolder>().SelectMany(x => x.SubItems.Where(y => item.Matches(y)));
+            }
+            return from;
         }
 
         public bool IsSelectedFrom(IMusicItem start, IMusicItem item)
