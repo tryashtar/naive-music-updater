@@ -22,7 +22,7 @@ namespace NaiveMusicUpdater
             }
             else if (yaml is YamlMappingNode map)
             {
-                var operation = (string)map.TryGet("operation");
+                var operation = (string)map.Go("operation");
                 if (operation != null)
                 {
                     if (operation == "split")
@@ -35,7 +35,7 @@ namespace NaiveMusicUpdater
                         return new CopyMetadataSelector(map);
                     else if (operation == "parent")
                     {
-                        var up = map.TryGet("up");
+                        var up = map.Go("up");
                         return new SimpleParentSelector(int.Parse((string)up));
                     }
                     else if (operation == "remove")

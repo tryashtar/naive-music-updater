@@ -50,7 +50,7 @@ namespace NaiveMusicUpdater
             Logger.TabIn();
             foreach (var item in folder.SubFolders)
             {
-                var token = (YamlMappingNode)obj.TryGet(item.SimpleName);
+                var token = (YamlMappingNode)obj.Go(item.SimpleName);
                 if (token == null)
                 {
                     token = new YamlMappingNode();
@@ -80,7 +80,7 @@ namespace NaiveMusicUpdater
                 if (item.Value.NodeType == YamlNodeType.Sequence || item.Value.NodeType == YamlNodeType.Scalar)
                 {
                     // this is a song source
-                    string[] sourced = item.Value is YamlSequenceNode j ? YamlHelper.ToStringArray(j) : new string[] { (string)item.Value };
+                    string[] sourced = item.Value is YamlSequenceNode j ? YamlHelper.ToStringList(j).ToArray() : new string[] { (string)item.Value };
 
                     foreach (string song in sourced)
                     {
@@ -114,11 +114,15 @@ namespace NaiveMusicUpdater
                         conversions[song] = search.Value.result;
                 }
             }
-            if (conversions.Any())
+            if (conversions.Any() || redundant_songs.Any())
             {
                 Logger.WriteLine("");
                 Logger.WriteLine("Possible source autocorrections:");
                 Logger.TabIn();
+                foreach (var item in redundant_songs)
+                {
+                    Logger.WriteLine("X " + item);
+                }
                 foreach (var item in conversions)
                 {
                     Logger.WriteLine("┎ " + item.Value);
@@ -142,6 +146,17 @@ namespace NaiveMusicUpdater
                         {
                             int index = list.Children.IndexOf(list.Children.First(x => (string)x == item.Value));
                             list.Children[index] = new YamlScalarNode(item.Key);
+                        }
+                    }
+                    foreach (var item in redundant_songs)
+                    {
+                        var redundant_location = reverse_sources[item];
+                        if (redundant_location is YamlScalarNode simple)
+                            obj.Children.Remove(item);
+                        else if (redundant_location is YamlSequenceNode list)
+                        {
+                            int index = list.Children.IndexOf(list.Children.First(x => (string)x == item));
+                            list.Children.RemoveAt(index);
                         }
                     }
                 }

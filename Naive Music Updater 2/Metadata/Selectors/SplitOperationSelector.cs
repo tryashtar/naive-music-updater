@@ -35,11 +35,11 @@ namespace NaiveMusicUpdater
             Separator = (string)yaml["separator"];
             Index = int.Parse((string)yaml["index"]);
             NoSeparator = NoSeparatorDecision.Ignore;
-            var no_separator = yaml.TryGet("no_separator");
+            var no_separator = yaml.Go("no_separator");
             if (no_separator != null && (string)no_separator == "exit")
                 NoSeparator = NoSeparatorDecision.Exit;
             OutofBounds = OutofBoundsDecision.Exit;
-            var bounds = yaml.TryGet("out_of_bounds");
+            var bounds = yaml.Go("out_of_bounds");
             if (bounds != null && (string)bounds == "wrap")
                 OutofBounds = OutofBoundsDecision.Wrap;
             if (bounds != null && (string)bounds == "clamp")

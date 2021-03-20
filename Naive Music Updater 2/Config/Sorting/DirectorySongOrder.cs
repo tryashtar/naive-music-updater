@@ -12,10 +12,10 @@ namespace NaiveMusicUpdater
         private readonly SubfolderMode Subfolders;
         public DirectorySongOrder(YamlMappingNode yaml)
         {
-            var sort = yaml.TryGet("sort");
+            var sort = yaml.Go("sort");
             if ((string)sort == "alphabetical")
                 Sort = SortType.Alphabetical;
-            var subfolder = yaml.TryGet("subfolders");
+            var subfolder = yaml.Go("subfolders");
             if (subfolder == null)
                 Subfolders = SubfolderMode.Ignore;
             else

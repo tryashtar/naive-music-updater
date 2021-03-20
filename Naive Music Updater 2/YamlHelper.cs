@@ -31,9 +31,64 @@ namespace NaiveMusicUpdater
             }
         }
 
-        public static string[] ToStringArray(YamlSequenceNode node)
+        public static YamlNode Go(this YamlNode node, params string[] path)
         {
-            return node.Select(x => (string)x).ToArray();
+            foreach (var item in path)
+            {
+                node = TryGet(node, item);
+                if (node == null)
+                    return null;
+            }
+            return node;
+        }
+
+        public static YamlNode TryGet(this YamlNode node, string key)
+        {
+            try
+            {
+                return node[key];
+            }
+            catch (KeyNotFoundException)
+            {
+                return null;
+            }
+        }
+
+        public static List<TValue> ToList<TValue>(this YamlNode node, Func<YamlNode, TValue> value)
+        {
+            if (node == null || (node is YamlScalarNode scalar && String.IsNullOrEmpty(scalar.Value)))
+                return null;
+            if (node is YamlSequenceNode sequence)
+            {
+                return sequence.Select(value).ToList();
+            }
+            throw new ArgumentException();
+        }
+
+        public static List<string> ToStringList(this YamlNode node)
+        {
+            return ToList(node, x => (string)x);
+        }
+
+        public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this YamlNode node, Func<YamlNode, TKey> key, Func<YamlNode, TValue> value)
+        {
+            if (node == null || (node is YamlScalarNode scalar && String.IsNullOrEmpty(scalar.Value)))
+                return null;
+            if (node is YamlMappingNode map)
+            {
+                var dict = new Dictionary<TKey, TValue>();
+                foreach (var child in map)
+                {
+                    dict[key(child.Key)] = value(child.Value);
+                }
+                return dict;
+            }
+            throw new ArgumentException();
+        }
+
+        public static Dictionary<string, string> ToStringDictionary(this YamlNode node)
+        {
+            return ToDictionary(node, x => (string)x, x => (string)x);
         }
     }
 }

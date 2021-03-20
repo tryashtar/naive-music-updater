@@ -23,6 +23,8 @@ namespace NaiveMusicUpdater
         private readonly Dictionary<string, IMetadataStrategy> NamedStrategies = new Dictionary<string, IMetadataStrategy>();
         private readonly string MP3GainPath;
         private readonly List<string> IllegalPrivateOwners;
+        private readonly List<string> KeepFrameIDs;
+        private readonly List<Regex> KeepFrameTexts;
         public readonly int SourceAutoMaxDistance;
         public LibraryConfig(string file)
         {
@@ -60,15 +62,21 @@ namespace NaiveMusicUpdater
             {
                 NamedStrategies.Add((string)item.Key, MetadataStrategyFactory.Create(item.Value));
             }
-            var mp3path = yaml.TryGet("mp3gain_path");
-            var cpo = yaml.TryGet("clear_private_owners");
-            var samd = yaml.TryGet("source_auto_max_distance");
+            var mp3path = yaml.Go("mp3gain_path");
+            var cpo = yaml.Go("clear_private_owners");
+            var samd = yaml.Go("source_auto_max_distance");
+            var keep_frames = yaml.Go("keep_frames", "ids");
+            var keep_text = yaml.Go("keep_frames", "text");
             if (mp3path != null)
                 MP3GainPath = (string)mp3path;
             if (cpo != null)
-                IllegalPrivateOwners = YamlHelper.ToStringArray((YamlSequenceNode)cpo).ToList();
+                IllegalPrivateOwners = cpo.ToStringList();
             if (samd != null)
                 SourceAutoMaxDistance = int.Parse((string)samd);
+            if (keep_frames != null)
+                KeepFrameIDs = keep_frames.ToStringList();
+            if (keep_text != null)
+                KeepFrameTexts = keep_text.ToList(x => new Regex((string)x));
         }
 
         public IMetadataStrategy GetNamedStrategy(string name)
@@ -85,6 +93,17 @@ namespace NaiveMusicUpdater
                 if (Regex.IsMatch(owner, item))
                     return true;
             }
+            return false;
+        }
+
+        public bool ShouldKeepFrame(TextInformationFrame frame)
+        {
+            var id = frame.FrameId.ToString();
+            if (KeepFrameIDs.Contains(id))
+                return true;
+            var text = frame.Text.First();
+            if (KeepFrameTexts.Any(x => x.IsMatch(text)))
+                return true;
             return false;
         }
 

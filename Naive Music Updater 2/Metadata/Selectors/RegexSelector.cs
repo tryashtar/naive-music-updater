@@ -28,7 +28,7 @@ namespace NaiveMusicUpdater
             Regex = new Regex((string)yaml["regex"]);
             Group = (string)yaml["group"];
             MatchFail = MatchFailDecision.Ignore;
-            var fail = (string)yaml.TryGet("fail");
+            var fail = (string)yaml.Go("fail");
             if (fail == "exit")
                 MatchFail = MatchFailDecision.Exit;
         }

@@ -24,11 +24,24 @@ namespace NaiveMusicUpdater
             Location = file;
         }
 
+#if DEBUG
+        private static string Breakpoint;
+        static Song()
+        {
+            if (File.Exists("break.txt"))
+                Breakpoint = File.ReadAllText("break.txt").ToLower().Replace("\n", "").Replace("\r", "");
+        }
+#endif
+
         public void Update()
         {
             Logger.WriteLine($"Song: {SimpleName}");
 #if !DEBUG
             if (!GlobalCache.NeedsUpdate(this))
+                return;
+#endif
+#if DEBUG
+            if (Breakpoint != null && SimpleName.ToLower() != Breakpoint)
                 return;
 #endif
             Logger.WriteLine($"(checking)");
@@ -322,21 +335,9 @@ namespace NaiveMusicUpdater
                         }
                         else
                         {
-                            var tiftext = tif.Text.First();
-                            var id = tif.FrameId.ToString();
-                            if (!new string[] {
-                                "TIT2", // title
-                                "TALB", // album
-                                "TPE1", // artist
-                                "TPE2", // performer
-                                "TCOM", // composer
-                                "TRCK", // track number
-                                "TLAN", // language
-                                "TDRC", // year
-                                "TCON", // genre
-                            }.Contains(id) && !tiftext.StartsWith("[replaygain_"))
+                            if (!GlobalCache.Config.ShouldKeepFrame(tif))
                             {
-                                Logger.WriteLine($"Removed text information frame of type {id} not carrying tag data: \"{tif}\"");
+                                Logger.WriteLine($"Removed text information frame of type {tif.FrameId} not carrying tag data: \"{tif}\"");
                                 remove = true;
                             }
                         }

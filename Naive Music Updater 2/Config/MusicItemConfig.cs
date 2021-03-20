@@ -29,26 +29,26 @@ namespace NaiveMusicUpdater
             var root = YamlHelper.ParseFile(file);
             if (root != null)
             {
-                var order = root.TryGet("order");
+                var order = root.Go("order");
                 if (order != null && configured_item is MusicFolder folder)
                     TrackOrder = () => SongOrderFactory.FromNode(order, folder);
-                var songs = root.TryGet("songs");
+                var songs = root.Go("songs");
                 if (songs != null)
                     SongsStrategy = () => LiteralOrReference(songs);
-                var folders = root.TryGet("folders");
+                var folders = root.Go("folders");
                 if (folders != null)
                     FoldersStrategy = () => LiteralOrReference(folders);
-                var set = root.TryGet("set") as YamlMappingNode;
+                var set = root.Go("set") as YamlMappingNode;
                 if (set != null)
                     MetadataStrategies = set.Children.Select(x => (Func<(ItemSelector, IMetadataStrategy)>)(() => ParseStrategy(x.Key, x.Value))).ToList();
-                var shared = root.TryGet("set all") as YamlSequenceNode;
+                var shared = root.Go("set all") as YamlSequenceNode;
                 if (shared != null)
                 {
                     SharedStrategies = new List<Func<(List<ItemSelector> selectors, IMetadataStrategy strategy)>>();
                     foreach (var item in shared)
                     {
-                        var names = item.TryGet("names") as YamlSequenceNode;
-                        var setting = item.TryGet("set");
+                        var names = item.Go("names") as YamlSequenceNode;
+                        var setting = item.Go("set");
                         SharedStrategies.Add(() => ParseMultiple(names, setting));
                     }
                 }
