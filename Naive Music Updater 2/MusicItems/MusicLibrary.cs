@@ -68,7 +68,7 @@ namespace NaiveMusicUpdater
             Logger.WriteLine(folder.SimpleName);
             Logger.TabIn();
 
-            var reverse_sources = new Dictionary<string, YamlNode>();
+            var reverse_sources = new Dictionary<string, KeyValuePair<YamlNode, YamlNode>>();
             var songs_to_check = folder.Songs.Select(x => x.SimpleName).ToList();
             var redundant_songs = new List<string>();
             var conversions = new Dictionary<string, string>();
@@ -84,7 +84,7 @@ namespace NaiveMusicUpdater
 
                     foreach (string song in sourced)
                     {
-                        reverse_sources[song] = item.Value;
+                        reverse_sources[song] = item;
                         if (songs_to_check.Contains(song))
                             songs_to_check.Remove(song);
                         else
@@ -111,7 +111,10 @@ namespace NaiveMusicUpdater
                 {
                     var search = MinLevenshtein(song, redundant_songs.Except(conversions.Values));
                     if (search != null && search.Value.distance <= Cache.Config.SourceAutoMaxDistance)
+                    {
                         conversions[song] = search.Value.result;
+                        redundant_songs.Remove(search.Value.result);
+                    }
                 }
             }
             if (conversions.Any() || redundant_songs.Any())
@@ -139,10 +142,10 @@ namespace NaiveMusicUpdater
                     foreach (var item in conversions)
                     {
                         songs_to_check.Remove(item.Key);
-                        var redundant_location = reverse_sources[item.Value];
-                        if (redundant_location is YamlScalarNode simple)
+                        var redundant_value = reverse_sources[item.Value].Value;
+                        if (redundant_value is YamlScalarNode simple)
                             simple.Value = item.Key;
-                        else if (redundant_location is YamlSequenceNode list)
+                        else if (redundant_value is YamlSequenceNode list)
                         {
                             int index = list.Children.IndexOf(list.Children.First(x => (string)x == item.Value));
                             list.Children[index] = new YamlScalarNode(item.Key);
@@ -150,10 +153,11 @@ namespace NaiveMusicUpdater
                     }
                     foreach (var item in redundant_songs)
                     {
-                        var redundant_location = reverse_sources[item];
-                        if (redundant_location is YamlScalarNode simple)
-                            obj.Children.Remove(item);
-                        else if (redundant_location is YamlSequenceNode list)
+                        var redundant_key = reverse_sources[item].Key;
+                        var redundant_value = reverse_sources[item].Value;
+                        if (redundant_value is YamlScalarNode simple)
+                            obj.Children.Remove(redundant_key);
+                        else if (redundant_value is YamlSequenceNode list)
                         {
                             int index = list.Children.IndexOf(list.Children.First(x => (string)x == item));
                             list.Children.RemoveAt(index);
