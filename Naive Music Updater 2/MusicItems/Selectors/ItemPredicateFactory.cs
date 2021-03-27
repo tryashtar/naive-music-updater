@@ -22,7 +22,7 @@ namespace NaiveMusicUpdater
                 return CreateFrom((string)node);
             if (node is YamlMappingNode map)
                 return CreateFrom((string)map["regex"]);
-            throw new ArgumentException();
+            throw new ArgumentException($"{node} is {node.NodeType}, doesn't work for item predicate");
         }
     }
 }

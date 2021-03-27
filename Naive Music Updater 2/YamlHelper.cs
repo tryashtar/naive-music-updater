@@ -62,7 +62,7 @@ namespace NaiveMusicUpdater
             {
                 return sequence.Select(value).ToList();
             }
-            throw new ArgumentException();
+            throw new ArgumentException($"Can't convert {node} ({node.NodeType}) to list");
         }
 
         public static List<string> ToStringList(this YamlNode node)
@@ -83,7 +83,7 @@ namespace NaiveMusicUpdater
                 }
                 return dict;
             }
-            throw new ArgumentException();
+            throw new ArgumentException($"Can't convert {node} ({node.NodeType}) to dictionary");
         }
 
         public static Dictionary<string, string> ToStringDictionary(this YamlNode node)

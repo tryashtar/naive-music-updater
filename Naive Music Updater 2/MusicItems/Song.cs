@@ -41,7 +41,7 @@ namespace NaiveMusicUpdater
                 return;
 #endif
 #if DEBUG
-            if (Breakpoint != null && SimpleName.ToLower() != Breakpoint)
+            if (Breakpoint != null && !SimpleName.ToLower().Contains(Breakpoint))
                 return;
 #endif
             Logger.WriteLine($"(checking)");
@@ -328,6 +328,7 @@ namespace NaiveMusicUpdater
                     bool remove = false;
                     if (frame is TextInformationFrame tif)
                     {
+                        //Logger.WriteLine(String.Join("\n",tif.Text));
                         if (tif.Text.Length == 0)
                         {
                             Logger.WriteLine($"Removed text information frame with length {tif.Text.Length}: \"{tif}\"");

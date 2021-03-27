@@ -61,7 +61,7 @@ namespace NaiveMusicUpdater
                 ScanContents();
             }
 
-            var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
+            //var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
             var art = GlobalCache.GetArtPathFor(this);
             ArtCache.LoadAndMakeIcon(art);
             string subalbumini = Path.Combine(Location, "desktop.ini");

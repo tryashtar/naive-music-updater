@@ -15,7 +15,7 @@ namespace NaiveMusicUpdater
                 return new MetadataStrategy(map);
             if (node is YamlSequenceNode list)
                 return new MultipleMetadataStrategy(list);
-            throw new ArgumentException();
+            throw new ArgumentException($"{node} is {node.NodeType}, doesn't work for metadata strategy");
         }
     }
 }

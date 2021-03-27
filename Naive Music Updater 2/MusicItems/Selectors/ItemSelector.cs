@@ -24,7 +24,7 @@ namespace NaiveMusicUpdater
                 return new ItemSelector((string)node);
             if (node.NodeType == YamlNodeType.Sequence)
                 return new ItemSelector(((YamlSequenceNode)node).Children.Select(x => ItemPredicateFactory.FromNode(x)).ToArray());
-            throw new ArgumentException();
+            throw new ArgumentException($"{node} is {node.NodeType}, doesn't work for item selector");
         }
 
         public IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start)
