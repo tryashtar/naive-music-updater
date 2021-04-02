@@ -62,7 +62,8 @@ namespace NaiveMusicUpdater
             }
 
             // load simple lyrics from tag
-            tag_lyrics = TagFile.Tag.Lyrics.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Select(x => new SynchedText(0, x)).ToArray();
+            if (TagFile.Tag.Lyrics != null)
+                tag_lyrics = TagFile.Tag.Lyrics.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Select(x => new SynchedText(0, x)).ToArray();
 
             // load synced lyrics from id3v2 tag
             var id3v2 = (TagLib.Id3v2.Tag)TagFile.GetTag(TagTypes.Id3v2);
@@ -210,7 +211,10 @@ namespace NaiveMusicUpdater
 
         private void Remove(string thing, object data)
         {
-            Logger.WriteLine($"Removing {thing} (was \"{data}\")");
+            string rep = data.ToString();
+            if (data is IEnumerable<string> arr)
+                rep = String.Join(";", arr);
+            Logger.WriteLine($"Removing {thing} (was \"{rep}\")");
         }
 
         #region WipeUselessPropertiesDynamic
@@ -316,21 +320,21 @@ namespace NaiveMusicUpdater
         {
             WipeUselessPropertiesDynamic((Tag)tag);
             var label = tag.GetField("LABEL");
-            if (label != null)
+            if (label != null && label.Length > 0)
             {
                 Remove("LABEL", label);
                 tag.RemoveField("LABEL");
                 HasChanged = true;
             }
             var isrc = tag.GetField("ISRC");
-            if (isrc != null)
+            if (isrc != null && isrc.Length > 0)
             {
                 Remove("ISRC", isrc);
                 tag.RemoveField("ISRC");
                 HasChanged = true;
             }
             var bar = tag.GetField("BARCODE");
-            if (bar != null)
+            if (bar != null && bar.Length > 0)
             {
                 Remove("BARCODE", bar);
                 tag.RemoveField("BARCODE");

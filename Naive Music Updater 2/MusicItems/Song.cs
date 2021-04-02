@@ -70,11 +70,35 @@ namespace NaiveMusicUpdater
                 if (success)
                 {
 #if !DEBUG
-                    GlobalCache.Config.NormalizeAudio(this);
+                    bool needs_replaygain = !HasReplayGain(file);
+                    if (needs_replaygain)
+                    {
+                        Logger.WriteLine($"Normalizing audio with ReplayGain");
+                        GlobalCache.Config.NormalizeAudio(this);
+                    }
                     GlobalCache.MarkUpdatedRecently(this);
 #endif
                 }
             }
+        }
+
+        private bool HasReplayGain(TagLib.File file)
+        {
+            const string TRACK_GAIN = "REPLAYGAIN_TRACK_GAIN";
+            var ape = (TagLib.Ape.Tag)file.GetTag(TagTypes.Ape);
+            if (ape != null)
+                return ape.HasItem(TRACK_GAIN);
+            else
+            {
+                var ogg = (TagLib.Ogg.XiphComment)file.GetTag(TagTypes.Xiph);
+                if (ogg != null)
+                {
+                    var gain = ogg.GetFirstField(TRACK_GAIN);
+                    if (gain != null)
+                        return true;
+                }
+            }
+            return false;
         }
 
         public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);
