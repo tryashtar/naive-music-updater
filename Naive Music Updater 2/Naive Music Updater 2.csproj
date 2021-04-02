@@ -88,6 +88,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="MusicItems\Song.cs" />
     <Compile Include="Metadata\Metadata.cs" />
+    <Compile Include="TagInterops.cs" />
+    <Compile Include="TagModifier.cs" />
     <Compile Include="Util.cs" />
     <Compile Include="YamlHelper.cs" />
   </ItemGroup>

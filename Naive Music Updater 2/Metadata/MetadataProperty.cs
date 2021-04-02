@@ -11,7 +11,7 @@ namespace NaiveMusicUpdater
     // when a list, you can still access the first value with Value
     // and when not a list, you can still access the singular value with ListValue
     // CombineMode determines whether this replaces other properties when merging
-    public class MetadataProperty
+    public class MetadataProperty : IEquatable<MetadataProperty>
     {
         public readonly bool IsList;
         public string Value { get; private set; }
@@ -64,6 +64,16 @@ namespace NaiveMusicUpdater
                 ListValue.InsertRange(0, other.ListValue);
                 Value = ListValue.FirstOrDefault();
             }
+        }
+
+        public bool Equals(MetadataProperty other)
+        {
+            return ListValue.SequenceEqual(other.ListValue);
+        }
+
+        public override string ToString()
+        {
+            return String.Join("; ", ListValue);
         }
     }
 
