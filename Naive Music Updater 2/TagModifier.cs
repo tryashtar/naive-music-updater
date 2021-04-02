@@ -20,21 +20,23 @@ namespace NaiveMusicUpdater
     public class TagModifier
     {
         public bool HasChanged { get; private set; }
-        private readonly Tag Tag;
+        private readonly TagLib.File TagFile;
         private readonly LibraryCache Cache;
-        public TagModifier(Tag tag, LibraryCache cache)
+        public TagModifier(TagLib.File file, LibraryCache cache)
         {
-            Tag = tag;
+            TagFile = file;
             Cache = cache;
         }
 
         public void UpdateMetadata(Metadata metadata)
         {
-            var interop = TagInteropFactory.GetDynamicInterop(Tag);
+            var interop = TagInteropFactory.GetDynamicInterop(TagFile.Tag);
             foreach (var field in MetadataField.Values)
             {
                 interop.Set(field, metadata.Get(field));
             }
+            if (interop.Changed)
+                HasChanged = true;
         }
 
         public void WipeUselessProperties()
@@ -44,94 +46,32 @@ namespace NaiveMusicUpdater
 
         public void WriteLyrics(string location)
         {
-            InvokeDynamicDo(x => WriteLyricsDynamic(x, location));
-        }
-
-        private void InvokeDynamicDo(Action<dynamic> function)
-        {
-            void wrapped_function(Tag t)
-            {
-                try
-                {
-                    function(t);
-                }
-                catch (RuntimeBinderException)
-                {
-                    Logger.WriteLine($"Unsure how to handle {t.GetType()} for {function.Method.Name}");
-                }
-            }
-            DynamicDo((dynamic)Tag, (Action<Tag>)wrapped_function);
-        }
-
-        private void DynamicDo(Tag tag, Action<Tag> function)
-        {
-            function(tag);
-        }
-
-        private void DynamicDo(CombinedTag tag, Action<Tag> function)
-        {
-            foreach (var sub in tag.Tags)
-            {
-                DynamicDo((dynamic)sub, function);
-            }
-        }
-
-        public void UpdateArt(string art_path)
-        {
-            var picture = art_path == null ? null : ArtCache.GetPicture(art_path);
-            if (!IsSingleValue(Tag.Pictures, picture))
-            {
-                if (picture == null)
-                {
-                    if (Tag.Pictures.Length == 0)
-                        return;
-                    Logger.WriteLine($"Deleted art");
-                    Tag.Pictures = new IPicture[0];
-                }
-                else
-                {
-                    Logger.WriteLine($"Added art");
-                    Tag.Pictures = new IPicture[] { picture };
-                }
-                HasChanged = true;
-            }
-        }
-
-        private void WriteLyricsDynamic(TagLib.Id3v2.Tag tag, string location)
-        {
             var lyrics_file = Path.ChangeExtension(Path.Combine(Cache.Folder, "lyrics", location), ".lrc");
+
             // higher priority first
             SynchedText[] frame_lyrics = null;
             SynchedText[] tag_lyrics = null;
             SynchedText[] file_lyrics = null;
             string file_text = null;
 
-            // load lyrics from various sources
+            // load lyrics from cached file
             if (File.Exists(lyrics_file))
             {
                 file_text = File.ReadAllText(lyrics_file).Replace("\r\n", "\n");
                 file_lyrics = ParseSyncedTexts(file_text);
             }
-            if (tag != null)
+
+            // load simple lyrics from tag
+            tag_lyrics = TagFile.Tag.Lyrics.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Select(x => new SynchedText(0, x)).ToArray();
+
+            // load synced lyrics from id3v2 tag
+            var id3v2 = (TagLib.Id3v2.Tag)TagFile.GetTag(TagTypes.Id3v2);
+            if (id3v2 != null)
             {
-                if (tag.Lyrics != null)
-                    tag_lyrics = new SynchedText[] { new SynchedText(0, tag.Lyrics) };
-                bool has_frame = false;
-                foreach (var frame in tag.GetFrames().ToList())
+                foreach (var frame in id3v2.GetFrames<SynchronisedLyricsFrame>())
                 {
-                    if (frame is SynchronisedLyricsFrame slf)
-                    {
-                        if (!has_frame)
-                        {
-                            frame_lyrics = slf.Text;
-                            has_frame = true;
-                        }
-                        else
-                        {
-                            Logger.WriteLine($"Removed non-initial synced lyrics frame: \"{frame}\"");
-                            tag.RemoveFrame(frame);
-                        }
-                    }
+                    frame_lyrics = frame.Text;
+                    break;
                 }
             }
 
@@ -158,29 +98,83 @@ namespace NaiveMusicUpdater
                 {
                     // update simple tag
                     var simple_lyrics = String.Join("\n", chosen_lyrics.Select(x => x.Text));
-                    if (tag.Lyrics != simple_lyrics)
+                    if (TagFile.Tag.Lyrics != simple_lyrics)
                     {
                         if (chosen_lyrics == frame_lyrics)
                             Logger.WriteLine($"Wrote lyrics from synced frame to simple tag");
                         if (chosen_lyrics == file_lyrics)
                             Logger.WriteLine($"Wrote lyrics from file cache to simple tag");
-                        tag.Lyrics = simple_lyrics;
+                        TagFile.Tag.Lyrics = simple_lyrics;
                         HasChanged = true;
                     }
                 }
 
-                if (chosen_lyrics != frame_lyrics)
+                if (chosen_lyrics != frame_lyrics && id3v2 != null)
                 {
                     // add frame
                     if (chosen_lyrics == tag_lyrics)
                         Logger.WriteLine($"Wrote lyrics from simple tag to synced frame");
                     if (chosen_lyrics == file_lyrics)
                         Logger.WriteLine($"Wrote lyrics from file cache to synced frame");
-                    var frame = new SynchronisedLyricsFrame("lyrics", "english", SynchedTextType.Lyrics, StringType.Latin1);
-                    frame.Text = chosen_lyrics;
-                    tag.AddFrame(frame);
+                    foreach (var frame in id3v2.GetFrames<SynchronisedLyricsFrame>().ToList())
+                    {
+                        id3v2.RemoveFrame(frame);
+                    }
+                    var lyrics = new SynchronisedLyricsFrame("lyrics", Id3v2TagInterop.GetLanguage(id3v2), SynchedTextType.Lyrics, StringType.Latin1);
+                    lyrics.Text = chosen_lyrics;
+                    id3v2.AddFrame(lyrics);
                     HasChanged = true;
                 }
+            }
+        }
+
+        private void InvokeDynamicDo(Action<dynamic> function)
+        {
+            void wrapped_function(Tag t)
+            {
+                try
+                {
+                    function(t);
+                }
+                catch (RuntimeBinderException)
+                {
+                    Logger.WriteLine($"Unsure how to handle {t.GetType()} for {function.Method.Name}");
+                }
+            }
+            DynamicDo((dynamic)TagFile.Tag, (Action<Tag>)wrapped_function);
+        }
+
+        private void DynamicDo(Tag tag, Action<Tag> function)
+        {
+            function(tag);
+        }
+
+        private void DynamicDo(CombinedTag tag, Action<Tag> function)
+        {
+            foreach (var sub in tag.Tags)
+            {
+                DynamicDo((dynamic)sub, function);
+            }
+        }
+
+        public void UpdateArt(string art_path)
+        {
+            var picture = art_path == null ? null : ArtCache.GetPicture(art_path);
+            if (!IsSingleValue(TagFile.Tag.Pictures, picture))
+            {
+                if (picture == null)
+                {
+                    if (TagFile.Tag.Pictures.Length == 0)
+                        return;
+                    Logger.WriteLine($"Deleted art");
+                    TagFile.Tag.Pictures = new IPicture[0];
+                }
+                else
+                {
+                    Logger.WriteLine($"Added art");
+                    TagFile.Tag.Pictures = new IPicture[] { picture };
+                }
+                HasChanged = true;
             }
         }
 
@@ -219,6 +213,7 @@ namespace NaiveMusicUpdater
             Logger.WriteLine($"Removing {thing} (was \"{data}\")");
         }
 
+        #region WipeUselessPropertiesDynamic
         private void WipeUselessPropertiesDynamic(Tag tag)
         {
             if (tag.Publisher != null)
@@ -317,6 +312,32 @@ namespace NaiveMusicUpdater
             }
         }
 
+        private void WipeUselessPropertiesDynamic(TagLib.Ogg.XiphComment tag)
+        {
+            WipeUselessPropertiesDynamic((Tag)tag);
+            var label = tag.GetField("LABEL");
+            if (label != null)
+            {
+                Remove("LABEL", label);
+                tag.RemoveField("LABEL");
+                HasChanged = true;
+            }
+            var isrc = tag.GetField("ISRC");
+            if (isrc != null)
+            {
+                Remove("ISRC", isrc);
+                tag.RemoveField("ISRC");
+                HasChanged = true;
+            }
+            var bar = tag.GetField("BARCODE");
+            if (bar != null)
+            {
+                Remove("BARCODE", bar);
+                tag.RemoveField("BARCODE");
+                HasChanged = true;
+            }
+        }
+
         private void WipeUselessPropertiesDynamic(TagLib.Id3v2.Tag tag)
         {
             WipeUselessPropertiesDynamic((Tag)tag);
@@ -392,5 +413,6 @@ namespace NaiveMusicUpdater
                 }
             }
         }
+        #endregion
     }
 }

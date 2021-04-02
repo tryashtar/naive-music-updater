@@ -51,7 +51,7 @@ namespace NaiveMusicUpdater
                 bool success = true;
                 var path = Util.StringPathAfterRoot(this);
                 var art = GlobalCache.GetArtPathFor(this);
-                var modifier = new TagModifier(file.Tag, GlobalCache);
+                var modifier = new TagModifier(file, GlobalCache);
                 modifier.UpdateMetadata(metadata);
                 modifier.UpdateArt(art);
                 modifier.WriteLyrics(path);
@@ -75,13 +75,6 @@ namespace NaiveMusicUpdater
 #endif
                 }
             }
-        }
-
-        private string Resize(string thing, int size)
-        {
-            if (thing == null)
-                return null;
-            return TagLib.Id3v1.Tag.DefaultStringHandler.Render(thing).Resize(size).ToString().Trim().TrimEnd('\0');
         }
 
         public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);
