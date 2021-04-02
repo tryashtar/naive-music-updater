@@ -22,6 +22,9 @@ namespace NaiveMusicUpdater
         private readonly Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
         private readonly Dictionary<string, IMetadataStrategy> NamedStrategies = new Dictionary<string, IMetadataStrategy>();
         private readonly string MP3GainPath;
+        private readonly string MP3GainArgs;
+        private readonly string MetaFlacPath;
+        private readonly string MetaFlacArgs;
         private readonly List<string> IllegalPrivateOwners;
         private readonly List<string> KeepFrameIDs;
         private readonly List<Regex> KeepFrameTexts;
@@ -62,13 +65,22 @@ namespace NaiveMusicUpdater
             {
                 NamedStrategies.Add((string)item.Key, MetadataStrategyFactory.Create(item.Value));
             }
-            var mp3path = yaml.Go("mp3gain_path");
+            var mp3path = yaml.Go("replay_gain", "mp3", "path");
+            var mp3args = yaml.Go("replay_gain", "mp3", "args");
+            var flacpath = yaml.Go("replay_gain", "flac", "path");
+            var flacargs = yaml.Go("replay_gain", "flac", "args");
             var cpo = yaml.Go("clear_private_owners");
             var samd = yaml.Go("source_auto_max_distance");
             var keep_frames = yaml.Go("keep_frames", "ids");
             var keep_text = yaml.Go("keep_frames", "text");
             if (mp3path != null)
                 MP3GainPath = (string)mp3path;
+            if (mp3args != null)
+                MP3GainArgs = (string)mp3args;
+            if (flacpath != null)
+                MetaFlacPath = (string)flacpath;
+            if (flacargs != null)
+                MetaFlacArgs = (string)flacargs;
             if (cpo != null)
                 IllegalPrivateOwners = cpo.ToStringList();
             if (samd != null)
@@ -180,13 +192,13 @@ namespace NaiveMusicUpdater
                     throw new InvalidOperationException("That's not supposed to be there...");
                 File.Move(song.Location, location);
             }
-            var process = new Process()
-            {
-                StartInfo = new ProcessStartInfo(MP3GainPath, $"/r /c \"{location}\"")
-                {
-                    UseShellExecute = false
-                }
-            };
+            var process = new Process();
+            var extension = Path.GetExtension(song.Location);
+            if (extension == ".mp3")
+                process.StartInfo = new ProcessStartInfo(MP3GainPath, $"{MP3GainArgs} \"{location}\"");
+            else if (extension == ".flac")
+                process.StartInfo = new ProcessStartInfo(MetaFlacPath, $"{MetaFlacArgs} \"{location}\"");
+            process.StartInfo.UseShellExecute = false;
             process.Start();
             process.WaitForExit();
             if (abnormal_chars)

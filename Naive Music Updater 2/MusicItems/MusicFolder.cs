@@ -97,9 +97,11 @@ namespace NaiveMusicUpdater
                     ChildFolders.Add(child);
             }
             SongList = new List<Song>();
-            foreach (var file in Directory.EnumerateFiles(Location, "*.mp3"))
+            foreach (var file in Directory.EnumerateFiles(Location))
             {
-                SongList.Add(new Song(this, file));
+                var extension = Path.GetExtension(file);
+                if (extension == ".mp3" || extension == ".flac")
+                    SongList.Add(new Song(this, file));
             }
         }
 
