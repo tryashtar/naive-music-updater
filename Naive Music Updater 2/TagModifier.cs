@@ -50,14 +50,17 @@ namespace NaiveMusicUpdater
 
             // higher priority first
             SynchedText[] frame_lyrics = null;
-            SynchedText[] tag_lyrics = null;
             SynchedText[] file_lyrics = null;
-            string file_text = null;
+            SynchedText[] tag_lyrics = null;
+            string[] file_text = null;
+
+            var id3v2 = (TagLib.Id3v2.Tag)TagFile.GetTag(TagTypes.Id3v2);
+            var ogg = (TagLib.Ogg.XiphComment)TagFile.GetTag(TagTypes.Xiph);
 
             // load lyrics from cached file
             if (File.Exists(lyrics_file))
             {
-                file_text = File.ReadAllText(lyrics_file).Replace("\r\n", "\n");
+                file_text = File.ReadAllLines(lyrics_file);
                 file_lyrics = ParseSyncedTexts(file_text);
             }
 
@@ -66,7 +69,6 @@ namespace NaiveMusicUpdater
                 tag_lyrics = TagFile.Tag.Lyrics.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Select(x => new SynchedText(0, x)).ToArray();
 
             // load synced lyrics from id3v2 tag
-            var id3v2 = (TagLib.Id3v2.Tag)TagFile.GetTag(TagTypes.Id3v2);
             if (id3v2 != null)
             {
                 foreach (var frame in id3v2.GetFrames<SynchronisedLyricsFrame>())
@@ -75,23 +77,32 @@ namespace NaiveMusicUpdater
                     break;
                 }
             }
+            else
+            {
+                if (ogg != null)
+                {
+                    var lyrics = ogg.GetField("SYNCED LYRICS");
+                    if (lyrics != null && lyrics.Length > 0)
+                        frame_lyrics = ParseSyncedTexts(lyrics);
+                }
+            }
 
-            SynchedText[] chosen_lyrics = frame_lyrics ?? tag_lyrics ?? file_lyrics;
+            SynchedText[] chosen_lyrics = frame_lyrics ?? file_lyrics ?? tag_lyrics;
 
             if (chosen_lyrics != null)
             {
                 if (chosen_lyrics != file_lyrics)
                 {
                     // write to file
-                    var lyrics_text = String.Join("\n", chosen_lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}"));
-                    if (file_text == null || file_text != lyrics_text)
+                    var lyrics_text = chosen_lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}").ToArray();
+                    if (file_text == null || !file_text.SequenceEqual(lyrics_text))
                     {
                         if (chosen_lyrics == frame_lyrics)
                             Logger.WriteLine($"Wrote lyrics from synced frame to file cache");
                         if (chosen_lyrics == tag_lyrics)
                             Logger.WriteLine($"Wrote lyrics from simple tag to file cache");
                         Directory.CreateDirectory(Path.GetDirectoryName(lyrics_file));
-                        File.WriteAllText(lyrics_file, lyrics_text);
+                        File.WriteAllLines(lyrics_file, lyrics_text);
                     }
                 }
 
@@ -105,26 +116,40 @@ namespace NaiveMusicUpdater
                             Logger.WriteLine($"Wrote lyrics from synced frame to simple tag");
                         if (chosen_lyrics == file_lyrics)
                             Logger.WriteLine($"Wrote lyrics from file cache to simple tag");
+                        Logger.WriteLine($"Old lyrics:");
+                        Logger.WriteLine(TagFile.Tag.Lyrics);
                         TagFile.Tag.Lyrics = simple_lyrics;
                         HasChanged = true;
                     }
                 }
 
-                if (chosen_lyrics != frame_lyrics && id3v2 != null)
+                if (chosen_lyrics != frame_lyrics)
                 {
-                    // add frame
-                    if (chosen_lyrics == tag_lyrics)
-                        Logger.WriteLine($"Wrote lyrics from simple tag to synced frame");
-                    if (chosen_lyrics == file_lyrics)
-                        Logger.WriteLine($"Wrote lyrics from file cache to synced frame");
-                    foreach (var frame in id3v2.GetFrames<SynchronisedLyricsFrame>().ToList())
+                    if (id3v2 != null)
                     {
-                        id3v2.RemoveFrame(frame);
+                        // add frame
+                        if (chosen_lyrics == tag_lyrics)
+                            Logger.WriteLine($"Wrote lyrics from simple tag to synced frame");
+                        if (chosen_lyrics == file_lyrics)
+                            Logger.WriteLine($"Wrote lyrics from file cache to synced frame");
+                        foreach (var frame in id3v2.GetFrames<SynchronisedLyricsFrame>().ToList())
+                        {
+                            id3v2.RemoveFrame(frame);
+                        }
+                        var lyrics = new SynchronisedLyricsFrame("lyrics", Id3v2TagInterop.GetLanguage(id3v2), SynchedTextType.Lyrics, StringType.Latin1);
+                        lyrics.Text = chosen_lyrics;
+                        id3v2.AddFrame(lyrics);
+                        HasChanged = true;
                     }
-                    var lyrics = new SynchronisedLyricsFrame("lyrics", Id3v2TagInterop.GetLanguage(id3v2), SynchedTextType.Lyrics, StringType.Latin1);
-                    lyrics.Text = chosen_lyrics;
-                    id3v2.AddFrame(lyrics);
-                    HasChanged = true;
+                    if (ogg != null)
+                    {
+                        if (chosen_lyrics == tag_lyrics)
+                            Logger.WriteLine($"Wrote lyrics from simple tag to synced flac");
+                        if (chosen_lyrics == file_lyrics)
+                            Logger.WriteLine($"Wrote lyrics from file cache to synced flac");
+                        ogg.SetField("SYNCED LYRICS", SerializeSyncedTexts(chosen_lyrics));
+                        HasChanged = true;
+                    }
                 }
             }
         }
@@ -179,22 +204,41 @@ namespace NaiveMusicUpdater
             }
         }
 
-        private static SynchedText[] ParseSyncedTexts(string alltext)
+        private static readonly string[] TimespanFormats = new string[] { @"h\:mm\:ss\.FFF", @"mm\:ss\.FFF", @"m\:ss\.FFF", @"h\:mm\:ss", @"mm\:ss", @"m\:ss" };
+        private static SynchedText[] ParseSyncedTexts(string[] lines)
         {
             var list = new List<SynchedText>();
-            var stamps = Regex.Matches(alltext, @"\[(\d:\d\d:\d\d.\d\d)\]");
-            for (int i = 0; i < stamps.Count; i++)
+            var regex = new Regex(@"\[(?<time>.+)\](?<line>.+)");
+            foreach (var line in lines)
             {
-                var time = TimeSpan.ParseExact(stamps[i].Groups[1].Value, "h\\:mm\\:ss\\.ff", CultureInfo.InvariantCulture);
-                string text;
-                if (i == stamps.Count - 1)
-                    text = alltext.Substring(stamps[i].Index + stamps[i].Length);
-                else
-                    text = alltext.Substring(stamps[i].Index + stamps[i].Length, stamps[i + 1].Index - stamps[i].Index - stamps[i].Length);
-                text = text.TrimEnd('\n');
-                list.Add(new SynchedText((long)time.TotalMilliseconds, text));
+                var match = regex.Match(line);
+                if (match.Success)
+                {
+                    if (TimeSpan.TryParseExact(match.Groups["time"].Value, TimespanFormats, null, out var time))
+                        list.Add(new SynchedText((long)time.TotalMilliseconds, match.Groups["line"].Value));
+                }
+
             }
             return list.ToArray();
+        }
+
+        private static string[] SerializeSyncedTexts(SynchedText[] lines)
+        {
+            return lines.Select(x => $"[{StringTimeSpan(TimeSpan.FromMilliseconds(x.Time), 3)}]{x.Text}").ToArray();
+        }
+
+        private static string StringTimeSpan(TimeSpan time, int decimals = 0)
+        {
+            // create decimal part if requested
+            string ending = decimals > 0 ? time.ToString(new string('F', decimals)) : "";
+            // only include the dot if there will be digits after it
+            if (ending != "")
+                ending = "." + ending;
+            if (time.TotalMinutes < 10)
+                return time.ToString(@"m\:ss") + ending;
+            if (time.TotalHours < 1)
+                return time.ToString(@"mm\:ss") + ending;
+            return time.ToString(@"h\:mm\:ss") + ending;
         }
 
         private static bool IsSingleValue(IPicture[] array, IPicture value)

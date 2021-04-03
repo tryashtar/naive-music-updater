@@ -61,7 +61,7 @@ namespace NaiveMusicUpdater
             {
                 FoldersafeConversions.Add((string)item.Key, (string)item.Value);
             }
-            foreach (var item in (YamlMappingNode)yaml["strategies"]["named"])
+            foreach (var item in (YamlMappingNode)yaml["named_strategies"])
             {
                 NamedStrategies.Add((string)item.Key, MetadataStrategyFactory.Create(item.Value));
             }
