@@ -120,6 +120,16 @@ namespace NaiveMusicUpdater
                     }
                     Logger.TabOut();
                 }
+                if (results.UnselectedItems.Any())
+                {
+                    Logger.WriteLine($"{this} has unselected items:");
+                    Logger.TabIn();
+                    foreach (var unselected in results.UnselectedItems)
+                    {
+                        Logger.WriteLine(unselected.SimpleName);
+                    }
+                    Logger.TabOut();
+                }
             }
             foreach (var item in SubFolders)
             {

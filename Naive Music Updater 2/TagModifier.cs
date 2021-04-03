@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -94,7 +94,7 @@ namespace NaiveMusicUpdater
                 if (chosen_lyrics != file_lyrics)
                 {
                     // write to file
-                    var lyrics_text = chosen_lyrics.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time):h\\:mm\\:ss\\.ff}]{x.Text}").ToArray();
+                    var lyrics_text = SerializeSyncedTexts(chosen_lyrics);
                     if (file_text == null || !file_text.SequenceEqual(lyrics_text))
                     {
                         if (chosen_lyrics == frame_lyrics)
@@ -217,28 +217,20 @@ namespace NaiveMusicUpdater
                     if (TimeSpan.TryParseExact(match.Groups["time"].Value, TimespanFormats, null, out var time))
                         list.Add(new SynchedText((long)time.TotalMilliseconds, match.Groups["line"].Value));
                 }
-
             }
             return list.ToArray();
         }
 
         private static string[] SerializeSyncedTexts(SynchedText[] lines)
         {
-            return lines.Select(x => $"[{StringTimeSpan(TimeSpan.FromMilliseconds(x.Time), 3)}]{x.Text}").ToArray();
+            return lines.Select(x => $"[{StringTimeSpan(TimeSpan.FromMilliseconds(x.Time))}]{x.Text}").ToArray();
         }
 
-        private static string StringTimeSpan(TimeSpan time, int decimals = 0)
+        private static string StringTimeSpan(TimeSpan time)
         {
-            // create decimal part if requested
-            string ending = decimals > 0 ? time.ToString(new string('F', decimals)) : "";
-            // only include the dot if there will be digits after it
-            if (ending != "")
-                ending = "." + ending;
-            if (time.TotalMinutes < 10)
-                return time.ToString(@"m\:ss") + ending;
             if (time.TotalHours < 1)
-                return time.ToString(@"mm\:ss") + ending;
-            return time.ToString(@"h\:mm\:ss") + ending;
+                return time.ToString(@"mm\:ss\.ff");
+            return time.ToString(@"h\:mm\:ss\.ff");
         }
 
         private static bool IsSingleValue(IPicture[] array, IPicture value)

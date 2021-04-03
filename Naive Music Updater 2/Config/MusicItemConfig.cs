@@ -89,7 +89,10 @@ namespace NaiveMusicUpdater
             var all_selectors = SharedStrategies.SelectMany(x => x().selectors)
                 .Concat(MetadataStrategies.Select(x => x().selector));
             if (TrackOrder != null && TrackOrder() is DefinedSongOrder defined)
+            {
                 all_selectors = all_selectors.Concat(defined.Order);
+                results.UnselectedItems.AddRange(defined.UnselectedItems);
+            }
             foreach (var selector in all_selectors)
             {
                 var find = selector.AllMatchesFrom(ConfiguredItem);
