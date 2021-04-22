@@ -34,7 +34,7 @@ namespace NaiveMusicUpdater
         private static ITagInterop GetInterop(TagLib.Id3v2.Tag tag) => new Id3v2TagInterop(tag);
         private static ITagInterop GetInterop(TagLib.Id3v1.Tag tag) => new Id3v1TagInterop(tag);
         private static ITagInterop GetInterop(TagLib.Ape.Tag tag) => new ApeTagInterop(tag);
-        private static ITagInterop GetInterop(TagLib.Ogg.XiphComment tag) => new BasicInterop(tag);
+        private static ITagInterop GetInterop(TagLib.Ogg.XiphComment tag) => new XiphTagInterop(tag);
         private static ITagInterop GetInterop(CombinedTag tag) => new MultipleInterop(tag);
     }
 
@@ -292,6 +292,16 @@ namespace NaiveMusicUpdater
         {
             var schema = BasicInterop.BasicSchema(tag);
             schema.Remove(MetadataField.Arranger);
+            return schema;
+        }
+    }
+
+    public class XiphTagInterop : AbstractInterop<TagLib.Ogg.XiphComment>
+    {
+        public XiphTagInterop(TagLib.Ogg.XiphComment tag) : base(tag) { }
+        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema(TagLib.Ogg.XiphComment tag)
+        {
+            var schema = BasicInterop.BasicSchema(tag);
             return schema;
         }
     }
