@@ -21,6 +21,7 @@ namespace NaiveMusicUpdater
     {
         MetadataProperty Get(MetadataField field);
         void Set(MetadataField field, MetadataProperty value);
+        void WipeUselessProperties();
         bool Changed { get; }
     }
 
@@ -65,6 +66,14 @@ namespace NaiveMusicUpdater
                 interop.Set(field, value);
             }
         }
+
+        public void WipeUselessProperties()
+        {
+            foreach (var interop in Interops)
+            {
+                interop.WipeUselessProperties();
+            }
+        }
     }
 
     public delegate MetadataProperty Getter();
@@ -84,19 +93,41 @@ namespace NaiveMusicUpdater
         }
     }
 
+    public delegate WipeResult Wiper();
+    public class WipeDelegates
+    {
+        public readonly Wiper Wipe;
+        public WipeDelegates(Wiper wipe)
+        {
+            Wipe = wipe;
+        }
+    }
+
+    public record WipeResult
+    {
+        public string OldValue { get; init; }
+        public string NewValue { get; init; }
+        public bool Changed { get; init; }
+    }
+
     public abstract class AbstractInterop<T> : ITagInterop where T : Tag
     {
+        protected T Tag;
         private readonly TagTypes TagType;
         public bool Changed { get; protected set; } = false;
         private readonly Dictionary<MetadataField, InteropDelegates> Schema;
+        private readonly Dictionary<string, WipeDelegates> WipeSchema;
 
         public AbstractInterop(T tag)
         {
-            Schema = CreateSchema(tag);
+            Tag = tag;
             TagType = tag.TagTypes;
+            Schema = CreateSchema();
+            WipeSchema = CreateWipeSchema();
         }
 
-        protected abstract Dictionary<MetadataField, InteropDelegates> CreateSchema(T tag);
+        protected abstract Dictionary<MetadataField, InteropDelegates> CreateSchema();
+        protected abstract Dictionary<string, WipeDelegates> CreateWipeSchema();
 
         public MetadataProperty Get(MetadataField field)
         {
@@ -120,6 +151,19 @@ namespace NaiveMusicUpdater
                 Logger.WriteLine($"Changing {field.Name} in {TagType} tag from \"{current}\" to \"{result}\"");
                 delegates.Setter(result);
                 Changed = true;
+            }
+        }
+
+        public void WipeUselessProperties()
+        {
+            foreach (var item in WipeSchema)
+            {
+                var result = item.Value.Wipe();
+                if (result.Changed)
+                {
+                    Logger.WriteLine($"Wiped {item.Key} in {TagType} tag from \"{result.OldValue}\" to \"{result.NewValue}\"");
+                    Changed = true;
+                }
             }
         }
 
@@ -184,14 +228,37 @@ namespace NaiveMusicUpdater
         {
             return new InteropDelegates(get, set, NumberEqual);
         }
+
+        protected static WipeDelegates SimpleWipe(Func<string> get, Action set)
+        {
+            return new WipeDelegates(() =>
+            {
+                var before = get();
+                set();
+                var after = get();
+                return new WipeResult()
+                {
+                    OldValue = before,
+                    NewValue = after,
+                    Changed = before != after
+                };
+            });
+        }
+
+        protected static WipeDelegates SimpleWipe(Func<uint> get, Action set) => SimpleWipe(() => get().ToString(), set);
     }
 
     public class BasicInterop : AbstractInterop<Tag>
     {
         public BasicInterop(Tag tag) : base(tag) { }
-        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema(Tag tag)
+        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
-            return BasicSchema(tag);
+            return BasicSchema(Tag);
+        }
+
+        protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+        {
+            return BasicWipeSchema(Tag);
         }
 
         public static Dictionary<MetadataField, InteropDelegates> BasicSchema(Tag tag)
@@ -211,16 +278,74 @@ namespace NaiveMusicUpdater
                 { MetadataField.Year, NumDelegates(() => Get(tag.Year), x => tag.Year = Number(x)) },
             };
         }
+
+        public static Dictionary<string, WipeDelegates> BasicWipeSchema(Tag tag)
+        {
+            return new Dictionary<string, WipeDelegates>
+            {
+                { "publisher", SimpleWipe(() => tag.Publisher, () => tag.Publisher = null) },
+                { "bpm", SimpleWipe(() => tag.BeatsPerMinute, () => tag.BeatsPerMinute = 0) },
+                { "description", SimpleWipe(() => tag.Description, () => tag.Description = null) },
+                { "grouping", SimpleWipe(() => tag.Grouping, () => tag.Grouping = null) },
+                { "subtitle", SimpleWipe(() => tag.Subtitle, () => tag.Subtitle = null) },
+                { "amazon id", SimpleWipe(() => tag.AmazonId, () => tag.AmazonId = null) },
+                { "conductor", SimpleWipe(() => tag.Conductor, () => tag.Conductor = null) },
+                { "copyright", SimpleWipe(() => tag.Copyright, () => tag.Copyright = null) },
+                { "disc number", SimpleWipe(() => tag.Disc, () => tag.Disc = 0) },
+                { "disc count", SimpleWipe(() => tag.DiscCount, () => tag.DiscCount = 0) },
+                { "musicbrainz data", SimpleWipe(() => GetMusicBrainz(tag), () => WipeMusicBrainz(tag)) },
+                { "music ip", SimpleWipe(() => tag.MusicIpId, () => tag.MusicIpId = null) },
+            };
+        }
+
+        private static string GetMusicBrainz(Tag tag)
+        {
+            return String.Join(";", new string[] {
+                tag.MusicBrainzArtistId,
+                tag.MusicBrainzDiscId,
+                tag.MusicBrainzReleaseArtistId,
+                tag.MusicBrainzReleaseCountry,
+                tag.MusicBrainzReleaseId,
+                tag.MusicBrainzReleaseStatus,
+                tag.MusicBrainzReleaseType,
+                tag.MusicBrainzTrackId,
+            });
+        }
+
+        private static void WipeMusicBrainz(Tag tag)
+        {
+            tag.MusicBrainzArtistId = null;
+            tag.MusicBrainzDiscId = null;
+            tag.MusicBrainzReleaseArtistId = null;
+            tag.MusicBrainzReleaseCountry = null;
+            tag.MusicBrainzReleaseId = null;
+            tag.MusicBrainzReleaseStatus = null;
+            tag.MusicBrainzReleaseType = null;
+            tag.MusicBrainzTrackId = null;
+        }
     }
 
     public class Id3v2TagInterop : AbstractInterop<TagLib.Id3v2.Tag>
     {
         public Id3v2TagInterop(TagLib.Id3v2.Tag tag) : base(tag) { }
-        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema(TagLib.Id3v2.Tag tag)
+        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
-            var schema = BasicInterop.BasicSchema(tag);
-            schema[MetadataField.Language] = Delegates(() => Get(GetLanguage(tag)), x => SetLanguage(tag, x.Value));
+            var schema = BasicInterop.BasicSchema(Tag);
+            schema[MetadataField.Language] = Delegates(() => Get(GetLanguage(Tag)), x => SetLanguage(Tag, x.Value));
             return schema;
+        }
+
+        protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+        {
+            var schema = BasicInterop.BasicWipeSchema(Tag);
+            schema.Add("compilation", SimpleWipe(() => Tag.IsCompilation.ToString(), () => Tag.IsCompilation = false));
+            AddFrameWipes(schema);
+            return schema;
+        }
+
+        private void AddFrameWipes(Dictionary<string, WipeDelegates> schema)
+        {
+
         }
 
         private const string LANGUAGE_TAG = "TLAN";
@@ -253,9 +378,9 @@ namespace NaiveMusicUpdater
     public class Id3v1TagInterop : AbstractInterop<TagLib.Id3v1.Tag>
     {
         public Id3v1TagInterop(TagLib.Id3v1.Tag tag) : base(tag) { }
-        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema(TagLib.Id3v1.Tag tag)
+        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
-            var schema = BasicInterop.BasicSchema(tag);
+            var schema = BasicInterop.BasicSchema(Tag);
             schema.Remove(MetadataField.AlbumArtists);
             schema.Remove(MetadataField.Composers);
             schema.Remove(MetadataField.Arranger);
@@ -269,6 +394,12 @@ namespace NaiveMusicUpdater
             SetPrimitive(MetadataField.Performers, 30);
             SetPrimitive(MetadataField.Album, 30);
             SetPrimitive(MetadataField.Comment, 28);
+            return schema;
+        }
+
+        protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+        {
+            var schema = BasicInterop.BasicWipeSchema(Tag);
             return schema;
         }
 
@@ -288,10 +419,16 @@ namespace NaiveMusicUpdater
     public class ApeTagInterop : AbstractInterop<TagLib.Ape.Tag>
     {
         public ApeTagInterop(TagLib.Ape.Tag tag) : base(tag) { }
-        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema(TagLib.Ape.Tag tag)
+        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
-            var schema = BasicInterop.BasicSchema(tag);
+            var schema = BasicInterop.BasicSchema(Tag);
             schema.Remove(MetadataField.Arranger);
+            return schema;
+        }
+
+        protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+        {
+            var schema = BasicInterop.BasicWipeSchema(Tag);
             return schema;
         }
     }
@@ -299,10 +436,25 @@ namespace NaiveMusicUpdater
     public class XiphTagInterop : AbstractInterop<TagLib.Ogg.XiphComment>
     {
         public XiphTagInterop(TagLib.Ogg.XiphComment tag) : base(tag) { }
-        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema(TagLib.Ogg.XiphComment tag)
+        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
-            var schema = BasicInterop.BasicSchema(tag);
+            var schema = BasicInterop.BasicSchema(Tag);
             return schema;
+        }
+
+        protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+        {
+            var schema = BasicInterop.BasicWipeSchema(Tag);
+            AddFieldWipes(schema, "LABEL", "ISRC", "BARCODE");
+            return schema;
+        }
+
+        private void AddFieldWipes(Dictionary<string, WipeDelegates> schema, params string[] fields)
+        {
+            foreach (var field in fields)
+            {
+                schema.Add(field, SimpleWipe(() => String.Join(";", Tag.GetField(field)), () => Tag.RemoveField(field)));
+            }
         }
     }
 }

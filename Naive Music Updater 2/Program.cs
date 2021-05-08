@@ -12,11 +12,13 @@ namespace NaiveMusicUpdater
         public static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
+            Logger.WriteLine("NAIVE MUSIC UPDATER");
 
             // allows album art to show up in explorer
             TagLib.Id3v2.Tag.DefaultVersion = 3;
             TagLib.Id3v2.Tag.ForceDefaultVersion = true;
 
+#if DEBUG
             if (args.Length > 0)
             {
                 try
@@ -30,6 +32,7 @@ namespace NaiveMusicUpdater
                 Console.ReadLine();
                 return;
             }
+#endif
 
             string FolderPath;
 #if DEBUG

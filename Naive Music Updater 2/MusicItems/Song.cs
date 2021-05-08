@@ -55,7 +55,6 @@ namespace NaiveMusicUpdater
                 modifier.UpdateMetadata(metadata);
                 modifier.UpdateArt(art);
                 modifier.WriteLyrics(path);
-                modifier.WipeUselessProperties();
                 if (modifier.HasChanged)
                 {
                     Logger.WriteLine("Saving...");

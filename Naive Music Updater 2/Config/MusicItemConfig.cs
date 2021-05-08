@@ -12,15 +12,19 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace NaiveMusicUpdater
 {
+    public delegate (ItemSelector selector, IMetadataStrategy strategy) TargetedStrategyProducer();
+    public delegate (List<ItemSelector> selectors, IMetadataStrategy strategy) SharedStrategyProducer();
+    public delegate SongOrder OrderProducer();
+    public delegate IMetadataStrategy StrategyProducer();
     public class MusicItemConfig
     {
         public readonly string Location;
         // have to defer these because some of the data needed isn't ready until after constructor is done
-        public readonly Func<SongOrder> TrackOrder;
-        public readonly Func<IMetadataStrategy> SongsStrategy;
-        public readonly Func<IMetadataStrategy> FoldersStrategy;
-        public readonly List<Func<(ItemSelector selector, IMetadataStrategy strategy)>> MetadataStrategies;
-        public readonly List<Func<(List<ItemSelector> selectors, IMetadataStrategy strategy)>> SharedStrategies;
+        public readonly OrderProducer TrackOrder;
+        public readonly StrategyProducer SongsStrategy;
+        public readonly StrategyProducer FoldersStrategy;
+        public readonly List<TargetedStrategyProducer> MetadataStrategies;
+        public readonly List<SharedStrategyProducer> SharedStrategies;
         private readonly IMusicItem ConfiguredItem;
         public MusicItemConfig(string file, IMusicItem configured_item)
         {
@@ -40,11 +44,11 @@ namespace NaiveMusicUpdater
                     FoldersStrategy = () => LiteralOrReference(folders);
                 var set = root.Go("set") as YamlMappingNode;
                 if (set != null)
-                    MetadataStrategies = set.Children.Select(x => (Func<(ItemSelector, IMetadataStrategy)>)(() => ParseStrategy(x.Key, x.Value))).ToList();
+                    MetadataStrategies = set.Children.Select(x => (TargetedStrategyProducer)(() => ParseStrategy(x.Key, x.Value))).ToList();
                 var shared = root.Go("set all") as YamlSequenceNode;
                 if (shared != null)
                 {
-                    SharedStrategies = new List<Func<(List<ItemSelector> selectors, IMetadataStrategy strategy)>>();
+                    SharedStrategies = new List<SharedStrategyProducer>();
                     foreach (var item in shared)
                     {
                         var names = item.Go("names") as YamlSequenceNode;
@@ -54,9 +58,9 @@ namespace NaiveMusicUpdater
                 }
             }
             if (MetadataStrategies == null)
-                MetadataStrategies = new List<Func<(ItemSelector, IMetadataStrategy)>>();
+                MetadataStrategies = new List<TargetedStrategyProducer>();
             if (SharedStrategies == null)
-                SharedStrategies = new List<Func<(List<ItemSelector> selectors, IMetadataStrategy strategy)>>();
+                SharedStrategies = new List<SharedStrategyProducer>();
         }
 
         public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
