@@ -229,23 +229,63 @@ namespace NaiveMusicUpdater
             return new InteropDelegates(get, set, NumberEqual);
         }
 
-        protected static WipeDelegates SimpleWipe(Func<string> get, Action set)
+        protected static WipeDelegates SimpleWipeRet(Func<string> get, Func<bool> set)
         {
             return new WipeDelegates(() =>
             {
                 var before = get();
-                set();
+                bool changed = set();
                 var after = get();
                 return new WipeResult()
                 {
                     OldValue = before,
                     NewValue = after,
-                    Changed = before != after
+                    Changed = changed
                 };
             });
         }
 
-        protected static WipeDelegates SimpleWipe(Func<uint> get, Action set) => SimpleWipe(() => get().ToString(), set);
+        protected static WipeDelegates SimpleWipe(Func<string> get, Action set)
+        {
+            return SimpleWipeRet(get, () =>
+            {
+                var before = get();
+                set();
+                var after = get();
+                return before != after;
+            });
+        }
+
+        protected static WipeDelegates SimpleWipe(Func<uint> get, Action set)
+        {
+            return SimpleWipeRet(() => get().ToString(), () =>
+            {
+                var before = get();
+                set();
+                var after = get();
+                return before != after;
+            });
+        }
+
+        protected static WipeDelegates SimpleWipe(Func<string[]> get, Action set)
+        {
+            return SimpleWipeRet(() => get().ToString(), () =>
+            {
+                var before = get();
+                set();
+                var after = get();
+                return !ArrayEquals(before, after);
+            });
+        }
+
+        private static bool ArrayEquals<T>(T[] one, T[] two)
+        {
+            if (one == null)
+                return two == null;
+            if (two == null)
+                return one == null;
+            return one.SequenceEqual(two);
+        }
     }
 
     public class BasicInterop : AbstractInterop<Tag>
@@ -298,9 +338,9 @@ namespace NaiveMusicUpdater
             };
         }
 
-        private static string GetMusicBrainz(Tag tag)
+        private static string[] GetMusicBrainz(Tag tag)
         {
-            return String.Join(";", new string[] {
+            return new string[] {
                 tag.MusicBrainzArtistId,
                 tag.MusicBrainzDiscId,
                 tag.MusicBrainzReleaseArtistId,
@@ -309,7 +349,7 @@ namespace NaiveMusicUpdater
                 tag.MusicBrainzReleaseStatus,
                 tag.MusicBrainzReleaseType,
                 tag.MusicBrainzTrackId,
-            });
+            };
         }
 
         private static void WipeMusicBrainz(Tag tag)
@@ -338,7 +378,7 @@ namespace NaiveMusicUpdater
         protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
         {
             var schema = BasicInterop.BasicWipeSchema(Tag);
-            schema.Add("compilation", SimpleWipe(() => Tag.IsCompilation.ToString(), () => Tag.IsCompilation = false));
+            schema.Add("compilation", SimpleWipeRet(() => Tag.IsCompilation.ToString(), () => Tag.IsCompilation = false));
             AddFrameWipes(schema);
             return schema;
         }
