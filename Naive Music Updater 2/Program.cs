@@ -46,8 +46,14 @@ namespace NaiveMusicUpdater
 #endif
             {
                 library.UpdateLibrary();
+                Logger.WriteLine();
                 library.UpdateSources();
-                library.CheckSelectors();
+                Logger.WriteLine();
+                var results = library.CheckSelectors();
+# if !DEBUG
+                if (results.AnyUnused)
+                    Console.ReadLine();
+#endif
             }
 #if !DEBUG
             catch (Exception ex)

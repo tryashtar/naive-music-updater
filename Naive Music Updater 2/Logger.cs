@@ -34,6 +34,8 @@ namespace NaiveMusicUpdater
                 Writer.WriteLine(text);
         }
 
+        public static void WriteLine() => WriteLine("");
+
         public static void WriteLine(string text)
         {
             string tabs = new string('\t', TabCount);

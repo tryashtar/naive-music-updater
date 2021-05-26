@@ -105,8 +105,9 @@ namespace NaiveMusicUpdater
             }
         }
 
-        public virtual void CheckSelectors()
+        public CheckSelectorResults CheckSelectors()
         {
+            var answer = new CheckSelectorResults();
             if (LocalConfig != null)
             {
                 var results = LocalConfig.CheckSelectors();
@@ -130,11 +131,13 @@ namespace NaiveMusicUpdater
                     }
                     Logger.TabOut();
                 }
+                answer.AddResults(results);
             }
             foreach (var item in SubFolders)
             {
-                item.CheckSelectors();
+                answer.AddResults(item.CheckSelectors());
             }
+            return answer;
         }
 
         public override string ToString()
