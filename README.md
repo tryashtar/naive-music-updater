@@ -13,7 +13,7 @@ A strategy decides how to assign metadata to a song. It consists of one or more 
 Here's an example of a simple strategy:
 ```
 title: Joy to the World
-artist: Isaac Watts
+composer: Isaac Watts
 ```
 A list of strategies is also a valid strategy. Each strategy is applied in turn. A typical song will have many strategies applied to it; later metadata assignments will override earlier ones.
 
@@ -35,14 +35,16 @@ All the valid metadata fields are as follows:
 These are mapped to various song metadata tags.
 
 ### Item Selectors
-An item selector lets you pick one or more songs that will be affected by something, usually a [strategy](#strategies). The simplest item selector is just a string path, relative to the containing folder, that matches a song. For example, if there's a song in `C418/Volume Beta/Alpha.mp3`, then you can select it with just `Alpha` if you're in the `Volume Beta` folder. If you're in the `C418` folder, you can select it with `Volume Beta/Alpha`.
+An item selector lets you pick one or more songs that will be affected by something, usually a [strategy](#strategies). The simplest item selector is just a string path, relative to the containing folder, that matches a song. For example, if there's a song in `C418/Volume Beta/Alpha.mp3`, then you can select it with just `Alpha` if you're in the Volume Beta folder. If you're in the C418 folder, you can select it with `Volume Beta/Alpha`.
 
 If you select a folder this way, it will not result in all of the containing songs being selected. Usually, item selectors are for selecting specific songs only.
 
 A list of item selectors is by itself a valid item selector. Each selector is evaluated in turn, producing many selected songs. You can also write item selectors as an object to get special behavior. The behavior is defined by the value of the `type` key:
 
 **`path`**  
-Allows you to define a list of each subfolder that must be navigated in turn to reach the song. Each list entry can either be a string, or an object with a `regex` value, which will navigate any item matching the [regular expression](https://en.wikipedia.org/wiki/Regular_expression). For example, this selector selects all songs beginning with "C" across multiple folders:
+Allows you to define a list of each subfolder that must be navigated in turn to reach the song. Each list entry can either be a string, or an object with a `regex` value, which will navigate any item matching the [regular expression](https://en.wikipedia.org/wiki/Regular_expression).
+
+For example, this selector selects all songs beginning with "C" across multiple folders:
 ```
 type: path
 path:
@@ -53,7 +55,9 @@ path:
 
 ---
 **`subpath`**  
-Allows you to change the folder a selector starts from. The new start folder is an item selector called `subpath`, and the selector to use is called `select`. For example, if you're in the C418 folder and want to select many songs in the Volume Alpha folder, you would have to write `Volume Alpha/` in front of every song. You can use `subpath` to avoid this:
+Allows you to change the folder a selector starts from. The new start folder is an item selector called `subpath`, and the selector to use is called `select`.
+
+For example, if you're in the C418 folder and want to select many songs in the Volume Alpha folder, you would have to write `Volume Alpha/` in front of every song. You can use `subpath` to avoid this:
 ```
 type: subpath
 subpath: Volume Alpha
@@ -71,7 +75,7 @@ This is one of the more elaborate features of the program. Metadata selectors te
 
 **String**
 * A simple string will be used literally. For example, `title: Joy to the World` would set the title of all relevant songs to exactly that.
-* `<this>` will select the song's "clean name." For example, `title: <this>` is an easy way to use file names to define your songs' titles.
+* `<this>` will select the song's [clean name](#names). For example, `title: <this>` is an easy way to use file names to define your songs' titles.
 * `<exact>` will select the song's file name, as-is, instead of the clean name.
 
 **List**  
@@ -81,7 +85,9 @@ A list of selectors allows you to set multiple values in one property. For examp
 The behavior is defined by the value of the `operation` key.
 
 `parent`:  
-This selects the "clean name" of a parent folder. `up` specifies the number of folders to navigate. If positive, it's relative to the root, so `1` would be whichever folder in the library root contains the song, `2` would be one deeper, etc. If negative, it's relative to the song, so `-1` would be whichever folder directly contains the song, `-2` would be one higher, etc. For example, if the songs are inside a folder named after the album, you can express that like this:
+This selects the "clean name" of a parent folder. `up` specifies the number of folders to navigate. If positive, it's relative to the root, so `1` would be whichever folder in the library root contains the song, `2` would be one deeper, etc. If negative, it's relative to the song, so `-1` would be whichever folder directly contains the song, `-2` would be one higher, etc.
+
+For example, if the songs are inside a folder named after the album, you can use a strategy like this:
 ```
 album:
   operation: parent
@@ -90,7 +96,9 @@ album:
 
 ---
 `split`:  
-This allows you to grab a value from another metadata selector, split it, and take a specific piece. `from` is the selector to use. `separator` is what to split on. `index` is which piece to use. `no_separator` can be `ignore` or `exit`. If it's set to exit, the result must contain the separator somewhere. `out_of_bounds` can be `exit`, `wrap`, or `clamp`, which decides how the index should be used to choose the result. For example, if your songs are named like `C418 - wait`, you can use a strategy like this:
+This allows you to grab a value from another metadata selector, split it, and take a specific piece. `from` is the selector to use. `separator` is what to split on. `index` is which piece to use. `no_separator` can be `ignore` or `exit`. If it's set to exit, the result must contain the separator somewhere. `out_of_bounds` can be `exit`, `wrap`, or `clamp`, which decides how the index should be used to choose the result.
+
+For example, if your songs are named like `C418 - wait`, you can use a strategy like this:
 ```
 performer:
   operation: split
@@ -108,7 +116,9 @@ title:
 
 ---
 `regex`:  
-This is similar to `split`. It lets you extract a group from another selector according to a [regular expression](https://en.wikipedia.org/wiki/Regular_expression). `from` is the selector. `regex` is the expression, with at least one capture group. `group` is the name of the group to select. `fail` can be `ignore` or `exit`, to determine what to do if the regex didn't match. For example, if your songs are named like `wait (C418)`, you can use a strategy like this:
+This is similar to `split`. It lets you extract a group from another selector according to a [regular expression](https://en.wikipedia.org/wiki/Regular_expression). `from` is the selector. `regex` is the expression, with at least one capture group. `group` is the name of the group to select. `fail` can be `ignore` or `exit`, to determine what to do if the regex didn't match.
+
+For example, if your songs are named like `wait (C418)`, you can use a strategy like this:
 ```
 performer:
   operation: regex
@@ -125,7 +135,9 @@ title:
 
 ---
 `join`:  
-This lets you combine two selectors with something in between them. `from1` and `from2` are the selectors. `with` is what to put between. For example, if your songs are named like `Piano Sonata No. 14/Movement 1`, and you want the full title to contain both, you can use a strategy like this:
+This lets you combine two selectors with something in between them. `from1` and `from2` are the selectors. `with` is what to put between.
+
+For example, if your songs are named like `Piano Sonata No. 14/Movement 1`, and you want the full title to contain both, you can use a strategy like this:
 ```
 title:
   operation: join
@@ -138,7 +150,9 @@ title:
 
 ---
 `copy`:  
-This lets you copy metadata from one field into another. The one value, `get`, is the field to copy. Note that this will copy the "final" value that ends up in that field. This means if later strategies modify the field you're copying from, this field will end up with those modifications as well. Example:
+This lets you copy metadata from one field into another. The one value, `get`, is the field to copy. Note that this will copy the "final" value that ends up in that field. This means if later strategies modify the field you're copying from, this field will end up with those modifications as well.
+
+Example:
 ```
 composer:
   operation: copy
@@ -215,14 +229,14 @@ As a bonus, at the same time the program checks for unused selectors, it will pr
 This hidden folder is created at the root of your music library folder. It contains a few things:
 
 ### `art`
-Contains PNG files that are used to embed album art into your songs, and change the folder icons. Their names should correspond to folders in your music library. This will embed the image in the metadata of all songs in that folder, including songs inside of subfolders. You can mirror the folder structure of your library in the art folder to select specific folders. Additionally, you can create a file named `__contents__.png` inside of an art folder. Doing this will use the main image for the folder icon, but the `__contents__` image will be the one that gets embedded.
+This folder contains PNG files that are used to embed album art into your songs, and change the folder icons. Their names should correspond to folders in your music library. This will embed the image in the metadata of all songs in that folder, including songs inside of subfolders. You can mirror the folder structure of your library in the art folder to select specific folders. Additionally, you can create a file named `__contents__.png` inside of an art folder. Doing this will use the main image for the folder icon, but the `__contents__` image will be the one that gets embedded.
 
 For example, if you have a folder named C418 in your music library, its image will be found in `.music-cache/art/C418.png`. All tracks in the C418 folder will be given that image. If you have folders named Volume Alpha and Volume Beta in the C418 folder, you can give them different album art by creating the images in `.music-cache/art/C418/Volume Alpha.png` and `.music-cache/art/C418/Volume Beta.png`, respectively. If you have a file in `.music-cache/art/C418/__contents__.png`, then the original `C418.png` image will now only be used as a folder icon; the new image will be the one that gets embedded into songs.
 
 The program automatically generates `.ico` files from the PNGs. These are 256x256 pixels, as required by Windows to allow them to work as folder icons. When the source PNG is not a perfect square, the icon will be centered and given a transparent buffer to meet the size requirement.
 
 ### `logs`
-All of the program output is both displayed to the console and written to a log file, named as `YYYY-MM-DD hh_mm_ss.txt`.
+All of the program output is both displayed to the console and written to a log file in this folder, named as `YYYY-MM-DD hh_mm_ss.txt`.
 
 ### `lyrics`
 The program looks for three different sources of lyrics and tries to make them consistent. They are, in order of priority:
@@ -263,7 +277,9 @@ This is for configuration that applies to the entire library. It's mostly just s
 ## Sources
 The program writes a `sources.yaml` file to your library root. The intention of this file is to keep track of where you got your music from. As for me, I've downloaded my music from all kinds of random places, and it brings me peace of mind to know I can go back and get them again, or find them in a higher quality somewhere else.
 
-Initially, it will list every folder as an object, with more objects for its subfolders. Songs will ultimately be listed under a `MISSING` object. This is where you can come in and manually write the URL or source you got those songs from. Each value can either be a list or a single song. Example:
+Initially, it will list every folder as an object, with more objects for its subfolders. Songs will ultimately be listed under a `MISSING` object. This is where you can come in and manually write the URL or source you got those songs from. Each value can either be a list or a single song.
+
+Example:
 ```
 C418:
   Volume Alpha:
