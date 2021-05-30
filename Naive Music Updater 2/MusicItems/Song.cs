@@ -46,39 +46,44 @@ namespace NaiveMusicUpdater
 #endif
             Logger.WriteLine($"(checking)");
             var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
-            using (TagLib.File file = TagLib.File.Create(Location))
-            {
-                bool success = true;
-                var path = Util.StringPathAfterRoot(this);
-                var art = GlobalCache.GetArtPathFor(this);
-                var modifier = new TagModifier(file, GlobalCache);
-                modifier.UpdateMetadata(metadata);
-                modifier.UpdateArt(art);
-                modifier.WriteLyrics(path);
-                if (modifier.HasChanged)
-                {
-                    Logger.WriteLine("Saving...");
-                    try { file.Save(); }
-                    catch (IOException ex)
-                    {
-                        Logger.WriteLine($"Save failed because {ex.Message}! Skipping...");
-                        GlobalCache.MarkNeedsUpdateNextTime(this);
-                        success = false;
-                    }
-                }
-                if (success)
-                {
 #if !DEBUG
-                    bool needs_replaygain = !HasReplayGain(file);
-                    if (needs_replaygain)
-                    {
-                        Logger.WriteLine($"Normalizing audio with ReplayGain");
-                        GlobalCache.Config.NormalizeAudio(this);
-                    }
-                    GlobalCache.MarkUpdatedRecently(this);
+            bool reload_file = true;
+            using var replay_file = TagLib.File.Create(Location);
+            bool needs_replaygain = !HasReplayGain(replay_file);
+            if (needs_replaygain)
+            {
+                Logger.WriteLine($"Normalizing audio with ReplayGain");
+                GlobalCache.Config.NormalizeAudio(this);
+                replay_file.Dispose();
+            }
+            else
+                reload_file = false;
+            using var file = reload_file ? TagLib.File.Create(Location) : replay_file;
+#else
+            using var file = TagLib.File.Create(Location);
 #endif
+            var path = Util.StringPathAfterRoot(this);
+            var art = GlobalCache.GetArtPathFor(this);
+            var modifier = new TagModifier(file, GlobalCache);
+            modifier.UpdateMetadata(metadata);
+            modifier.UpdateArt(art);
+            modifier.WriteLyrics(path);
+            bool success = true;
+            if (modifier.HasChanged)
+            {
+                Logger.WriteLine("Saving...");
+                try { file.Save(); }
+                catch (IOException ex)
+                {
+                    Logger.WriteLine($"Save failed because {ex.Message}! Skipping...");
+                    GlobalCache.MarkNeedsUpdateNextTime(this);
+                    success = false;
                 }
             }
+#if !DEBUG
+            if (success)
+                GlobalCache.MarkUpdatedRecently(this);
+#endif
         }
 
         private bool HasReplayGain(TagLib.File file)

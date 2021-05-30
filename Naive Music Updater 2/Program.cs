@@ -36,7 +36,7 @@ namespace NaiveMusicUpdater
 
             string FolderPath;
 #if DEBUG
-            FolderPath = @"D:\Music";
+            FolderPath = File.ReadAllText("folder.txt");
 #else
             FolderPath = Directory.GetCurrentDirectory();
 #endif
