@@ -6,22 +6,12 @@ namespace NaiveMusicUpdater
 {
     public static class ItemPredicateFactory
     {
-        public static IItemPredicate CreateFrom(string str)
-        {
-            return new ExactItemPredicate(str);
-        }
-
-        public static IItemPredicate CreateFrom(Regex regex)
-        {
-            return new RegexItemPredicate(regex);
-        }
-
         public static IItemPredicate FromNode(YamlNode node)
         {
             if (node.NodeType == YamlNodeType.Scalar)
-                return CreateFrom((string)node);
+                return new ExactItemPredicate((string)node);
             if (node is YamlMappingNode map)
-                return CreateFrom((string)map["regex"]);
+                return new RegexItemPredicate(new Regex((string)map["regex"], RegexOptions.IgnoreCase));
             throw new ArgumentException($"{node} is {node.NodeType}, doesn't work for item predicate");
         }
     }

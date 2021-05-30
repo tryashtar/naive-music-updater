@@ -278,7 +278,7 @@ namespace NaiveMusicUpdater
             });
         }
 
-        private static bool ArrayEquals<T>(T[] one, T[] two)
+        private static bool ArrayEquals<U>(U[] one, U[] two)
         {
             if (one == null)
                 return two == null;

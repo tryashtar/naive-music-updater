@@ -6,8 +6,8 @@ namespace NaiveMusicUpdater
 {
     public class CheckSelectorResults
     {
-        public List<IMusicItem> UnselectedItems = new List<IMusicItem>();
-        public List<ItemSelector> UnusedSelectors = new List<ItemSelector>();
+        public List<IMusicItem> UnselectedItems = new();
+        public List<IItemSelector> UnusedSelectors = new();
 
         public void AddResults(CheckSelectorResults more)
         {

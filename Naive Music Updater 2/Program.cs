@@ -63,9 +63,6 @@ namespace NaiveMusicUpdater
             }
 #endif
             Logger.Close();
-#if DEBUG
-            Console.ReadLine();
-#endif
         }
 
         public static void PrintFrames(string[] paths)

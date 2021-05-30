@@ -12,8 +12,8 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace NaiveMusicUpdater
 {
-    public delegate (ItemSelector selector, IMetadataStrategy strategy) TargetedStrategyProducer();
-    public delegate (List<ItemSelector> selectors, IMetadataStrategy strategy) SharedStrategyProducer();
+    public delegate (IItemSelector selector, IMetadataStrategy strategy) TargetedStrategyProducer();
+    public delegate (List<IItemSelector> selectors, IMetadataStrategy strategy) SharedStrategyProducer();
     public delegate SongOrder OrderProducer();
     public delegate IMetadataStrategy StrategyProducer();
     public class MusicItemConfig
@@ -94,28 +94,26 @@ namespace NaiveMusicUpdater
                 .Concat(MetadataStrategies.Select(x => x().selector));
             if (TrackOrder != null && TrackOrder() is DefinedSongOrder defined)
             {
-                all_selectors = all_selectors.Concat(defined.Order);
+                all_selectors = all_selectors.Append(defined.Order);
                 results.UnselectedItems.AddRange(defined.UnselectedItems);
             }
             foreach (var selector in all_selectors)
             {
-                var find = selector.AllMatchesFrom(ConfiguredItem);
-                if (!find.Any())
-                    results.UnusedSelectors.Add(selector);
+                results.UnusedSelectors.AddRange(selector.UnusedFrom(ConfiguredItem));
             }
             return results;
         }
 
-        private (ItemSelector selector, IMetadataStrategy strategy) ParseStrategy(YamlNode key, YamlNode value)
+        private (IItemSelector selector, IMetadataStrategy strategy) ParseStrategy(YamlNode key, YamlNode value)
         {
-            var selector = ItemSelector.FromNode(key);
+            var selector = ItemSelectorFactory.FromNode(key);
             var strategy = LiteralOrReference(value);
             return (selector, strategy);
         }
 
-        private (List<ItemSelector> selectors, IMetadataStrategy strategy) ParseMultiple(YamlSequenceNode names, YamlNode value)
+        private (List<IItemSelector> selectors, IMetadataStrategy strategy) ParseMultiple(YamlSequenceNode names, YamlNode value)
         {
-            var selectors = names.Select(x => ItemSelector.FromNode(x)).ToList();
+            var selectors = names.Select(x => ItemSelectorFactory.FromNode(x)).ToList();
             var strategy = LiteralOrReference(value);
             return (selectors, strategy);
         }

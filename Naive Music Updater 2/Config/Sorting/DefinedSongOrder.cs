@@ -8,28 +8,26 @@ namespace NaiveMusicUpdater
     public class DefinedSongOrder : SongOrder
     {
         private readonly MusicFolder Folder;
-        private readonly List<ItemSelector> DefinedOrder;
         private readonly List<IMusicItem> Unselected;
         private readonly Dictionary<IMusicItem, uint> CachedResults;
-        public ReadOnlyCollection<ItemSelector> Order => DefinedOrder.AsReadOnly();
+        public readonly IItemSelector Order;
+        public readonly uint TotalNumber;
         public ReadOnlyCollection<IMusicItem> UnselectedItems => Unselected.AsReadOnly();
-        public DefinedSongOrder(YamlSequenceNode yaml, MusicFolder folder)
+        public DefinedSongOrder(YamlNode yaml, MusicFolder folder)
         {
             Folder = folder;
-            DefinedOrder = yaml.Children.Select(x => ItemSelector.FromNode(x)).ToList();
+            Order = ItemSelectorFactory.FromNode(yaml);
             CachedResults = new Dictionary<IMusicItem, uint>();
             var used_folders = new HashSet<MusicFolder>();
-            uint index = 1;
-            foreach (var item in DefinedOrder)
+            var order = Order.AllMatchesFrom(folder).ToList();
+            uint index = 0;
+            foreach (var item in order)
             {
-                var matches = item.AllMatchesFrom(folder);
-                foreach (var match in matches)
-                {
-                    CachedResults[match] = index;
-                    used_folders.Add(match.Parent);
-                }
                 index++;
+                CachedResults[item] = index;
+                used_folders.Add(item.Parent);
             }
+            TotalNumber = index;
             Unselected = new List<IMusicItem>();
             foreach (var used in used_folders)
             {
@@ -43,7 +41,7 @@ namespace NaiveMusicUpdater
             if (CachedResults.TryGetValue(item, out uint track))
             {
                 metadata.Register(MetadataField.Track, MetadataProperty.Single(track.ToString(), CombineMode.Replace));
-                metadata.Register(MetadataField.TrackTotal, MetadataProperty.Single(DefinedOrder.Count.ToString(), CombineMode.Replace));
+                metadata.Register(MetadataField.TrackTotal, MetadataProperty.Single(TotalNumber.ToString(), CombineMode.Replace));
             }
             return metadata;
         }
