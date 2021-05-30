@@ -16,7 +16,7 @@ namespace NaiveMusicUpdater
 
     public class MetadataStrategy : IMetadataStrategy
     {
-        private readonly Dictionary<MetadataField, MetadataSelector> Fields = new Dictionary<MetadataField, MetadataSelector>();
+        private readonly Dictionary<MetadataField, MetadataSelector> Fields = new();
         
         public MetadataStrategy(YamlMappingNode yaml)
         {
