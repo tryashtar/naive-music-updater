@@ -40,11 +40,11 @@ namespace NaiveMusicUpdater
 #else
             FolderPath = Directory.GetCurrentDirectory();
 #endif
-            var library = new MusicLibrary(FolderPath);
 #if !DEBUG
             try
 #endif
             {
+                var library = new MusicLibrary(FolderPath);
                 library.UpdateLibrary();
                 Logger.WriteLine();
                 library.UpdateSources();

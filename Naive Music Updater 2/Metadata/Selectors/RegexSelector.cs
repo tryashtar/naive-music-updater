@@ -28,8 +28,8 @@ namespace NaiveMusicUpdater
             Regex = new Regex((string)yaml["regex"]);
             Group = (string)yaml["group"];
             MatchFail = MatchFailDecision.Ignore;
-            var fail = (string)yaml.Go("fail");
-            if (fail == "exit")
+            var fail = yaml.Go("fail");
+            if (fail != null && (string)fail == "exit")
                 MatchFail = MatchFailDecision.Exit;
         }
 

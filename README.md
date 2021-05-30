@@ -77,10 +77,10 @@ This is one of the more elaborate features of the program. Metadata selectors te
 **List**  
 A list of selectors allows you to set multiple values in one property. For example, `performer: [Ricardo Arjona, Gaby Moreno]` can be used to set multiple artists.
 
-**Object**
+**Object**  
 The behavior is defined by the value of the `operation` key.
 
-`parent`:
+`parent`:  
 This selects the "clean name" of a parent folder. `up` specifies the number of folders to navigate. If positive, it's relative to the root, so `1` would be whichever folder in the library root contains the song, `2` would be one deeper, etc. If negative, it's relative to the song, so `-1` would be whichever folder directly contains the song, `-2` would be one higher, etc. For example, if the songs are inside a folder named after the album, you can express that like this:
 ```
 album:
@@ -89,7 +89,7 @@ album:
 ```
 
 ---
-`split`:
+`split`:  
 This allows you to grab a value from another metadata selector, split it, and take a specific piece. `from` is the selector to use. `separator` is what to split on. `index` is which piece to use. `no_separator` can be `ignore` or `exit`. If it's set to exit, the result must contain the separator somewhere. `out_of_bounds` can be `exit`, `wrap`, or `clamp`, which decides how the index should be used to choose the result. For example, if your songs are named like `C418 - wait`, you can use a strategy like this:
 ```
 performer:
@@ -107,7 +107,7 @@ title:
 ```
 
 ---
-`regex`:
+`regex`:  
 This is similar to `split`. It lets you extract a group from another selector according to a [regular expression](https://en.wikipedia.org/wiki/Regular_expression). `from` is the selector. `regex` is the expression, with at least one capture group. `group` is the name of the group to select. `fail` can be `ignore` or `exit`, to determine what to do if the regex didn't match. For example, if your songs are named like `wait (C418)`, you can use a strategy like this:
 ```
 performer:
@@ -124,7 +124,7 @@ title:
 ```
 
 ---
-`join`:
+`join`:  
 This lets you combine two selectors with something in between them. `from1` and `from2` are the selectors. `with` is what to put between. For example, if your songs are named like `Piano Sonata No. 14/Movement 1`, and you want the full title to contain both, you can use a strategy like this:
 ```
 title:
@@ -137,7 +137,7 @@ title:
 ```
 
 ---
-`copy`:
+`copy`:  
 This lets you copy metadata from one field into another. The one value, `get`, is the field to copy. Note that this will copy the "final" value that ends up in that field. This means if later strategies modify the field you're copying from, this field will end up with those modifications as well. Example:
 ```
 composer:
@@ -146,7 +146,7 @@ composer:
 ```
 
 ---
-`remove`:
+`remove`:  
 This deletes any metadata set by previously run strategies.
 
 ## Configuration
@@ -157,9 +157,16 @@ For example, if you have a `config.yaml` file in the root of your library, those
 Here are the options that can be included in a `config.yaml` file:
 
 **`songs`**  
-The value for this is a [strategy](#strategies). If you use a string, it will use the strategy defined in [`library.yaml`](#library.yaml) with that name.
+The value for this is a [strategy](#strategies). If you use a string, it will use the strategy defined in [`library.yaml`](#library.yaml) with that name. This strategy applies to all relevant songs unconditionally.
 
-The `songs` strategy applies to all relevant songs unconditionally.
+For example:
+```
+songs:
+  title: <this>
+  performer:
+    operation: parent
+    up: 2
+```
 
 ---
 **`set`**  
@@ -191,11 +198,10 @@ set all:
 ```
 
 ---
-**`order`**
-
+**`order`**  
 This is a more convenient way to set track number metadata than using the `track` and `track total` fields. It's simply an item selector. The items it selects will be assigned track metadata according to their order and count.
 
-For example, these tracks will be assigned a track number of 1, 2, and 3, respectively, and all will be assigned a track total of 3.
+For example, these tracks will be assigned a track number of 1, 2, and 3, respectively, and all will be assigned a track total of 3:
 ```
 order:
 - Dearly Beloved
@@ -228,6 +234,8 @@ The highest priority source of lyrics for a song is treated as the source of tru
 
 ### `datecache.yaml`
 The program does not scan every file every time, that would take forever, especially for someone like me who has like 12,000 songs. Every time the program modifies a file, it saves the date here. Next time, if the file's last modified date isn't any more recent than the date it saved before, the file will just be skipped.
+
+If the program notices that a [config](#configuration) or art file that would apply to a song has changed, it will also decide to scan the file. For example, this means if you change a `config.yaml` in your library root, the program will scan everything the next time it runs.
 
 ### `library.yaml`
 This is for configuration that applies to the entire library. It's mostly just some top-level objects:
