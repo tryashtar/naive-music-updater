@@ -12,6 +12,7 @@ namespace NaiveMusicUpdater
         private readonly MetadataSelector From;
         private readonly string Separator;
         private readonly int Index;
+        private readonly bool TakeAll;
         private readonly NoSeparatorDecision NoSeparator;
         private readonly OutofBoundsDecision OutofBounds;
 
@@ -33,7 +34,11 @@ namespace NaiveMusicUpdater
         {
             From = MetadataSelectorFactory.FromToken(yaml["from"]);
             Separator = (string)yaml["separator"];
-            Index = int.Parse((string)yaml["index"]);
+            var take_all = yaml.Go("take_all");
+            if (take_all != null && bool.Parse((string)take_all))
+                TakeAll = true;
+            else
+                Index = int.Parse((string)yaml["index"]);
             NoSeparator = NoSeparatorDecision.Ignore;
             var no_separator = yaml.Go("no_separator");
             if (no_separator != null && (string)no_separator == "exit")
@@ -54,6 +59,8 @@ namespace NaiveMusicUpdater
             string[] parts = basetext.Value.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 1 && NoSeparator == NoSeparatorDecision.Exit)
                 return null;
+            if (TakeAll)
+                return MetadataProperty.List(parts.ToList(), CombineMode.Replace);
             int index = Index;
             if (index < 0 || index >= parts.Length)
             {
