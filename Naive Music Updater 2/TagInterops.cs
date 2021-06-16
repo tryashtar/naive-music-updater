@@ -367,7 +367,14 @@ namespace NaiveMusicUpdater
 
     public class Id3v2TagInterop : AbstractInterop<TagLib.Id3v2.Tag>
     {
-        public Id3v2TagInterop(TagLib.Id3v2.Tag tag) : base(tag) { }
+        private static readonly string[] ReadDelimiters = new string[] { "/", "; ", ";" };
+        private const string WriteDelimiter = "; ";
+        public Id3v2TagInterop(TagLib.Id3v2.Tag tag) : base(tag)
+        {
+            tag.ReadArtistDelimiters = ReadDelimiters;
+            tag.WriteArtistDelimiter = WriteDelimiter;
+        }
+
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
             var schema = BasicInterop.BasicSchema(Tag);
