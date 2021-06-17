@@ -31,6 +31,14 @@ namespace NaiveMusicUpdater
             }
         }
 
+        public static T ParseOrDefault<T>(this YamlNode node, string key, Func<YamlNode, T> parse, T def = default)
+        {
+            var sub = node.TryGet(key);
+            if (sub == null)
+                return def;
+            return parse(sub);
+        }
+
         public static YamlNode Go(this YamlNode node, params string[] path)
         {
             foreach (var item in path)

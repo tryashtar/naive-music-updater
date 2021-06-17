@@ -7,11 +7,20 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using YamlDotNet.RepresentationModel;
+using System.Globalization;
 
 namespace NaiveMusicUpdater
 {
     public static class Util
     {
+        public static T ParseUnderscoredEnum<T>(string str) where T : struct
+        {
+            str = str.ToLower().Replace("_", " ");
+            var info = CultureInfo.CurrentCulture.TextInfo;
+            str = info.ToTitleCase(str).Replace(" ", String.Empty);
+            return Enum.Parse<T>(str);
+        }
+
         public static string StringPathAfterRoot(IMusicItem item)
         {
             return String.Join(Path.DirectorySeparatorChar.ToString(), item.PathFromRoot().Skip(1).Select(x => x.SimpleName));
@@ -47,18 +56,6 @@ namespace NaiveMusicUpdater
             var temp_windows_hack = to + "_TEMPORARY_FOLDER";
             Directory.Move(from, temp_windows_hack);
             Directory.Move(temp_windows_hack, to);
-        }
-
-        public static YamlNode TryGet(this YamlNode node, string key)
-        {
-            try
-            {
-                return node[key];
-            }
-            catch (KeyNotFoundException)
-            {
-                return null;
-            }
         }
     }
 }

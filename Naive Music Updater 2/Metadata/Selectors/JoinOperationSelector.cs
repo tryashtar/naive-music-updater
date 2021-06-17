@@ -16,8 +16,8 @@ namespace NaiveMusicUpdater
         // gets metadata "From" two other places and combines them with "With" in between
         public JoinOperationSelector(YamlMappingNode yaml)
         {
-            From1 = MetadataSelectorFactory.FromToken(yaml["from1"]);
-            From2 = MetadataSelectorFactory.FromToken(yaml["from2"]);
+            From1 = MetadataSelectorFactory.Create(yaml["from1"]);
+            From2 = MetadataSelectorFactory.Create(yaml["from2"]);
             With = (string)yaml["with"];
         }
 

@@ -9,7 +9,7 @@ namespace NaiveMusicUpdater
 {
     public static class MetadataSelectorFactory
     {
-        public static MetadataSelector FromToken(YamlNode yaml)
+        public static MetadataSelector Create(YamlNode yaml)
         {
             if (yaml.NodeType == YamlNodeType.Scalar)
             {
@@ -22,24 +22,33 @@ namespace NaiveMusicUpdater
             }
             else if (yaml is YamlMappingNode map)
             {
+                var picker = map.ParseOrDefault("pick", x => ValuePickerFactory.Create(x));
+                MetadataSelector base_selector = null;
                 var operation = (string)map.Go("operation");
+                var simple_base = map.Go("base");
                 if (operation != null)
                 {
-                    if (operation == "split")
-                        return new SplitOperationSelector(map);
+                    if (operation == "copy")
+                        base_selector = new CopyMetadataSelector(map);
                     else if (operation == "join")
-                        return new JoinOperationSelector(map);
-                    else if (operation == "regex")
-                        return new RegexSelector(map);
-                    else if (operation == "copy")
-                        return new CopyMetadataSelector(map);
+                        base_selector = new JoinOperationSelector(map);
                     else if (operation == "parent")
                     {
                         var up = map.Go("up");
-                        return new SimpleParentSelector(int.Parse((string)up));
+                        base_selector = new SimpleParentSelector(int.Parse((string)up));
                     }
                     else if (operation == "remove")
-                        return new RemoveSelector();
+                        base_selector = new RemoveSelector();
+                }
+                else if (simple_base!=null)
+                {
+                    base_selector = MetadataSelectorFactory.Create(simple_base);
+                }
+                if (base_selector != null)
+                {
+                    if (picker != null)
+                        return new PickedSelector(base_selector, picker);
+                    return base_selector;
                 }
             }
             else if (yaml is YamlSequenceNode sequence)

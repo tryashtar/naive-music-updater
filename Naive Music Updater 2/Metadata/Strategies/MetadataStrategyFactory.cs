@@ -7,12 +7,23 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
+    public interface IMetadataStrategy
+    {
+        Metadata Get(IMusicItem item, Predicate<MetadataField> desired);
+    }
+
     public static class MetadataStrategyFactory
     {
         public static IMetadataStrategy Create(YamlNode node)
         {
             if (node is YamlMappingNode map)
-                return new MetadataStrategy(map);
+            {
+                var type = map.Go("type");
+                if (type != null && (string)type == "multi")
+                    return new RedirectingMetadataStrategy(map);
+                else
+                    return new FieldMapMetadataStrategy(map);
+            }
             if (node is YamlSequenceNode list)
                 return new MultipleMetadataStrategy(list);
             throw new ArgumentException($"{node} is {node.NodeType}, doesn't work for metadata strategy");

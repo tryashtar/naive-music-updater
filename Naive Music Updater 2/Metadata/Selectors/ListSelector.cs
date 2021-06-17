@@ -12,7 +12,7 @@ namespace NaiveMusicUpdater
         private readonly List<MetadataSelector> SubSelectors;
         public ListSelector(YamlSequenceNode list)
         {
-            SubSelectors = list.Select(x => MetadataSelectorFactory.FromToken(x)).ToList();
+            SubSelectors = list.Select(x => MetadataSelectorFactory.Create(x)).ToList();
         }
 
         public override MetadataProperty GetRaw(IMusicItem item)

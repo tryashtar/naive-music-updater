@@ -9,28 +9,18 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public interface IMetadataStrategy
-    {
-        Metadata Get(IMusicItem item, Predicate<MetadataField> desired);
-    }
-
-    public class MetadataStrategy : IMetadataStrategy
+    public class FieldMapMetadataStrategy : IMetadataStrategy
     {
         private readonly Dictionary<MetadataField, MetadataSelector> Fields = new();
         
-        public MetadataStrategy(YamlMappingNode yaml)
+        public FieldMapMetadataStrategy(YamlMappingNode yaml)
         {
             foreach (var pair in yaml)
             {
                 var field = MetadataField.FromID((string)pair.Key);
                 if (field != null)
-                    Fields[field] = MetadataSelectorFactory.FromToken(pair.Value);
+                    Fields[field] = MetadataSelectorFactory.Create(pair.Value);
             }
-        }
-
-        private MetadataProperty Get(MetadataSelector selector, IMusicItem item)
-        {
-            return selector?.Get(item) ?? MetadataProperty.Ignore();
         }
 
         public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
@@ -39,7 +29,7 @@ namespace NaiveMusicUpdater
             foreach (var pair in Fields)
             {
                 if (desired(pair.Key))
-                    meta.Register(pair.Key, Get(pair.Value, item));
+                    meta.Register(pair.Key, pair.Value.Get(item));
             }
             return meta;
         }
