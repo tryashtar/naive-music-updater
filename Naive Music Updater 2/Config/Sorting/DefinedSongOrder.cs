@@ -16,7 +16,7 @@ namespace NaiveMusicUpdater
         public DefinedSongOrder(YamlNode yaml, MusicFolder folder)
         {
             Folder = folder;
-            Order = ItemSelectorFactory.FromNode(yaml);
+            Order = ItemSelectorFactory.Create(yaml);
             CachedResults = new Dictionary<IMusicItem, uint>();
             var used_folders = new HashSet<MusicFolder>();
             var order = Order.AllMatchesFrom(folder).ToList();

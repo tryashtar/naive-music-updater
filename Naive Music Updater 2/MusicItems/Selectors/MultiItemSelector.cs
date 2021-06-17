@@ -10,7 +10,7 @@ namespace NaiveMusicUpdater
         private readonly IItemSelector[] Subselectors;
         public MultiItemSelector(YamlSequenceNode sequence)
         {
-            Subselectors = sequence.Children.Select(x => ItemSelectorFactory.FromNode(x)).ToArray();
+            Subselectors = sequence.Children.Select(x => ItemSelectorFactory.Create(x)).ToArray();
         }
 
         public IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start)

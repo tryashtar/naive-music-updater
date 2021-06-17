@@ -8,26 +8,26 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public class RegexValuePicker : IValuePicker
+    public class RegexValueOperator : IValueOperator
     {
         public readonly Regex RegexItem;
-        public readonly string Replace;
         public readonly MatchFailDecision MatchFail;
 
-        public RegexValuePicker(YamlMappingNode yaml)
+        public RegexValueOperator(YamlMappingNode yaml)
         {
             RegexItem = new Regex((string)yaml["regex"]);
-            Replace = (string)yaml["replace"];
             MatchFail = yaml.ParseOrDefault("fail", x => Util.ParseUnderscoredEnum<MatchFailDecision>((string)x), MatchFailDecision.Exit);
         }
 
-        public MetadataProperty PickFrom(MetadataProperty full)
+        public IValue Apply(IValue original)
         {
-            var basetext = full.Value;
-            var match = RegexItem.Match(basetext);
+            var text = (StringValue)original;
+
+            var match = RegexItem.Match(text.Value);
             if (!match.Success)
-                return MatchFail == MatchFailDecision.TakeWhole ? full : MetadataProperty.Ignore();
-            return MetadataProperty.Single(RegexItem.Replace(basetext, Replace), full.CombineMode);
+                return MatchFail == MatchFailDecision.TakeWhole ? original : MetadataProperty.Ignore();
+
+            return new RegexMatchValue(match);
         }
     }
 

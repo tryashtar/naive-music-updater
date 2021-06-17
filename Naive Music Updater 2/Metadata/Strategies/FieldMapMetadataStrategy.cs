@@ -11,15 +11,15 @@ namespace NaiveMusicUpdater
 {
     public class FieldMapMetadataStrategy : IMetadataStrategy
     {
-        private readonly Dictionary<MetadataField, MetadataSelector> Fields = new();
-        
+        private readonly Dictionary<MetadataField, IValueResolver> Fields = new();
+
         public FieldMapMetadataStrategy(YamlMappingNode yaml)
         {
             foreach (var pair in yaml)
             {
                 var field = MetadataField.FromID((string)pair.Key);
                 if (field != null)
-                    Fields[field] = MetadataSelectorFactory.Create(pair.Value);
+                    Fields[field] = ValueResolverFactory.Create(pair.Value);
             }
         }
 
@@ -29,7 +29,7 @@ namespace NaiveMusicUpdater
             foreach (var pair in Fields)
             {
                 if (desired(pair.Key))
-                    meta.Register(pair.Key, pair.Value.Get(item));
+                    meta.Register(pair.Key, pair.Value.Resolve(item).ToProperty());
             }
             return meta;
         }

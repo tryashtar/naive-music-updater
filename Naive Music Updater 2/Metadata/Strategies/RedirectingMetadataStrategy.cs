@@ -11,45 +11,43 @@ namespace NaiveMusicUpdater
 {
     public class RedirectingMetadataStrategy : IMetadataStrategy
     {
-        public readonly SelectorDirector Director;
+        public readonly IValueResolver Resolver;
+        public readonly ValueApplier Applier;
 
         public RedirectingMetadataStrategy(YamlMappingNode yaml)
         {
-            Director = new SelectorDirector((YamlMappingNode)yaml["strat"]);
+            Resolver = ValueResolverFactory.Create((YamlMappingNode)yaml["take"]);
+            Applier = new ValueApplier((YamlMappingNode)yaml["apply"]);
         }
 
         public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
         {
-            return Director.Get(item, desired);
+            var value = Resolver.Resolve(item);
+            return Applier.Apply(value, desired);
         }
     }
 
-    public class SelectorDirector
+    public class ValueApplier
     {
-        public readonly MetadataSelector Selector;
-        public readonly Dictionary<MetadataField, IValuePicker> Fields = new();
+        private readonly Dictionary<MetadataField, IValueOperator> Fields = new();
 
-        public SelectorDirector(YamlMappingNode yaml)
+        public ValueApplier(YamlMappingNode yaml)
         {
-            Selector = MetadataSelectorFactory.Create(yaml["selector"]);
-            foreach (var pair in (YamlMappingNode)yaml["assign"])
+            foreach (var pair in yaml)
             {
                 var field = MetadataField.FromID((string)pair.Key);
                 if (field != null)
-                    Fields[field] = ValuePickerFactory.Create(pair.Value);
+                    Fields[field] = ValueOperatorFactory.Create(pair.Value);
             }
         }
 
-        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
+        public Metadata Apply(IValue value, Predicate<MetadataField> desired)
         {
             var meta = new Metadata();
             foreach (var pair in Fields)
             {
                 if (desired(pair.Key))
-                {
-                    var base_value = Selector.Get(item);
-                    meta.Register(pair.Key, pair.Value.PickFrom(base_value));
-                }
+                    meta.Register(pair.Key, pair.Value.Apply(value).ToProperty());
             }
             return meta;
         }

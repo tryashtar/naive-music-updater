@@ -7,24 +7,26 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public class SplitValuePicker : IValuePicker
+    public class SplitValueOperator : IValueOperator
     {
         public readonly string Separator;
         public readonly NoSeparatorDecision NoSeparator;
 
-        public SplitValuePicker(YamlMappingNode yaml)
+        public SplitValueOperator(YamlMappingNode yaml)
         {
             Separator = (string)yaml["separator"];
             NoSeparator = yaml.ParseOrDefault("no_separator", x => Util.ParseUnderscoredEnum<NoSeparatorDecision>((string)x), NoSeparatorDecision.Ignore);
         }
 
-        public MetadataProperty PickFrom(MetadataProperty full)
+        public IValue Apply(IValue original)
         {
-            var basetext = full.Value;
-            string[] parts = basetext.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
+            var text = (StringValue)original;
+
+            string[] parts = text.Value.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 1 && NoSeparator == NoSeparatorDecision.Exit)
                 return MetadataProperty.Ignore();
-            return MetadataProperty.List(parts.ToList(), full.CombineMode);
+
+            return new ListValue(parts);
         }
     }
 

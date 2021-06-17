@@ -9,7 +9,7 @@ namespace NaiveMusicUpdater
     // an actual mutable collection of metadata
     public class Metadata
     {
-        private readonly Dictionary<MetadataField, MetadataProperty> SavedFields = new Dictionary<MetadataField, MetadataProperty>();
+        private readonly Dictionary<MetadataField, MetadataProperty> SavedFields = new();
         public Metadata()
         { }
 

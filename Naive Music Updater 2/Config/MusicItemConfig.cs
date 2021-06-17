@@ -106,14 +106,14 @@ namespace NaiveMusicUpdater
 
         private (IItemSelector selector, IMetadataStrategy strategy) ParseStrategy(YamlNode key, YamlNode value)
         {
-            var selector = ItemSelectorFactory.FromNode(key);
+            var selector = ItemSelectorFactory.Create(key);
             var strategy = LiteralOrReference(value);
             return (selector, strategy);
         }
 
         private (List<IItemSelector> selectors, IMetadataStrategy strategy) ParseMultiple(YamlSequenceNode names, YamlNode value)
         {
-            var selectors = names.Select(x => ItemSelectorFactory.FromNode(x)).ToList();
+            var selectors = names.Select(x => ItemSelectorFactory.Create(x)).ToList();
             var strategy = LiteralOrReference(value);
             return (selectors, strategy);
         }

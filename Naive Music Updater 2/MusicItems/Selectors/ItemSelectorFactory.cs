@@ -5,9 +5,16 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
+    public interface IItemSelector
+    {
+        IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start);
+        bool IsSelectedFrom(IMusicItem start, IMusicItem item);
+        IEnumerable<IItemSelector> UnusedFrom(IMusicItem start);
+    }
+
     public static class ItemSelectorFactory
     {
-        public static IItemSelector FromNode(YamlNode node)
+        public static IItemSelector Create(YamlNode node)
         {
             if (node.NodeType == YamlNodeType.Scalar)
                 return new PathItemSelector((string)node);
@@ -24,8 +31,8 @@ namespace NaiveMusicUpdater
                 }
                 else if (type == "subpath")
                 {
-                    var subpath = ItemSelectorFactory.FromNode(node["subpath"]);
-                    var select = ItemSelectorFactory.FromNode(node["select"]);
+                    var subpath = ItemSelectorFactory.Create(node["subpath"]);
+                    var select = ItemSelectorFactory.Create(node["select"]);
                     return new SubPathItemSelector(subpath, select);
                 }
             }

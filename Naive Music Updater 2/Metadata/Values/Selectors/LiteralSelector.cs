@@ -6,17 +6,17 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    public class LiteralSelector : MetadataSelector
+    public class LiteralSelector : IValueSelector
     {
-        private readonly string LiteralText;
+        public readonly string LiteralText;
         public LiteralSelector(string spec)
         {
             LiteralText = spec;
         }
 
-        public override MetadataProperty GetRaw(IMusicItem item)
+        public IValue Get(IMusicItem item)
         {
-            return MetadataProperty.Single(LiteralText, CombineMode.Replace);
+            return new StringValue(LiteralText);
         }
     }
 }
