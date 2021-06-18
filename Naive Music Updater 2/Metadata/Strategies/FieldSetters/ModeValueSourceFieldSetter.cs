@@ -15,12 +15,15 @@ namespace NaiveMusicUpdater
         public ModeValueSourceFieldSetter(YamlNode yaml)
         {
             Mode = yaml.Go("mode").ToEnum(def: CombineMode.Replace);
-            Source = yaml.Go("source").Parse(x => ValueSourceFactory.Create(x));
+            Source = yaml.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
         }
 
         public MetadataProperty Get(IMusicItem item)
         {
-            return MetadataProperty.FromValue(Source.Get(item), Mode);
+            if (Mode == CombineMode.Remove)
+                return MetadataProperty.Delete();
+            else
+                return MetadataProperty.FromValue(Source.Get(item), Mode);
         }
 
         public MetadataProperty GetWithContext(IMusicItem item, IValue value)

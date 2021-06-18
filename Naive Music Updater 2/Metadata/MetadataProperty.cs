@@ -30,7 +30,7 @@ namespace NaiveMusicUpdater
 
         public static MetadataProperty Delete()
         {
-            return new MetadataProperty(false, null, new List<string>(), CombineMode.Replace);
+            return new MetadataProperty(false, null, new List<string>(), CombineMode.Remove);
         }
 
         public static MetadataProperty Ignore()
@@ -53,21 +53,29 @@ namespace NaiveMusicUpdater
 
         public void CombineWith(MetadataProperty other)
         {
-            if (other.CombineMode == CombineMode.Replace)
+            switch (other.CombineMode)
             {
-                ListValue.Clear();
-                ListValue.AddRange(other.ListValue);
-                Value = other.Value;
-            }
-            if (other.CombineMode == CombineMode.Append)
-            {
-                ListValue.AddRange(other.ListValue);
-                Value = ListValue.FirstOrDefault();
-            }
-            if (other.CombineMode == CombineMode.Prepend)
-            {
-                ListValue.InsertRange(0, other.ListValue);
-                Value = ListValue.FirstOrDefault();
+                case CombineMode.Ignore:
+                    break;
+                case CombineMode.Replace:
+                    ListValue.Clear();
+                    ListValue.AddRange(other.ListValue);
+                    Value = other.Value;
+                    break;
+                case CombineMode.Append:
+                    ListValue.AddRange(other.ListValue);
+                    Value = ListValue.FirstOrDefault();
+                    break;
+                case CombineMode.Prepend:
+                    ListValue.InsertRange(0, other.ListValue);
+                    Value = ListValue.FirstOrDefault();
+                    break;
+                case CombineMode.Remove:
+                    ListValue.Clear();
+                    Value = null;
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -95,6 +103,7 @@ namespace NaiveMusicUpdater
         Ignore,
         Replace,
         Append,
-        Prepend
+        Prepend,
+        Remove
     }
 }

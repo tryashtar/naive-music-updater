@@ -25,9 +25,9 @@ namespace NaiveMusicUpdater
             if (yaml != null)
             {
                 if (configured_item is MusicFolder folder)
-                    TrackOrder = yaml.Go("order").Parse(x => SongOrderFactory.FromNode(x, folder));
-                SongsStrategy = yaml.Go("songs").Parse(x => LiteralOrReference(x));
-                FoldersStrategy = yaml.Go("folders").Parse(x => LiteralOrReference(x));
+                    TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.FromNode(x, folder));
+                SongsStrategy = yaml.Go("songs").NullableParse(x => LiteralOrReference(x));
+                FoldersStrategy = yaml.Go("folders").NullableParse(x => LiteralOrReference(x));
                 MetadataStrategies = yaml.Go("set").ToList((k, v) => ParseStrategy(k, v)) ?? new();
                 SharedStrategies = yaml.Go("set all").ToList(x => ParseMultiple(x.Go("names"), x.Go("set"))) ?? new();
             }

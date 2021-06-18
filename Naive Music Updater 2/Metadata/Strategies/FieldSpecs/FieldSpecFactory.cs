@@ -19,7 +19,7 @@ namespace NaiveMusicUpdater
         {
             if (yaml is YamlMappingNode map)
             {
-                var type = map.Go("type").ToEnum(def: FieldSpecType.Map);
+                var type = map.Go("field_spec").ToEnum(def: FieldSpecType.Map);
                 if (type == FieldSpecType.Map)
                     return new MapFieldSpec(map);
                 else if (type == FieldSpecType.SetAll)

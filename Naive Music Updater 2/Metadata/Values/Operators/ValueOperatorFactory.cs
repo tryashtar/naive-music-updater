@@ -47,6 +47,8 @@ namespace NaiveMusicUpdater
                 if (group != null)
                     return new RegexGroupOperator(group);
             }
+            else if (node is YamlSequenceNode sequence)
+                return new MultipleValueOperator(sequence.ToList(x => ValueOperatorFactory.Create(x)));
             throw new ArgumentException($"Can't make a value operator from {node}");
         }
     }

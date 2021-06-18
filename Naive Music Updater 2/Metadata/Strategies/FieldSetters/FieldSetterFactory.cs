@@ -27,6 +27,8 @@ namespace NaiveMusicUpdater
                 else if (type == FieldSetterType.Context)
                     return new ModeContextFieldSetter(map);
             }
+            else
+                return new DirectValueSourceFieldSetter(yaml);
             throw new ArgumentException($"Can't make field setter from {yaml}");
         }
     }
