@@ -5,23 +5,18 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TagLib.Flac;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
     public class SetAllFieldSpec : IFieldSpec
     {
-        private readonly HashSet<MetadataField> Fields;
+        public readonly HashSet<MetadataField> Fields;
         public readonly IFieldSetter Setter;
 
-        public SetAllFieldSpec(YamlMappingNode yaml)
+        public SetAllFieldSpec(HashSet<MetadataField> fields, IFieldSetter setter)
         {
-            var fields = yaml.Go("fields");
-            if (fields is YamlScalarNode scalar && scalar.Value == "*")
-                Fields = MetadataField.Values.ToHashSet();
-            else
-                Fields = fields.ToList(x => MetadataField.FromID(x.String()))?.ToHashSet();
-            Setter = yaml.Go("set").Parse(x => FieldSetterFactory.Create(x));
+            Fields = fields;
+            Setter = setter;
         }
 
         private Metadata ApplyLike(Predicate<MetadataField> desired, Func<IFieldSetter, MetadataProperty> get)

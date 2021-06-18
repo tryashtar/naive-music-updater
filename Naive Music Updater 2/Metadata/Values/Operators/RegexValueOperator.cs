@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -13,10 +12,10 @@ namespace NaiveMusicUpdater
         public readonly Regex RegexItem;
         public readonly MatchFailDecision MatchFail;
 
-        public RegexValueOperator(YamlMappingNode yaml)
+        public RegexValueOperator(Regex regex, MatchFailDecision decision)
         {
-            RegexItem = yaml.Go("regex").Parse(x => new Regex(x.String()));
-            MatchFail = yaml.Go("fail").ToEnum(def: MatchFailDecision.Exit);
+            RegexItem = regex;
+            MatchFail = decision;
         }
 
         public IValue Apply(IValue original)

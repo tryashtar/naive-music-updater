@@ -4,8 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using TagLib.Flac;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -14,10 +12,10 @@ namespace NaiveMusicUpdater
         public readonly IValueSource Source;
         public readonly IFieldSpec Applier;
 
-        public RedirectingMetadataStrategy(YamlMappingNode yaml)
+        public RedirectingMetadataStrategy(IValueSource source, IFieldSpec applier)
         {
-            Source = yaml.Go("source").Parse(x => ValueSourceFactory.Create(x));
-            Applier = yaml.Go("apply").Parse(x => FieldSpecFactory.Create(x));
+            Source = source;
+            Applier = applier;
         }
 
         public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)

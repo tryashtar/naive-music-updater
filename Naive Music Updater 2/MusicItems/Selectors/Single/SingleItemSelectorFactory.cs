@@ -22,24 +22,17 @@ namespace NaiveMusicUpdater
             }
             else if (node is YamlMappingNode map)
             {
-                var type = map.Go("type").ToEnum<AdvancedSourceType>();
-                if (type == AdvancedSourceType.Parent)
-                {
-                    int up = map.Go("up").Int().Value;
-                    return new ParentItemSelector(up);
-                }
-                else if (type == AdvancedSourceType.Root)
-                {
-                    int down = map.Go("down").Int().Value;
-                    return new RootItemSelector(down);
-                }
-                else if (type == AdvancedSourceType.Selector)
-                {
-                    var selector = map.Go("selector").Parse(x => ItemSelectorFactory.Create(x));
+                var up = map.Go("up").Int();
+                if (up != null)
+                    return new ParentItemSelector(up.Value);
+                var down = map.Go("from_root").Int();
+                if (down != null)
+                    return new RootItemSelector(down.Value);
+                var selector = map.Go("selector").NullableParse(x => ItemSelectorFactory.Create(x));
+                if (selector != null)
                     return new SingleSelectorWrapper(selector);
-                }
             }
-            throw new ArgumentException($"Couldn't make a single-item selector from {node}");
+            throw new ArgumentException($"Can't make single-item selector from {node}");
         }
     }
 
@@ -47,12 +40,5 @@ namespace NaiveMusicUpdater
     {
         This,
         Self
-    }
-
-    public enum AdvancedSourceType
-    {
-        Parent,
-        Root,
-        Selector
     }
 }

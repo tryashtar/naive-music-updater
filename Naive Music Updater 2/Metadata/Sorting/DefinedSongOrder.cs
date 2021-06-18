@@ -5,21 +5,17 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public class DefinedSongOrder : SongOrder
+    public class DefinedSongOrder : ISongOrder
     {
-        private readonly MusicFolder Folder;
         private readonly List<IMusicItem> Unselected;
         private readonly Dictionary<IMusicItem, uint> CachedResults;
         public readonly IItemSelector Order;
         public readonly uint TotalNumber;
         public ReadOnlyCollection<IMusicItem> UnselectedItems => Unselected.AsReadOnly();
-        public DefinedSongOrder(YamlNode yaml, MusicFolder folder)
+        public DefinedSongOrder(IEnumerable<IMusicItem> order)
         {
-            Folder = folder;
-            Order = ItemSelectorFactory.Create(yaml);
             CachedResults = new Dictionary<IMusicItem, uint>();
             var used_folders = new HashSet<MusicFolder>();
-            var order = Order.AllMatchesFrom(folder).ToList();
             uint index = 0;
             foreach (var item in order)
             {
@@ -35,7 +31,7 @@ namespace NaiveMusicUpdater
             }
         }
 
-        public override Metadata Get(IMusicItem item)
+        public Metadata Get(IMusicItem item)
         {
             var metadata = new Metadata();
             if (CachedResults.TryGetValue(item, out uint track))

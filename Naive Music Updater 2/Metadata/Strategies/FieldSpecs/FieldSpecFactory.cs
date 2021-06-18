@@ -19,19 +19,27 @@ namespace NaiveMusicUpdater
         {
             if (yaml is YamlMappingNode map)
             {
-                var type = map.Go("field_spec").ToEnum(def: FieldSpecType.Map);
-                if (type == FieldSpecType.Map)
-                    return new MapFieldSpec(map);
-                else if (type == FieldSpecType.SetAll)
-                    return new SetAllFieldSpec(map);
+                var fields = yaml.Go("fields");
+                if (fields != null)
+                {
+                    IEnumerable<MetadataField> set;
+                    if (fields is YamlScalarNode scalar && scalar.Value == "*")
+                        set = MetadataField.Values;
+                    else
+                        set = fields.ToList(x => MetadataField.FromID(x.String()));
+                    var setter = yaml.Go("set").Parse(x => FieldSetterFactory.Create(x));
+                    return new SetAllFieldSpec(set.ToHashSet(), setter);
+                }
+                else
+                {
+                    var direct = yaml.ToDictionary(
+                        x => MetadataField.FromID(x.String()),
+                        x => FieldSetterFactory.Create(x)
+                    );
+                    return new MapFieldSpec(direct);
+                }
             }
             throw new ArgumentException($"Can't make field spec from {yaml}");
         }
-    }
-
-    public enum FieldSpecType
-    {
-        Map,
-        SetAll
     }
 }

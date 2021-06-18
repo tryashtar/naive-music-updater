@@ -19,29 +19,26 @@ namespace NaiveMusicUpdater
             if (node is YamlScalarNode scalar)
                 return new PathItemSelector(scalar.Value);
             if (node is YamlSequenceNode sequence)
-                return new MultiItemSelector(sequence);
+            {
+                var subselectors = sequence.ToList(x => ItemSelectorFactory.Create(x));
+                return new MultiItemSelector(subselectors);
+            }
             if (node is YamlMappingNode map)
             {
-                var type = map.Go("type").ToEnum<SelectorType>();
-                if (type == SelectorType.Path)
+                var path = node.Go("path");
+                if (path != null)
                 {
-                    var predicates = node.Go("path").ToList(x => ItemPredicateFactory.FromNode(x)).ToArray();
+                    var predicates = path.ToList(x => ItemPredicateFactory.FromNode(x)).ToArray();
                     return new PathItemSelector(predicates);
                 }
-                else if (type == SelectorType.Subpath)
+                var subpath = node.Go("subpath").NullableParse(x => ItemSelectorFactory.Create(x));
+                if (subpath != null)
                 {
-                    var subpath = node.Go("subpath").Parse(x => ItemSelectorFactory.Create(x));
                     var select = node.Go("select").Parse(x => ItemSelectorFactory.Create(x));
                     return new SubPathItemSelector(subpath, select);
                 }
             }
-            throw new ArgumentException($"Couldn't make an item selector from {node}");
+            throw new ArgumentException($"Can't make item selector from {node}");
         }
-    }
-
-    public enum SelectorType
-    {
-        Path,
-        Subpath
     }
 }

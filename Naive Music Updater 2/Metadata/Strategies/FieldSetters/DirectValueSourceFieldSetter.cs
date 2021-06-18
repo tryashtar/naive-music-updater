@@ -4,16 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
     public class DirectValueSourceFieldSetter : IFieldSetter
     {
         public readonly IValueSource Source;
-        public DirectValueSourceFieldSetter(YamlNode yaml)
+
+        public DirectValueSourceFieldSetter(IValueSource source)
         {
-            Source = ValueSourceFactory.Create(yaml);
+            Source = source;
         }
 
         public MetadataProperty Get(IMusicItem item)

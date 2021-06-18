@@ -19,24 +19,25 @@ namespace NaiveMusicUpdater
         {
             if (yaml is YamlMappingNode map)
             {
-                var type = map.Go("type").ToEnum(def: FieldSetterType.DirectValue);
-                if (type == FieldSetterType.DirectValue)
-                    return new DirectValueSourceFieldSetter(map);
-                else if (type == FieldSetterType.Value)
-                    return new ModeValueSourceFieldSetter(map);
-                else if (type == FieldSetterType.Context)
-                    return new ModeContextFieldSetter(map);
+                var mode = map.Go("mode").ToEnum<CombineMode>();
+                if (mode == null)
+                {
+                    var source = ValueSourceFactory.Create(map);
+                    return new DirectValueSourceFieldSetter(source);
+                }
+                else
+                {
+                    var source = map.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
+                    if (source != null)
+                        return new ModeValueSourceFieldSetter(mode.Value, source);
+                    else
+                    {
+                        var modify = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
+                        return new ModeContextFieldSetter(mode.Value, modify);
+                    }
+                }
             }
-            else
-                return new DirectValueSourceFieldSetter(yaml);
             throw new ArgumentException($"Can't make field setter from {yaml}");
         }
-    }
-
-    public enum FieldSetterType
-    {
-        DirectValue,
-        Value,
-        Context
     }
 }

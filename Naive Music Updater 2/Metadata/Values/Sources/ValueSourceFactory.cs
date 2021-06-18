@@ -22,8 +22,13 @@ namespace NaiveMusicUpdater
             else if (yaml is YamlSequenceNode sequence)
                 return new LiteralListSource(sequence.ToList());
             else if (yaml is YamlMappingNode map)
-                return new MusicItemSource(map);
-            throw new ArgumentException($"Can't create a value resolver from {yaml}");
+            {
+                var selector = map.Go("from").Parse(x => SingleItemSelectorFactory.Create(x));
+                var getter = map.Go("value").Parse(x => MusicItemGetterFactory.Create(x));
+                var modifier = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
+                return new MusicItemSource(selector, getter, modifier);
+            }
+            throw new ArgumentException($"Can't make value resolver from {yaml}");
         }
     }
 }

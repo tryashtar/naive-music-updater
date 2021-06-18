@@ -26,15 +26,12 @@ namespace NaiveMusicUpdater
             }
             else if (yaml is YamlMappingNode map)
             {
-                var type = map.Go("type").ToEnum<OtherType>();
-                if (type == OtherType.Copy)
-                {
-                    var field = MetadataField.FromID(map.Go("get").String());
-                    return new CopyMetadataGetter(field);
-                }
+                var copy = yaml.Go("copy").NullableParse(x => MetadataField.FromID(x.String()));
+                if (copy != null)
+                    return new CopyMetadataGetter(copy);
             }
 
-            throw new ArgumentException($"Couldn't create a metadata selector from {yaml}");
+            throw new ArgumentException($"Can't make metadata selector from {yaml}");
         }
     }
 
@@ -42,10 +39,5 @@ namespace NaiveMusicUpdater
     {
         CleanName,
         FileName
-    }
-
-    public enum OtherType
-    {
-        Copy
     }
 }

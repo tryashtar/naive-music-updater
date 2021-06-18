@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -12,10 +11,10 @@ namespace NaiveMusicUpdater
         public readonly string Separator;
         public readonly NoSeparatorDecision NoSeparator;
 
-        public SplitValueOperator(YamlMappingNode yaml)
+        public SplitValueOperator(string separator, NoSeparatorDecision decision)
         {
-            Separator = yaml.Go("separator").String();
-            NoSeparator = yaml.Go("no_separator").ToEnum(def: NoSeparatorDecision.Ignore);
+            Separator = separator;
+            NoSeparator = decision;
         }
 
         public IValue Apply(IValue original)

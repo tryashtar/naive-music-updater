@@ -11,7 +11,7 @@ namespace NaiveMusicUpdater
     public class MusicItemConfig
     {
         public readonly string Location;
-        public readonly SongOrder TrackOrder;
+        public readonly ISongOrder TrackOrder;
         public readonly IMetadataStrategy SongsStrategy;
         public readonly IMetadataStrategy FoldersStrategy;
         public readonly List<TargetedStrategy> MetadataStrategies;
@@ -25,7 +25,7 @@ namespace NaiveMusicUpdater
             if (yaml != null)
             {
                 if (configured_item is MusicFolder folder)
-                    TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.FromNode(x, folder));
+                    TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.Create(x, folder));
                 SongsStrategy = yaml.Go("songs").NullableParse(x => LiteralOrReference(x));
                 FoldersStrategy = yaml.Go("folders").NullableParse(x => LiteralOrReference(x));
                 MetadataStrategies = yaml.Go("set").ToList((k, v) => ParseStrategy(k, v)) ?? new();

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using YamlDotNet.RepresentationModel;
 
@@ -14,9 +15,9 @@ namespace NaiveMusicUpdater
 
     public static class ValueOperatorFactory
     {
-        public static IValueOperator Create(YamlNode node)
+        public static IValueOperator Create(YamlNode yaml)
         {
-            if (node is YamlScalarNode scalar)
+            if (yaml is YamlScalarNode scalar)
             {
                 if (scalar.Value == "first")
                     return new IndexValueOperator(0, OutofBoundsDecision.Exit);
@@ -25,7 +26,7 @@ namespace NaiveMusicUpdater
                 if (int.TryParse(scalar.Value, out int index))
                     return new IndexValueOperator(index, OutofBoundsDecision.Exit);
             }
-            else if (node is YamlMappingNode map)
+            else if (yaml is YamlMappingNode map)
             {
                 var index = map.Go("index").Int();
                 if (index != null)
@@ -34,28 +35,27 @@ namespace NaiveMusicUpdater
                     return new IndexValueOperator(index.Value, oob);
                 }
 
-                var operation = map.Go("operation").ToEnum<ValueOperatorType>();
-                if (operation != null)
+                var split = map.Go("split").String();
+                if (split != null)
                 {
-                    if (operation == ValueOperatorType.Split)
-                        return new SplitValueOperator(map);
-                    else if (operation == ValueOperatorType.Regex)
-                        return new RegexValueOperator(map);
+                    var decision = map.Go("when_none").ToEnum(def: NoSeparatorDecision.Ignore);
+                    return new SplitValueOperator(split, decision);
                 }
 
                 var group = map.Go("group").String();
                 if (group != null)
                     return new RegexGroupOperator(group);
-            }
-            else if (node is YamlSequenceNode sequence)
-                return new MultipleValueOperator(sequence.ToList(x => ValueOperatorFactory.Create(x)));
-            throw new ArgumentException($"Can't make a value operator from {node}");
-        }
-    }
 
-    public enum ValueOperatorType
-    {
-        Split,
-        Regex
+                var regex = map.Go("regex").NullableParse(x => new Regex(x.String()));
+                if (regex != null)
+                {
+                    var decision = yaml.Go("fail").ToEnum(def: MatchFailDecision.Exit);
+                    return new RegexValueOperator(regex, decision);
+                }
+            }
+            else if (yaml is YamlSequenceNode sequence)
+                return new MultipleValueOperator(sequence.ToList(x => ValueOperatorFactory.Create(x)));
+            throw new ArgumentException($"Can't make value operator from {yaml}");
+        }
     }
 }

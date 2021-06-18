@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -12,10 +11,11 @@ namespace NaiveMusicUpdater
     {
         public readonly CombineMode Mode;
         public readonly IValueSource Source;
-        public ModeValueSourceFieldSetter(YamlNode yaml)
+
+        public ModeValueSourceFieldSetter(CombineMode mode, IValueSource source)
         {
-            Mode = yaml.Go("mode").ToEnum(def: CombineMode.Replace);
-            Source = yaml.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
+            Mode = mode;
+            Source = source;
         }
 
         public MetadataProperty Get(IMusicItem item)

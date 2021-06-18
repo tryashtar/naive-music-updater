@@ -4,6 +4,11 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
+    public interface IItemPredicate
+    {
+        bool Matches(IMusicItem item);
+    }
+
     public static class ItemPredicateFactory
     {
         public static IItemPredicate FromNode(YamlNode node)
@@ -15,7 +20,7 @@ namespace NaiveMusicUpdater
                 var regex = map.Go("regex").Parse(x => new Regex(x.String(), RegexOptions.IgnoreCase));
                 return new RegexItemPredicate(regex);
             }
-            throw new ArgumentException($"Couldn't create an item predicate from {node}");
+            throw new ArgumentException($"Can't make item predicate from {node}");
         }
     }
 }
