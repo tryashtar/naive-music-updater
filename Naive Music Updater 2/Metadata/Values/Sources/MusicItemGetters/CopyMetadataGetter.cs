@@ -7,10 +7,10 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public class CopyMetadataSelector : IValueSelector
+    public class CopyMetadataGetter : IMusicItemValueSource
     {
         public readonly MetadataField Desired;
-        public CopyMetadataSelector(MetadataField desired)
+        public CopyMetadataGetter(MetadataField desired)
         {
             Desired = desired;
         }

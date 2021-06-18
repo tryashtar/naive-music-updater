@@ -7,15 +7,15 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    public class LiteralStringResolver : IValueResolver
+    public class LiteralStringSource : IValueSource
     {
         public readonly string Literal;
-        public LiteralStringResolver(string literal)
+        public LiteralStringSource(string literal)
         {
             Literal = literal;
         }
 
-        public IValue Resolve(IMusicItem item)
+        public IValue Get(IMusicItem item)
         {
             return new StringValue(Literal);
         }

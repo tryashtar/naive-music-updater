@@ -7,22 +7,22 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public interface IValueSelector
+    public interface IMusicItemValueSource
     {
         IValue Get(IMusicItem item);
     }
 
-    public static class ValueSelectorFactory
+    public static class MusicItemGetterFactory
     {
-        public static IValueSelector Create(YamlNode yaml)
+        public static IMusicItemValueSource Create(YamlNode yaml)
         {
             if (yaml is YamlScalarNode scalar)
             {
                 var name = scalar.ToEnum<NameType>();
                 if (name == NameType.CleanName)
-                    return CleanNameSelector.Instance;
+                    return CleanNameGetter.Instance;
                 else if (name == NameType.FileName)
-                    return SimpleNameSelector.Instance;
+                    return SimpleNameGetter.Instance;
             }
             else if (yaml is YamlMappingNode map)
             {
@@ -30,7 +30,7 @@ namespace NaiveMusicUpdater
                 if (type == OtherType.Copy)
                 {
                     var field = MetadataField.FromID(map.Go("get").String());
-                    return new CopyMetadataSelector(field);
+                    return new CopyMetadataGetter(field);
                 }
             }
 

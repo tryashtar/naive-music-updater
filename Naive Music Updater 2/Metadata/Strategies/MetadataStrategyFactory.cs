@@ -14,25 +14,25 @@ namespace NaiveMusicUpdater
 
     public static class MetadataStrategyFactory
     {
-        public static IMetadataStrategy Create(YamlNode node)
+        public static IMetadataStrategy Create(YamlNode yaml)
         {
-            if (node is YamlMappingNode map)
+            if (yaml is YamlMappingNode map)
             {
                 var type = map.Go("type").ToEnum(def: MetadataStrategyType.Field);
-                if (type == MetadataStrategyType.Multi)
+                if (type == MetadataStrategyType.Redirect)
                     return new RedirectingMetadataStrategy(map);
                 else if (type == MetadataStrategyType.Field)
-                    return new FieldMapMetadataStrategy(map);
+                    return new DirectMetadataStrategy(map);
             }
-            if (node is YamlSequenceNode list)
+            if (yaml is YamlSequenceNode list)
                 return new MultipleMetadataStrategy(list);
-            throw new ArgumentException($"Can't make metadata strategy from {node}");
+            throw new ArgumentException($"Can't make metadata strategy from {yaml}");
         }
     }
 
     public enum MetadataStrategyType
     {
-        Multi,
+        Redirect,
         Field
     }
 }

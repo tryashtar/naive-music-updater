@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    public class SimpleNameSelector : IValueSelector
+    public class SimpleNameGetter : IMusicItemValueSource
     {
-        public static readonly SimpleNameSelector Instance = new();
+        public static readonly SimpleNameGetter Instance = new();
 
         public IValue Get(IMusicItem item)
         {

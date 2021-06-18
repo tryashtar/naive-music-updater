@@ -8,21 +8,21 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public interface IValueResolver
+    public interface IValueSource
     {
-        IValue Resolve(IMusicItem item);
+        IValue Get(IMusicItem item);
     }
 
-    public static class ValueResolverFactory
+    public static class ValueSourceFactory
     {
-        public static IValueResolver Create(YamlNode yaml)
+        public static IValueSource Create(YamlNode yaml)
         {
             if (yaml is YamlScalarNode scalar)
-                return new LiteralStringResolver(scalar.Value);
+                return new LiteralStringSource(scalar.Value);
             else if (yaml is YamlSequenceNode sequence)
-                return new LiteralListResolver(sequence.ToList());
+                return new LiteralListSource(sequence.ToList());
             else if (yaml is YamlMappingNode map)
-                return new SourcedResolver(map);
+                return new MusicItemSource(map);
             throw new ArgumentException($"Can't create a value resolver from {yaml}");
         }
     }

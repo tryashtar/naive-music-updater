@@ -8,19 +8,19 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public class SourcedResolver : IValueResolver
+    public class MusicItemSource : IValueSource
     {
         public readonly ISingleItemSelector Selector;
-        public readonly IValueSelector Getter;
+        public readonly IMusicItemValueSource Getter;
         public readonly IValueOperator Modifier;
-        public SourcedResolver(YamlMappingNode node)
+        public MusicItemSource(YamlMappingNode node)
         {
             Selector = node.Go("from").Parse(x => SingleItemSelectorFactory.Create(x));
-            Getter = node.Go("value").Parse(x => ValueSelectorFactory.Create(x));
-            Modifier = node.Go("modify").Parse(x => ValueOperatorFactory.Create(x));
+            Getter = node.Go("value").Parse(x => MusicItemGetterFactory.Create(x));
+            Modifier = node.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
         }
 
-        public IValue Resolve(IMusicItem item)
+        public IValue Get(IMusicItem item)
         {
             item = Selector.SelectFrom(item);
             var value = Getter.Get(item);

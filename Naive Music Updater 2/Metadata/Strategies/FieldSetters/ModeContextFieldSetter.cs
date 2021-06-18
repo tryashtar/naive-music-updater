@@ -8,20 +8,24 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public class ValueMetadataConverter
+    public class ModeContextFieldSetter : IFieldSetter
     {
         public readonly CombineMode Mode;
         public readonly IValueOperator Modify;
-        public ValueMetadataConverter(YamlNode yaml)
+        public ModeContextFieldSetter(YamlNode yaml)
         {
             Mode = yaml.Go("mode").ToEnum(def: CombineMode.Replace);
             Modify = yaml.Go("modify").Parse(x => ValueOperatorFactory.Create(x));
         }
 
-        public MetadataProperty Convert(IValue value)
+        public MetadataProperty Get(IMusicItem item)
         {
-            if (Modify != null)
-                value = Modify.Apply(value);
+            throw new InvalidOperationException($"Performing an operation on a value requires context!");
+        }
+
+        public MetadataProperty GetWithContext(IMusicItem item, IValue value)
+        {
+            value = Modify.Apply(value);
             return MetadataProperty.FromValue(value, Mode);
         }
     }

@@ -70,10 +70,17 @@ namespace NaiveMusicUpdater
                 x => value_getter(x.Value));
         }
 
-        public static OutType Parse<OutType>(this YamlNode node, Func<YamlNode, OutType> parser) where OutType : class
+        public static OutType NullableParse<OutType>(this YamlNode node, Func<YamlNode, OutType> parser) where OutType : class
         {
             if (node == null)
                 return null;
+            return parser(node);
+        }
+
+        public static OutType Parse<OutType>(this YamlNode node, Func<YamlNode, OutType> parser) where OutType : class
+        {
+            if (node == null)
+                throw new ArgumentNullException(nameof(node));
             return parser(node);
         }
 
