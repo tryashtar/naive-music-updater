@@ -8,7 +8,7 @@ namespace NaiveMusicUpdater
 {
     public interface IValue
     {
-        public MetadataProperty ToProperty();
+
     }
 
     public static class ValueFactory

@@ -2,11 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using YamlDotNet.RepresentationModel;
 using System.Globalization;
 
 namespace NaiveMusicUpdater

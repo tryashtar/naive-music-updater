@@ -33,7 +33,7 @@ namespace NaiveMusicUpdater
         {
             if (AliasCache.TryGetValue(id, out var result))
                 return result;
-            return null;
+            throw new ArgumentException($"No metadata field named {id}");
         }
 
         public static readonly MetadataField Title = new("Title", MetadataFieldType.String, "title");

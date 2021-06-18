@@ -18,42 +18,42 @@ namespace NaiveMusicUpdater
         {
             if (node is YamlScalarNode scalar)
             {
-                var str = (string)scalar;
-                if (str == "first")
+                if (scalar.Value == "first")
                     return new IndexValueOperator(0, OutofBoundsDecision.Exit);
-                if (str == "last")
+                if (scalar.Value == "last")
                     return new IndexValueOperator(-1, OutofBoundsDecision.Exit);
-                if (int.TryParse(str, out int index))
+                if (int.TryParse(scalar.Value, out int index))
                     return new IndexValueOperator(index, OutofBoundsDecision.Exit);
             }
             else if (node is YamlMappingNode map)
             {
-                var ind = map.Go("index");
-                if (ind != null && int.TryParse((string)ind, out int index))
+                var index = map.Go("index").Int();
+                if (index != null)
                 {
-                    var oob = map.ParseOrDefault(
-                        "out_of_bounds",
-                        x => Util.ParseUnderscoredEnum<OutofBoundsDecision>((string)x),
-                        OutofBoundsDecision.Exit
-                    );
-                    return new IndexValueOperator(index, oob);
+                    var oob = map.Go("out_of_bounds").ToEnum(def: OutofBoundsDecision.Exit);
+                    return new IndexValueOperator(index.Value, oob);
                 }
 
-                var op = map.Go("operation");
-                if (op != null)
+                var operation = map.Go("operation").ToEnum<ValueOperatorType>();
+                if (operation != null)
                 {
-                    string operation = (string)op;
-                    if (operation == "split")
+                    if (operation == ValueOperatorType.Split)
                         return new SplitValueOperator(map);
-                    else if (operation == "regex")
+                    else if (operation == ValueOperatorType.Regex)
                         return new RegexValueOperator(map);
                 }
 
-                var group = map.Go("group");
+                var group = map.Go("group").String();
                 if (group != null)
-                    return new RegexGroupOperator((string)group);
+                    return new RegexGroupOperator(group);
             }
             throw new ArgumentException($"Can't make a value operator from {node}");
         }
+    }
+
+    public enum ValueOperatorType
+    {
+        Split,
+        Regex
     }
 }

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using TagLib.Flac;
 using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
@@ -16,9 +15,9 @@ namespace NaiveMusicUpdater
         public readonly IValueOperator Modifier;
         public SourcedResolver(YamlMappingNode node)
         {
-            Selector = SingleItemSelectorFactory.Create(node["from"]);
-            Getter = ValueSelectorFactory.Create(node["value"]);
-            Modifier = node.ParseOrDefault("modify", x => ValueOperatorFactory.Create(x));
+            Selector = node.Go("from").Parse(x => SingleItemSelectorFactory.Create(x));
+            Getter = node.Go("value").Parse(x => ValueSelectorFactory.Create(x));
+            Modifier = node.Go("modify").Parse(x => ValueOperatorFactory.Create(x));
         }
 
         public IValue Resolve(IMusicItem item)

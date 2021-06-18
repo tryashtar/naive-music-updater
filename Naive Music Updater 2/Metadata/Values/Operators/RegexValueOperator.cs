@@ -15,8 +15,8 @@ namespace NaiveMusicUpdater
 
         public RegexValueOperator(YamlMappingNode yaml)
         {
-            RegexItem = new Regex((string)yaml["regex"]);
-            MatchFail = yaml.ParseOrDefault("fail", x => Util.ParseUnderscoredEnum<MatchFailDecision>((string)x), MatchFailDecision.Exit);
+            RegexItem = yaml.Go("regex").Parse(x => new Regex(x.String()));
+            MatchFail = yaml.Go("fail").ToEnum(def: MatchFailDecision.Exit);
         }
 
         public IValue Apply(IValue original)

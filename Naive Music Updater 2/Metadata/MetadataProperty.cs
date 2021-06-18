@@ -38,6 +38,11 @@ namespace NaiveMusicUpdater
             return new MetadataProperty(false, null, new List<string>(), CombineMode.Ignore);
         }
 
+        public static MetadataProperty FromValue(IValue value, CombineMode mode)
+        {
+            throw new NotImplementedException();
+        }
+
         private MetadataProperty(bool is_list, string item, List<string> list, CombineMode mode)
         {
             IsList = is_list;

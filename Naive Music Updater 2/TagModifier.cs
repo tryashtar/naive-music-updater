@@ -2,18 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using YamlDotNet.RepresentationModel;
 using TagLib;
 using File = System.IO.File;
-using Tag = TagLib.Tag;
 using System.Text.RegularExpressions;
-using System.Globalization;
 using TagLib.Id3v2;
-using Microsoft.CSharp.RuntimeBinder;
 
 namespace NaiveMusicUpdater
 {

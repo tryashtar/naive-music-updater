@@ -16,27 +16,43 @@ namespace NaiveMusicUpdater
         {
             if (node is YamlScalarNode scalar)
             {
-                string str = (string)scalar;
-                if (str == "this" || str == "self")
+                var type = scalar.ToEnum<SimpleSource>();
+                if (type == SimpleSource.This || type == SimpleSource.Self)
                     return ThisItemSelector.Instance;
             }
             else if (node is YamlMappingNode map)
             {
-                var type = (string)map["type"];
-                if (type == "parent")
+                var type = map.Go("type").ToEnum<AdvancedSourceType>();
+                if (type == AdvancedSourceType.Parent)
                 {
-                    int up = int.Parse((string)map["up"]);
+                    int up = map.Go("up").Int().Value;
                     return new ParentItemSelector(up);
                 }
-                else if (type == "root")
+                else if (type == AdvancedSourceType.Root)
                 {
-                    int down = int.Parse((string)map["down"]);
+                    int down = map.Go("down").Int().Value;
                     return new RootItemSelector(down);
                 }
-                else if (type == "selector")
-                    return new SingleSelectorWrapper(ItemSelectorFactory.Create(map["selector"]));
+                else if (type == AdvancedSourceType.Selector)
+                {
+                    var selector = map.Go("selector").Parse(x => ItemSelectorFactory.Create(x));
+                    return new SingleSelectorWrapper(selector);
+                }
             }
             throw new ArgumentException($"Couldn't make a single-item selector from {node}");
         }
+    }
+
+    public enum SimpleSource
+    {
+        This,
+        Self
+    }
+
+    public enum AdvancedSourceType
+    {
+        Parent,
+        Root,
+        Selector
     }
 }

@@ -13,11 +13,7 @@ namespace NaiveMusicUpdater
 
         public MultipleMetadataStrategy(YamlSequenceNode yaml)
         {
-            Substrategies = new List<IMetadataStrategy>();
-            foreach (var item in yaml.Children)
-            {
-                Substrategies.Add(MetadataStrategyFactory.Create(item));
-            }
+            Substrategies = yaml.ToList(x => MetadataStrategyFactory.Create(x));
         }
 
         public MultipleMetadataStrategy(IEnumerable<IMetadataStrategy> strategies)

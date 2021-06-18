@@ -14,8 +14,8 @@ namespace NaiveMusicUpdater
 
         public SplitValueOperator(YamlMappingNode yaml)
         {
-            Separator = (string)yaml["separator"];
-            NoSeparator = yaml.ParseOrDefault("no_separator", x => Util.ParseUnderscoredEnum<NoSeparatorDecision>((string)x), NoSeparatorDecision.Ignore);
+            Separator = yaml.Go("separator").String();
+            NoSeparator = yaml.Go("no_separator").ToEnum(def: NoSeparatorDecision.Ignore);
         }
 
         public IValue Apply(IValue original)

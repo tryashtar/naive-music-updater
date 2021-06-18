@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
@@ -10,7 +9,7 @@ namespace NaiveMusicUpdater
         public readonly IItemSelector Wrapped;
         public SingleSelectorWrapper(IItemSelector wrapped)
         {
-            Wrapped=wrapped;
+            Wrapped = wrapped;
         }
 
         public IMusicItem SelectFrom(IMusicItem value)

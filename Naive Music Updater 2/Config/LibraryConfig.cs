@@ -14,81 +14,59 @@ namespace NaiveMusicUpdater
 {
     public class LibraryConfig
     {
-        private readonly HashSet<string> LowercaseWords = new HashSet<string>();
-        private readonly HashSet<string> SkipNames = new HashSet<string>();
-        private readonly Dictionary<string, string> FindReplace = new Dictionary<string, string>();
-        private readonly Dictionary<string, string> MapNames = new Dictionary<string, string>();
-        private readonly Dictionary<string, string> FilesafeConversions = new Dictionary<string, string>();
-        private readonly Dictionary<string, string> FoldersafeConversions = new Dictionary<string, string>();
-        private readonly Dictionary<string, IMetadataStrategy> NamedStrategies = new Dictionary<string, IMetadataStrategy>();
+        private readonly HashSet<string> LowercaseWords;
+        private readonly HashSet<string> SkipNames;
+        private readonly Dictionary<string, string> FindReplace;
+        private readonly Dictionary<string, string> MapNames;
+        private readonly Dictionary<string, string> FilesafeConversions;
+        private readonly Dictionary<string, string> FoldersafeConversions;
+        private readonly Dictionary<string, IMetadataStrategy> NamedStrategies;
         private readonly string MP3GainPath;
         private readonly string MP3GainArgs;
         private readonly string MetaFlacPath;
         private readonly string MetaFlacArgs;
         private readonly List<string> IllegalPrivateOwners;
         private readonly List<string> KeepFrameIDs;
+        private readonly List<string> SongExtensions;
         private readonly List<Regex> KeepFrameTexts;
         public readonly int SourceAutoMaxDistance;
+
         public LibraryConfig(string file)
         {
-            if (!File.Exists(file))
+            YamlNode yaml;
+            if (File.Exists(file))
+                yaml = YamlHelper.ParseFile(file);
+            else
             {
                 Logger.WriteLine($"Couldn't find config file {file}, using blank config!!!");
-                return;
+                yaml = new YamlMappingNode();
             }
-            var yaml = YamlHelper.ParseFile(file);
-            foreach (string item in (YamlSequenceNode)yaml["lowercase"])
-            {
-                LowercaseWords.Add(item.ToLower());
-            }
-            foreach (string item in (YamlSequenceNode)yaml["skip"])
-            {
-                SkipNames.Add(item);
-            }
-            foreach (var item in (YamlMappingNode)yaml["find_replace"])
-            {
-                FindReplace.Add((string)item.Key, (string)item.Value);
-            }
-            foreach (var item in (YamlMappingNode)yaml["map"])
-            {
-                MapNames.Add((string)item.Key, (string)item.Value);
-            }
-            foreach (var item in (YamlMappingNode)yaml["title_to_filename"])
-            {
-                FilesafeConversions.Add((string)item.Key, (string)item.Value);
-            }
-            foreach (var item in (YamlMappingNode)yaml["title_to_foldername"])
-            {
-                FoldersafeConversions.Add((string)item.Key, (string)item.Value);
-            }
-            foreach (var item in (YamlMappingNode)yaml["named_strategies"])
-            {
-                NamedStrategies.Add((string)item.Key, MetadataStrategyFactory.Create(item.Value));
-            }
-            var mp3path = yaml.Go("replay_gain", "mp3", "path");
-            var mp3args = yaml.Go("replay_gain", "mp3", "args");
-            var flacpath = yaml.Go("replay_gain", "flac", "path");
-            var flacargs = yaml.Go("replay_gain", "flac", "args");
-            var cpo = yaml.Go("clear_private_owners");
-            var samd = yaml.Go("source_auto_max_distance");
-            var keep_frames = yaml.Go("keep_frames", "ids");
-            var keep_text = yaml.Go("keep_frames", "text");
-            if (mp3path != null)
-                MP3GainPath = (string)mp3path;
-            if (mp3args != null)
-                MP3GainArgs = (string)mp3args;
-            if (flacpath != null)
-                MetaFlacPath = (string)flacpath;
-            if (flacargs != null)
-                MetaFlacArgs = (string)flacargs;
-            if (cpo != null)
-                IllegalPrivateOwners = cpo.ToStringList();
-            if (samd != null)
-                SourceAutoMaxDistance = int.Parse((string)samd);
-            if (keep_frames != null)
-                KeepFrameIDs = keep_frames.ToStringList();
-            if (keep_text != null)
-                KeepFrameTexts = keep_text.ToList(x => new Regex((string)x));
+
+            LowercaseWords = yaml.Go("lowercase").ToListFromStrings(x => x.ToLower())?.ToHashSet() ?? new();
+            SkipNames = yaml.Go("skip").ToList()?.ToHashSet() ?? new();
+            FindReplace = yaml.Go("find_replace").ToDictionary() ?? new();
+            MapNames = yaml.Go("map").ToDictionary() ?? new();
+            FilesafeConversions = yaml.Go("title_to_filename").ToDictionary() ?? new();
+            FoldersafeConversions = yaml.Go("title_to_foldername").ToDictionary() ?? new();
+            NamedStrategies = yaml.Go("named_strategies").ToDictionary(x => MetadataStrategyFactory.Create(x)) ?? new();
+            IllegalPrivateOwners = yaml.Go("clear_private_owners").ToList() ?? new();
+            KeepFrameIDs = yaml.Go("keep_frames", "ids").ToList() ?? new();
+            KeepFrameTexts = yaml.Go("keep_frames", "text").ToListFromStrings(x => new Regex(x)) ?? new();
+            SongExtensions = yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
+
+            SourceAutoMaxDistance = yaml.Go("source_auto_max_distance").Int() ?? 0;
+            var mp3_gain = yaml.Go("replay_gain", "mp3");
+            MP3GainPath = mp3_gain.Go("path").String();
+            MP3GainArgs = mp3_gain.Go("args").String();
+            var flac_gain = yaml.Go("replay_gain", "flac");
+            MetaFlacPath = flac_gain.Go("path").String();
+            MetaFlacArgs = flac_gain.Go("args").String();
+        }
+
+        public bool IsSongFile(string file)
+        {
+            string extension = Path.GetExtension(file).ToLower();
+            return SongExtensions.Contains(extension);
         }
 
         public IMetadataStrategy GetNamedStrategy(string name)

@@ -16,27 +16,32 @@ namespace NaiveMusicUpdater
     {
         public static IItemSelector Create(YamlNode node)
         {
-            if (node.NodeType == YamlNodeType.Scalar)
-                return new PathItemSelector((string)node);
-            if (node.NodeType == YamlNodeType.Sequence)
-                return new MultiItemSelector((YamlSequenceNode)node);
-            if (node.NodeType == YamlNodeType.Mapping)
+            if (node is YamlScalarNode scalar)
+                return new PathItemSelector(scalar.Value);
+            if (node is YamlSequenceNode sequence)
+                return new MultiItemSelector(sequence);
+            if (node is YamlMappingNode map)
             {
-                string type = (string)node["type"];
-                if (type == "path")
+                var type = map.Go("type").ToEnum<SelectorType>();
+                if (type == SelectorType.Path)
                 {
-                    var path = (YamlSequenceNode)node["path"];
-                    var predicates = path.Children.Select(x => ItemPredicateFactory.FromNode(x)).ToArray();
+                    var predicates = node.Go("path").ToList(x => ItemPredicateFactory.FromNode(x)).ToArray();
                     return new PathItemSelector(predicates);
                 }
-                else if (type == "subpath")
+                else if (type == SelectorType.Subpath)
                 {
-                    var subpath = ItemSelectorFactory.Create(node["subpath"]);
-                    var select = ItemSelectorFactory.Create(node["select"]);
+                    var subpath = node.Go("subpath").Parse(x => ItemSelectorFactory.Create(x));
+                    var select = node.Go("select").Parse(x => ItemSelectorFactory.Create(x));
                     return new SubPathItemSelector(subpath, select);
                 }
             }
             throw new ArgumentException($"Couldn't make an item selector from {node}");
         }
+    }
+
+    public enum SelectorType
+    {
+        Path,
+        Subpath
     }
 }

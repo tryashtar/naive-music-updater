@@ -9,25 +9,25 @@ using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public class FieldMapMetadataStrategy : IMetadataStrategy
+    public class ValueApplier
     {
-        private readonly Dictionary<MetadataField, IValueResolver> Fields = new();
+        private readonly Dictionary<MetadataField, ValueMetadataConverter> Fields = new();
 
-        public FieldMapMetadataStrategy(YamlMappingNode yaml)
+        public ValueApplier(YamlNode yaml)
         {
             Fields = yaml.ToDictionary(
                 x => MetadataField.FromID(x.String()),
-                x => ValueResolverFactory.Create(x)
+                x => new ValueMetadataConverter(x)
             );
         }
 
-        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
+        public Metadata Apply(IValue value, Predicate<MetadataField> desired)
         {
             var meta = new Metadata();
             foreach (var pair in Fields)
             {
                 if (desired(pair.Key))
-                    meta.Register(pair.Key, MetadataProperty.FromValue(pair.Value.Resolve(item), CombineMode.Replace));
+                    meta.Register(pair.Key, pair.Value.Convert(value));
             }
             return meta;
         }

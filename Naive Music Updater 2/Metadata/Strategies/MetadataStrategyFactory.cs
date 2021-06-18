@@ -18,15 +18,21 @@ namespace NaiveMusicUpdater
         {
             if (node is YamlMappingNode map)
             {
-                var type = map.Go("type");
-                if (type != null && (string)type == "multi")
+                var type = map.Go("type").ToEnum(def: MetadataStrategyType.Field);
+                if (type == MetadataStrategyType.Multi)
                     return new RedirectingMetadataStrategy(map);
-                else
+                else if (type == MetadataStrategyType.Field)
                     return new FieldMapMetadataStrategy(map);
             }
             if (node is YamlSequenceNode list)
                 return new MultipleMetadataStrategy(list);
             throw new ArgumentException($"Can't make metadata strategy from {node}");
         }
+    }
+
+    public enum MetadataStrategyType
+    {
+        Multi,
+        Field
     }
 }

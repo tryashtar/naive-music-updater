@@ -4,15 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using TagLib.Flac;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
-    public class LiteralResolver : IValueResolver
+    public class LiteralStringResolver : IValueResolver
     {
         public readonly string Literal;
-        public LiteralResolver(string literal)
+        public LiteralStringResolver(string literal)
         {
             Literal = literal;
         }

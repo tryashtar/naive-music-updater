@@ -9,6 +9,7 @@ namespace NaiveMusicUpdater
 {
     public class MusicFolder : IMusicItem
     {
+        private bool HasScanned = false;
         public string Location { get; private set; }
         protected readonly MusicItemConfig _LocalConfig;
         public MusicItemConfig LocalConfig => _LocalConfig;
@@ -17,9 +18,25 @@ namespace NaiveMusicUpdater
         public MusicFolder Parent => _Parent;
         protected List<MusicFolder> ChildFolders;
         protected List<Song> SongList;
-        public IReadOnlyList<MusicFolder> SubFolders { get { return ChildFolders.AsReadOnly(); } }
-        public IReadOnlyList<Song> Songs { get { return SongList.AsReadOnly(); } }
-        public IEnumerable<IMusicItem> SubItems => ChildFolders.Concat<IMusicItem>(SongList);
+        public IReadOnlyList<MusicFolder> SubFolders
+        {
+            get
+            {
+                if (!HasScanned)
+                    ScanContents();
+                return ChildFolders.AsReadOnly();
+            }
+        }
+        public IReadOnlyList<Song> Songs
+        {
+            get
+            {
+                if (!HasScanned)
+                    ScanContents();
+                return SongList.AsReadOnly();
+            }
+        }
+        public IEnumerable<IMusicItem> SubItems => SubFolders.Concat<IMusicItem>(Songs);
         public MusicFolder(string folder) : this(null, folder)
         { }
 
@@ -27,7 +44,6 @@ namespace NaiveMusicUpdater
         {
             Location = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).TrimEnd('.');
             _Parent = parent;
-            ScanContents();
             string config = Path.Combine(folder, "config.yaml");
             if (File.Exists(config))
                 _LocalConfig = new MusicItemConfig(config, this);
@@ -35,12 +51,12 @@ namespace NaiveMusicUpdater
 
         public IEnumerable<Song> GetAllSongs()
         {
-            return SongList.Concat(ChildFolders.SelectMany(x => x.GetAllSongs()));
+            return Songs.Concat(SubFolders.SelectMany(x => x.GetAllSongs()));
         }
 
         public IEnumerable<IMusicItem> GetAllSubItems()
         {
-            return SubItems.Concat(ChildFolders.SelectMany(x => x.GetAllSubItems()));
+            return SubItems.Concat(SubFolders.SelectMany(x => x.GetAllSubItems()));
         }
 
         public string SimpleName => Path.GetFileName(Location);
@@ -73,11 +89,11 @@ namespace NaiveMusicUpdater
             }
 
             Logger.TabIn();
-            foreach (var child in ChildFolders)
+            foreach (var child in SubFolders)
             {
                 child.Update();
             }
-            foreach (var song in SongList)
+            foreach (var song in Songs)
             {
                 song.Update();
             }
@@ -93,16 +109,16 @@ namespace NaiveMusicUpdater
                 if (dir.Attributes.HasFlag(FileAttributes.Hidden))
                     continue;
                 var child = new MusicFolder(this, dir.FullName);
-                if (child.SongList.Any() || child.SubFolders.Any())
+                if (child.Songs.Any() || child.SubFolders.Any())
                     ChildFolders.Add(child);
             }
             SongList = new List<Song>();
             foreach (var file in Directory.EnumerateFiles(Location))
             {
-                var extension = Path.GetExtension(file);
-                if (extension == ".mp3" || extension == ".flac")
+                if (GlobalCache.Config.IsSongFile(file))
                     SongList.Add(new Song(this, file));
             }
+            HasScanned = true;
         }
 
         public CheckSelectorResults CheckSelectors()

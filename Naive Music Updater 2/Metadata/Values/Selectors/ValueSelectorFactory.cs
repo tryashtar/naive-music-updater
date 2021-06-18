@@ -16,26 +16,36 @@ namespace NaiveMusicUpdater
     {
         public static IValueSelector Create(YamlNode yaml)
         {
-            if (yaml.NodeType == YamlNodeType.Scalar)
+            if (yaml is YamlScalarNode scalar)
             {
-                string str = (string)yaml;
-                if (str == "clean_name")
+                var name = scalar.ToEnum<NameType>();
+                if (name == NameType.CleanName)
                     return CleanNameSelector.Instance;
-                if (str == "file_name")
+                else if (name == NameType.FileName)
                     return SimpleNameSelector.Instance;
             }
             else if (yaml is YamlMappingNode map)
             {
-                var type = (string)map["type"];
-                if (type == "copy")
+                var type = map.Go("type").ToEnum<OtherType>();
+                if (type == OtherType.Copy)
                 {
-                    var get = (string)map["get"];
-                    var field = MetadataField.FromID(get);
+                    var field = MetadataField.FromID(map.Go("get").String());
                     return new CopyMetadataSelector(field);
                 }
             }
 
             throw new ArgumentException($"Couldn't create a metadata selector from {yaml}");
         }
+    }
+
+    public enum NameType
+    {
+        CleanName,
+        FileName
+    }
+
+    public enum OtherType
+    {
+        Copy
     }
 }
