@@ -26,6 +26,8 @@ namespace NaiveMusicUpdater
         public MetadataProperty GetWithContext(IMusicItem item, IValue value)
         {
             value = Modify.Apply(item, value);
+            if (value.IsBlank)
+                return MetadataProperty.Ignore();
             return new MetadataProperty(value, Mode);
         }
     }

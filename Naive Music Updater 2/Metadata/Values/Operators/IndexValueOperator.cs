@@ -25,13 +25,13 @@ namespace NaiveMusicUpdater
 
             var list = original.AsList();
             if (MinLength != null && list.Values.Count < MinLength)
-                return original;
+                return BlankValue.Instance;
 
             int real_index = Index >= 0 ? Index : list.Values.Count + Index;
             if (real_index >= list.Values.Count || real_index < 0)
             {
                 if (OutOfBounds == OutofBoundsDecision.Exit || list.Values.Count == 0)
-                    return original;
+                    return BlankValue.Instance;
                 else if (OutOfBounds == OutofBoundsDecision.Clamp)
                     real_index = Math.Clamp(real_index, 0, list.Values.Count - 1);
                 else if (OutOfBounds == OutofBoundsDecision.Wrap)

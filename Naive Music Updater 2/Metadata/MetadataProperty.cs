@@ -18,9 +18,7 @@ namespace NaiveMusicUpdater
 
         public MetadataProperty(IValue value, CombineMode mode)
         {
-            if (value == null)
-                throw new ArgumentNullException(nameof(value));
-            Value = value;
+            Value = value ?? throw new ArgumentNullException(nameof(value));
             Mode = mode;
         }
 

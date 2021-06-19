@@ -15,8 +15,7 @@ namespace NaiveMusicUpdater
         public static ISongOrder Create(YamlNode yaml, MusicFolder folder)
         {
             var selector = ItemSelectorFactory.Create(yaml);
-            var order = selector.AllMatchesFrom(folder);
-            return new DefinedSongOrder(order);
+            return new DefinedSongOrder(selector, folder);
         }
     }
 }

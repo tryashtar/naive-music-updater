@@ -26,7 +26,7 @@ namespace NaiveMusicUpdater
 
             string[] parts = text.Value.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 1 && NoSeparator == NoSeparatorDecision.Exit)
-                return original;
+                return BlankValue.Instance;
 
             return new ListValue(parts);
         }

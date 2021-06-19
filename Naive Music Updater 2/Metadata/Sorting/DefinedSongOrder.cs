@@ -12,12 +12,13 @@ namespace NaiveMusicUpdater
         public readonly IItemSelector Order;
         public readonly uint TotalNumber;
         public ReadOnlyCollection<IMusicItem> UnselectedItems => Unselected.AsReadOnly();
-        public DefinedSongOrder(IEnumerable<IMusicItem> order)
+        public DefinedSongOrder(IItemSelector order, MusicFolder folder)
         {
+            Order = order;
             CachedResults = new Dictionary<IMusicItem, uint>();
             var used_folders = new HashSet<MusicFolder>();
             uint index = 0;
-            foreach (var item in order)
+            foreach (var item in order.AllMatchesFrom(folder))
             {
                 index++;
                 CachedResults[item] = index;
