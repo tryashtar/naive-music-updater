@@ -20,11 +20,14 @@ namespace NaiveMusicUpdater
 
         public IValue Apply(IMusicItem item, IValue original)
         {
-            var text = (StringValue)original;
+            if (original.IsBlank)
+                return BlankValue.Instance;
+
+            var text = original.AsString();
 
             var match = RegexItem.Match(text.Value);
             if (!match.Success)
-                return MatchFail == MatchFailDecision.TakeWhole ? original : MetadataProperty.Ignore();
+                return MatchFail == MatchFailDecision.TakeWhole ? original : BlankValue.Instance;
 
             return new RegexMatchValue(match);
         }

@@ -36,8 +36,8 @@ namespace NaiveMusicUpdater
             var metadata = new Metadata();
             if (CachedResults.TryGetValue(item, out uint track))
             {
-                metadata.Register(MetadataField.Track, MetadataProperty.Single(track.ToString(), CombineMode.Replace));
-                metadata.Register(MetadataField.TrackTotal, MetadataProperty.Single(TotalNumber.ToString(), CombineMode.Replace));
+                metadata.Register(MetadataField.Track, new MetadataProperty(new StringValue(track.ToString()), CombineMode.Replace));
+                metadata.Register(MetadataField.TrackTotal, new MetadataProperty(new StringValue(TotalNumber.ToString()), CombineMode.Replace));
             }
             return metadata;
         }

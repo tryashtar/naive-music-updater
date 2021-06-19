@@ -10,6 +10,6 @@ namespace NaiveMusicUpdater
     {
         StringValue AsString();
         ListValue AsList();
-        bool HasContents { get; }
+        bool IsBlank { get; }
     }
 }

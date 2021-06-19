@@ -11,19 +11,15 @@ namespace NaiveMusicUpdater
         public readonly string Value;
         public StringValue(string value)
         {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
             Value = value;
         }
 
-        public ListValue AsList()
-        {
-            return new ListValue(new[] { Value });
-        }
+        public ListValue AsList() => new(Value);
+        public StringValue AsString() => this;
+        public bool IsBlank => false;
 
-        public StringValue AsString()
-        {
-            return this;
-        }
-
-        public bool HasContents => Value != null;
+        public override string ToString() => Value;
     }
 }

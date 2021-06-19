@@ -24,7 +24,7 @@ namespace NaiveMusicUpdater
         {
             item = Selector.SelectFrom(item);
             if (item == null)
-                return new BlankValue();
+                return BlankValue.Instance;
             var value = Getter.Get(item);
             if (Modifier != null)
                 value = Modifier.Apply(item, value);

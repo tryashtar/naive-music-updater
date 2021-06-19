@@ -18,7 +18,7 @@ namespace NaiveMusicUpdater
 
         public MetadataProperty Get(IMusicItem item)
         {
-            return MetadataProperty.FromValue(Source.Get(item), CombineMode.Replace);
+            return new MetadataProperty(Source.Get(item), CombineMode.Replace);
         }
 
         public MetadataProperty GetWithContext(IMusicItem item, IValue value)

@@ -21,16 +21,10 @@ namespace NaiveMusicUpdater
             return Match.Groups[group].Value;
         }
 
-        public ListValue AsList()
-        {
-            throw new InvalidOperationException();
-        }
+        public ListValue AsList() => throw new InvalidOperationException();
+        public StringValue AsString() => throw new InvalidOperationException();
+        public bool IsBlank => false;
 
-        public StringValue AsString()
-        {
-            throw new InvalidOperationException();
-        }
-
-        public bool HasContents => true;
+        public override string ToString() => Match.ToString();
     }
 }

@@ -21,9 +21,7 @@ namespace NaiveTests
 
         private void AssertMetadata(Metadata meta, MetadataField field, string single_value)
         {
-            var prop = meta.Get(field);
-            Assert.IsFalse(prop.IsList);
-            Assert.AreEqual(prop.Value, single_value);
+
         }
     }
 }

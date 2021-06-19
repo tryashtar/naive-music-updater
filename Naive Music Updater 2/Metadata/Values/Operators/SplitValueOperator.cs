@@ -19,14 +19,14 @@ namespace NaiveMusicUpdater
 
         public IValue Apply(IMusicItem item, IValue original)
         {
-            if (!original.HasContents)
-                return new BlankValue();
+            if (original.IsBlank)
+                return BlankValue.Instance;
 
             var text = original.AsString();
 
             string[] parts = text.Value.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 1 && NoSeparator == NoSeparatorDecision.Exit)
-                return MetadataProperty.Ignore();
+                return original;
 
             return new ListValue(parts);
         }

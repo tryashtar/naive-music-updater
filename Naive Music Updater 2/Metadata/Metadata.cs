@@ -51,7 +51,7 @@ namespace NaiveMusicUpdater
             var builder = new StringBuilder();
             foreach (var item in SavedFields)
             {
-                builder.AppendLine($"{item.Key.Name}: {String.Join(";", item.Value.ListValue)}");
+                builder.AppendLine($"{item.Key.Name}: {item.Value}");
             }
             return builder.ToString();
         }

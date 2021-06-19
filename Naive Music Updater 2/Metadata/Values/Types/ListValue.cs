@@ -11,19 +11,19 @@ namespace NaiveMusicUpdater
         public readonly List<string> Values;
         public ListValue(IEnumerable<string> values)
         {
+            if (!values.Any())
+                throw new ArgumentException($"Empty lists not allowed");
             Values = values.ToList();
         }
 
-        public ListValue AsList()
+        public ListValue(params string[] values) : this((IEnumerable<string>)values)
         {
-            return this;
         }
 
-        public StringValue AsString()
-        {
-            return new StringValue(Values.First());
-        }
+        public ListValue AsList() => this;
+        public StringValue AsString() => new(Values.First());
+        public bool IsBlank => false;
 
-        public bool HasContents => Values.Any();
+        public override string ToString() => $"[{String.Join(", ", Values)}]";
     }
 }

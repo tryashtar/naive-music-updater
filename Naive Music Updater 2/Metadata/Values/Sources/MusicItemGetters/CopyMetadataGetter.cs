@@ -16,7 +16,7 @@ namespace NaiveMusicUpdater
 
         public IValue Get(IMusicItem item)
         {
-            return item.GetMetadata(Desired.Only).Get(Desired);
+            return item.GetMetadata(Desired.Only).Get(Desired).Value;
         }
     }
 }

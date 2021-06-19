@@ -11,83 +11,46 @@ namespace NaiveMusicUpdater
     // when a list, you can still access the first value with Value
     // and when not a list, you can still access the singular value with ListValue
     // CombineMode determines whether this replaces other properties when merging
-    public class MetadataProperty : IValue
+    public class MetadataProperty
     {
-        public readonly bool IsList;
-        public string Value { get; private set; }
-        public readonly List<string> ListValue;
-        public CombineMode CombineMode { get; private set; }
+        public IValue Value { get; private set; }
+        public CombineMode Mode { get; private set; }
 
-        public static MetadataProperty Single(string value, CombineMode mode)
+        public MetadataProperty(IValue value, CombineMode mode)
         {
-            return new MetadataProperty(false, value, new List<string> { value }, mode);
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+            Value = value;
+            Mode = mode;
         }
 
-        public static MetadataProperty List(List<string> value, CombineMode mode)
-        {
-            return new MetadataProperty(true, value.FirstOrDefault(), value, mode);
-        }
-
-        public static MetadataProperty Delete()
-        {
-            return new MetadataProperty(false, null, new List<string>(), CombineMode.Remove);
-        }
-
-        public static MetadataProperty Ignore()
-        {
-            return new MetadataProperty(false, null, new List<string>(), CombineMode.Ignore);
-        }
-
-        public static MetadataProperty FromValue(IValue value, CombineMode mode)
-        {
-            if (value is StringValue str)
-                return MetadataProperty.Single(str.Value, mode);
-            if (value is ListValue list)
-                return MetadataProperty.List(list.Values, mode);
-            if (value is MetadataProperty meta)
-                return new MetadataProperty(meta.IsList, meta.Value, meta.ListValue, mode);
-            if (value is BlankValue blank)
-                return MetadataProperty.Ignore();
-            throw new InvalidOperationException($"Can't turn {value} into a metadata property");
-        }
-
-        private MetadataProperty(bool is_list, string item, List<string> list, CombineMode mode)
-        {
-            IsList = is_list;
-            Value = item;
-            ListValue = list;
-            CombineMode = mode;
-        }
+        public static MetadataProperty Ignore() => new(BlankValue.Instance, CombineMode.Ignore);
+        public static MetadataProperty Delete() => new(BlankValue.Instance, CombineMode.Remove);
 
         public void CombineWith(MetadataProperty other)
         {
-            switch (other.CombineMode)
+            switch (other.Mode)
             {
                 case CombineMode.Ignore:
                     break;
                 case CombineMode.Replace:
-                    ListValue.Clear();
-                    ListValue.AddRange(other.ListValue);
                     Value = other.Value;
-                    CombineMode = CombineMode.Replace;
+                    Mode = CombineMode.Replace;
                     break;
                 case CombineMode.Append:
-                    ListValue.AddRange(other.ListValue);
-                    Value = ListValue.FirstOrDefault();
-                    CombineMode = CombineMode.Replace;
+                    Value = new ListValue(this.Value.AsList().Values.Concat(other.Value.AsList().Values));
+                    Mode = CombineMode.Replace;
                     break;
                 case CombineMode.Prepend:
-                    ListValue.InsertRange(0, other.ListValue);
-                    Value = ListValue.FirstOrDefault();
-                    CombineMode = CombineMode.Replace;
+                    Value = new ListValue(other.Value.AsList().Values.Concat(this.Value.AsList().Values));
+                    Mode = CombineMode.Replace;
                     break;
                 case CombineMode.Remove:
-                    ListValue.Clear();
-                    Value = null;
-                    CombineMode = CombineMode.Replace;
+                    Value = BlankValue.Instance;
+                    Mode = CombineMode.Replace;
                     break;
                 default:
-                    break;
+                    throw new ArgumentException($"Invalid combine mode {other.Mode}");
             }
         }
 
@@ -99,22 +62,7 @@ namespace NaiveMusicUpdater
             return property;
         }
 
-        public override string ToString()
-        {
-            return String.Join("; ", ListValue);
-        }
-
-        public StringValue AsString()
-        {
-            return new StringValue(Value);
-        }
-
-        public ListValue AsList()
-        {
-            return new ListValue(ListValue);
-        }
-
-        public bool HasContents => CombineMode != CombineMode.Ignore;
+        public override string ToString() => Value.ToString();
     }
 
     public enum CombineMode

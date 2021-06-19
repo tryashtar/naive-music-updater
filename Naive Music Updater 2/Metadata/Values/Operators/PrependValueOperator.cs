@@ -16,6 +16,9 @@ namespace NaiveMusicUpdater
 
         public IValue Apply(IMusicItem item, IValue original)
         {
+            if (original.IsBlank)
+                return BlankValue.Instance;
+
             var text = original.AsString();
             var extra = Prepend.Get(item).AsString();
 

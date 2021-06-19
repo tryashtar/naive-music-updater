@@ -20,15 +20,18 @@ namespace NaiveMusicUpdater
 
         public IValue Apply(IMusicItem item, IValue original)
         {
+            if (original.IsBlank)
+                return BlankValue.Instance;
+
             var list = original.AsList();
             if (MinLength != null && list.Values.Count < MinLength)
-                return MetadataProperty.Ignore();
+                return original;
 
             int real_index = Index >= 0 ? Index : list.Values.Count + Index;
             if (real_index >= list.Values.Count || real_index < 0)
             {
                 if (OutOfBounds == OutofBoundsDecision.Exit || list.Values.Count == 0)
-                    return MetadataProperty.Ignore();
+                    return original;
                 else if (OutOfBounds == OutofBoundsDecision.Clamp)
                     real_index = Math.Clamp(real_index, 0, list.Values.Count - 1);
                 else if (OutOfBounds == OutofBoundsDecision.Wrap)

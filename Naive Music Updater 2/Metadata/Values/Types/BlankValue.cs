@@ -8,20 +8,12 @@ namespace NaiveMusicUpdater
 {
     public class BlankValue : IValue
     {
-        public BlankValue()
-        {
-        }
+        public static readonly BlankValue Instance = new();
 
-        public ListValue AsList()
-        {
-            return new ListValue(Enumerable.Empty<string>());
-        }
+        public ListValue AsList() => throw new InvalidOperationException();
+        public StringValue AsString() => throw new InvalidOperationException();
+        public bool IsBlank => true;
 
-        public StringValue AsString()
-        {
-            return new StringValue(null);
-        }
-
-        public bool HasContents => false;
+        public override string ToString() => "";
     }
 }
