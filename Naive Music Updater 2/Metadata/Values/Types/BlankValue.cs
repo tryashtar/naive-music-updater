@@ -6,24 +6,22 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    public class ListValue : IValue
+    public class BlankValue : IValue
     {
-        public readonly List<string> Values;
-        public ListValue(IEnumerable<string> values)
+        public BlankValue()
         {
-            Values = values.ToList();
         }
 
         public ListValue AsList()
         {
-            return this;
+            return new ListValue(Enumerable.Empty<string>());
         }
 
         public StringValue AsString()
         {
-            return new StringValue(Values.First());
+            return new StringValue(null);
         }
 
-        public bool HasContents => Values.Any();
+        public bool HasContents => false;
     }
 }

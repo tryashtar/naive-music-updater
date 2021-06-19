@@ -46,7 +46,20 @@ namespace NaiveMusicUpdater
             _Parent = parent;
             string config = Path.Combine(folder, "config.yaml");
             if (File.Exists(config))
+            {
+#if !DEBUG2
                 _LocalConfig = new MusicItemConfig(config, this);
+#else
+                try
+                {
+                    _LocalConfig = new MusicItemConfig(config, this);
+                }
+                catch (Exception ex)
+                {
+                    Logger.WriteLine($"Failed to parse config for {this}: {ex.Message}");
+                }
+#endif
+            }
         }
 
         public IEnumerable<Song> GetAllSongs()

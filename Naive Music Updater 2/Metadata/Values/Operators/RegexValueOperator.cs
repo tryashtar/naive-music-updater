@@ -18,7 +18,7 @@ namespace NaiveMusicUpdater
             MatchFail = decision;
         }
 
-        public IValue Apply(IValue original)
+        public IValue Apply(IMusicItem item, IValue original)
         {
             var text = (StringValue)original;
 

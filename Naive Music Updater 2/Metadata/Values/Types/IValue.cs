@@ -8,11 +8,8 @@ namespace NaiveMusicUpdater
 {
     public interface IValue
     {
-
-    }
-
-    public static class ValueFactory
-    {
-
+        StringValue AsString();
+        ListValue AsList();
+        bool HasContents { get; }
     }
 }

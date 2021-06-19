@@ -24,7 +24,7 @@ namespace NaiveMusicUpdater
             else if (yaml is YamlMappingNode map)
             {
                 var selector = map.Go("from").Parse(x => SingleItemSelectorFactory.Create(x));
-                var getter = map.Go("value").Parse(x => MusicItemGetterFactory.Create(x));
+                var getter = map.Go("value").NullableParse(x => MusicItemGetterFactory.Create(x)) ?? CleanNameGetter.Instance;
                 var modifier = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
                 return new MusicItemSource(selector, getter, modifier);
             }

@@ -16,7 +16,7 @@ namespace NaiveMusicUpdater
         public readonly bool IsList;
         public string Value { get; private set; }
         public readonly List<string> ListValue;
-        public readonly CombineMode CombineMode;
+        public CombineMode CombineMode { get; private set; }
 
         public static MetadataProperty Single(string value, CombineMode mode)
         {
@@ -40,7 +40,15 @@ namespace NaiveMusicUpdater
 
         public static MetadataProperty FromValue(IValue value, CombineMode mode)
         {
-            throw new NotImplementedException();
+            if (value is StringValue str)
+                return MetadataProperty.Single(str.Value, mode);
+            if (value is ListValue list)
+                return MetadataProperty.List(list.Values, mode);
+            if (value is MetadataProperty meta)
+                return new MetadataProperty(meta.IsList, meta.Value, meta.ListValue, mode);
+            if (value is BlankValue blank)
+                return MetadataProperty.Ignore();
+            throw new InvalidOperationException($"Can't turn {value} into a metadata property");
         }
 
         private MetadataProperty(bool is_list, string item, List<string> list, CombineMode mode)
@@ -61,18 +69,22 @@ namespace NaiveMusicUpdater
                     ListValue.Clear();
                     ListValue.AddRange(other.ListValue);
                     Value = other.Value;
+                    CombineMode = CombineMode.Replace;
                     break;
                 case CombineMode.Append:
                     ListValue.AddRange(other.ListValue);
                     Value = ListValue.FirstOrDefault();
+                    CombineMode = CombineMode.Replace;
                     break;
                 case CombineMode.Prepend:
                     ListValue.InsertRange(0, other.ListValue);
                     Value = ListValue.FirstOrDefault();
+                    CombineMode = CombineMode.Replace;
                     break;
                 case CombineMode.Remove:
                     ListValue.Clear();
                     Value = null;
+                    CombineMode = CombineMode.Replace;
                     break;
                 default:
                     break;
@@ -92,10 +104,17 @@ namespace NaiveMusicUpdater
             return String.Join("; ", ListValue);
         }
 
-        public MetadataProperty ToProperty()
+        public StringValue AsString()
         {
-            return this;
+            return new StringValue(Value);
         }
+
+        public ListValue AsList()
+        {
+            return new ListValue(ListValue);
+        }
+
+        public bool HasContents => CombineMode != CombineMode.Ignore;
     }
 
     public enum CombineMode

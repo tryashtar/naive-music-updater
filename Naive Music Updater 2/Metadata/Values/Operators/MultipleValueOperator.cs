@@ -16,11 +16,11 @@ namespace NaiveMusicUpdater
             Operators = operators.ToList();
         }
 
-        public IValue Apply(IValue original)
+        public IValue Apply(IMusicItem item, IValue original)
         {
-            foreach (var item in Operators)
+            foreach (var op in Operators)
             {
-                original = item.Apply(original);
+                original = op.Apply(item, original);
             }
             return original;
         }

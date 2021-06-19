@@ -16,7 +16,7 @@ namespace NaiveMusicUpdater
             Group = group;
         }
 
-        public IValue Apply(IValue original)
+        public IValue Apply(IMusicItem item, IValue original)
         {
             var text = (RegexMatchValue)original;
             return new StringValue(text.GetGroup(Group));

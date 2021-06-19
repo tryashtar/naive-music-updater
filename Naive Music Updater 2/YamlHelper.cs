@@ -115,6 +115,8 @@ namespace NaiveMusicUpdater
 
         public static YamlNode Go(this YamlNode node, params string[] path)
         {
+            if (node == null)
+                return null;
             foreach (var item in path)
             {
                 node = TryGet(node, item);

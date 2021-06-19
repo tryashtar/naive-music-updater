@@ -10,7 +10,7 @@ namespace NaiveMusicUpdater
 {
     public interface IValueOperator
     {
-        IValue Apply(IValue original);
+        IValue Apply(IMusicItem item, IValue original);
     }
 
     public static class ValueOperatorFactory
@@ -32,7 +32,8 @@ namespace NaiveMusicUpdater
                 if (index != null)
                 {
                     var oob = map.Go("out_of_bounds").ToEnum(def: OutofBoundsDecision.Exit);
-                    return new IndexValueOperator(index.Value, oob);
+                    var min_length = map.Go("min_length").Int();
+                    return new IndexValueOperator(index.Value, oob, min_length);
                 }
 
                 var split = map.Go("split").String();
@@ -52,6 +53,10 @@ namespace NaiveMusicUpdater
                     var decision = yaml.Go("fail").ToEnum(def: MatchFailDecision.Exit);
                     return new RegexValueOperator(regex, decision);
                 }
+
+                var prepend = map.Go("prepend").NullableParse(x => ValueSourceFactory.Create(x));
+                if (prepend != null)
+                    return new PrependValueOperator(prepend);
             }
             else if (yaml is YamlSequenceNode sequence)
                 return new MultipleValueOperator(sequence.ToList(x => ValueOperatorFactory.Create(x)));

@@ -16,14 +16,21 @@ namespace NaiveMusicUpdater
             Match = match;
         }
 
-        public MetadataProperty ToProperty()
-        {
-            throw new InvalidOperationException();
-        }
-
         public string GetGroup(string group)
         {
             return Match.Groups[group].Value;
         }
+
+        public ListValue AsList()
+        {
+            throw new InvalidOperationException();
+        }
+
+        public StringValue AsString()
+        {
+            throw new InvalidOperationException();
+        }
+
+        public bool HasContents => true;
     }
 }

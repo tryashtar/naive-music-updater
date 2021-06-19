@@ -14,9 +14,16 @@ namespace NaiveMusicUpdater
             Value = value;
         }
 
-        public MetadataProperty ToProperty()
+        public ListValue AsList()
         {
-            return MetadataProperty.Single(Value, CombineMode.Replace);
+            return new ListValue(new[] { Value });
         }
+
+        public StringValue AsString()
+        {
+            return this;
+        }
+
+        public bool HasContents => Value != null;
     }
 }

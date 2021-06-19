@@ -7,20 +7,13 @@ using System.Threading.Tasks;
 
 namespace NaiveMusicUpdater
 {
-    public class ModeValueSourceFieldSetter : IFieldSetter
+    public class RemoveFieldSetter : IFieldSetter
     {
-        public readonly CombineMode Mode;
-        public readonly IValueSource Source;
-
-        public ModeValueSourceFieldSetter(CombineMode mode, IValueSource source)
-        {
-            Mode = mode;
-            Source = source;
-        }
+        public static readonly RemoveFieldSetter Instance = new();
 
         public MetadataProperty Get(IMusicItem item)
         {
-            return MetadataProperty.FromValue(Source.Get(item), Mode);
+            return MetadataProperty.Delete();
         }
 
         public MetadataProperty GetWithContext(IMusicItem item, IValue value)

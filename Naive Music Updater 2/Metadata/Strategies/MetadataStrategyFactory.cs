@@ -21,12 +21,12 @@ namespace NaiveMusicUpdater
                 var source = map.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
                 if (source != null)
                 {
-                    var apply = map.Go("apply").Parse(x => FieldSpecFactory.Create(x));
+                    var apply = map.Go("apply").Parse(x => FieldSpecFactory.Create(x, true));
                     return new RedirectingMetadataStrategy(source, apply);
                 }
                 else
                 {
-                    var apply = map.Parse(x => FieldSpecFactory.Create(x));
+                    var apply = map.Parse(x => FieldSpecFactory.Create(x, false));
                     return new DirectMetadataStrategy(apply);
                 }
             }

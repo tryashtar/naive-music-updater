@@ -15,28 +15,25 @@ namespace NaiveMusicUpdater
 
     public static class FieldSetterFactory
     {
-        public static IFieldSetter Create(YamlNode yaml)
+        public static IFieldSetter Create(YamlNode yaml, bool has_context)
         {
             if (yaml is YamlMappingNode map)
             {
-                var mode = map.Go("mode").ToEnum<CombineMode>();
-                if (mode == null)
+                var mode = map.Go("mode").ToEnum(def: CombineMode.Replace);
+                if (mode == CombineMode.Remove)
+                    return RemoveFieldSetter.Instance;
+                var source = map.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
+                if (source != null)
+                    return new ModeValueSourceFieldSetter(mode, source);
+                if (has_context)
                 {
-                    var source = ValueSourceFactory.Create(map);
-                    return new DirectValueSourceFieldSetter(source);
-                }
-                else
-                {
-                    var source = map.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
-                    if (source != null)
-                        return new ModeValueSourceFieldSetter(mode.Value, source);
-                    else
-                    {
-                        var modify = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
-                        return new ModeContextFieldSetter(mode.Value, modify);
-                    }
+                    var modify = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
+                    if (modify != null)
+                        return new ModeContextFieldSetter(mode, modify);
                 }
             }
+            var direct_source = ValueSourceFactory.Create(yaml);
+            return new DirectValueSourceFieldSetter(direct_source);
             throw new ArgumentException($"Can't make field setter from {yaml}");
         }
     }

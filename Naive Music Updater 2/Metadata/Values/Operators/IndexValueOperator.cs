@@ -10,18 +10,22 @@ namespace NaiveMusicUpdater
     {
         public readonly int Index;
         public readonly OutofBoundsDecision OutOfBounds;
-        public IndexValueOperator(int index, OutofBoundsDecision oob)
+        public readonly int? MinLength;
+        public IndexValueOperator(int index, OutofBoundsDecision oob, int? min_length = null)
         {
             Index = index;
             OutOfBounds = oob;
+            MinLength = min_length;
         }
 
-        public IValue Apply(IValue original)
+        public IValue Apply(IMusicItem item, IValue original)
         {
-            var list = (ListValue)original;
+            var list = original.AsList();
+            if (MinLength != null && list.Values.Count < MinLength)
+                return MetadataProperty.Ignore();
 
             int real_index = Index >= 0 ? Index : list.Values.Count + Index;
-            if (real_index >= list.Values.Count)
+            if (real_index >= list.Values.Count || real_index < 0)
             {
                 if (OutOfBounds == OutofBoundsDecision.Exit || list.Values.Count == 0)
                     return MetadataProperty.Ignore();

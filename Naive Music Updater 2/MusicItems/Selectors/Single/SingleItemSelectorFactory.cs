@@ -22,12 +22,13 @@ namespace NaiveMusicUpdater
             }
             else if (node is YamlMappingNode map)
             {
+                var must = map.Go("must_be").ToEnum<MusicItemType>();
                 var up = map.Go("up").Int();
                 if (up != null)
-                    return new ParentItemSelector(up.Value);
+                    return new ParentItemSelector(up.Value, must);
                 var down = map.Go("from_root").Int();
                 if (down != null)
-                    return new RootItemSelector(down.Value);
+                    return new RootItemSelector(down.Value, must);
                 var selector = map.Go("selector").NullableParse(x => ItemSelectorFactory.Create(x));
                 if (selector != null)
                     return new SingleSelectorWrapper(selector);
@@ -40,5 +41,11 @@ namespace NaiveMusicUpdater
     {
         This,
         Self
+    }
+
+    public enum MusicItemType
+    {
+        File,
+        Folder
     }
 }

@@ -17,9 +17,12 @@ namespace NaiveMusicUpdater
             NoSeparator = decision;
         }
 
-        public IValue Apply(IValue original)
+        public IValue Apply(IMusicItem item, IValue original)
         {
-            var text = (StringValue)original;
+            if (!original.HasContents)
+                return new BlankValue();
+
+            var text = original.AsString();
 
             string[] parts = text.Value.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 1 && NoSeparator == NoSeparatorDecision.Exit)

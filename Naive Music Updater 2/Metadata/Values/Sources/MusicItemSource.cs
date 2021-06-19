@@ -23,9 +23,11 @@ namespace NaiveMusicUpdater
         public IValue Get(IMusicItem item)
         {
             item = Selector.SelectFrom(item);
+            if (item == null)
+                return new BlankValue();
             var value = Getter.Get(item);
             if (Modifier != null)
-                value = Modifier.Apply(value);
+                value = Modifier.Apply(item, value);
             return value;
         }
     }

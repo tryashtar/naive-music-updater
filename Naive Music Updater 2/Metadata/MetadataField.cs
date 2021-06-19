@@ -29,6 +29,11 @@ namespace NaiveMusicUpdater
             AllFields.Add(this);
         }
 
+        public override string ToString()
+        {
+            return Name;
+        }
+
         public static MetadataField FromID(string id)
         {
             if (AliasCache.TryGetValue(id, out var result))

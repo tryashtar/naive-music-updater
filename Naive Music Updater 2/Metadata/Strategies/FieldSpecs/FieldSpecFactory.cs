@@ -15,7 +15,7 @@ namespace NaiveMusicUpdater
 
     public static class FieldSpecFactory
     {
-        public static IFieldSpec Create(YamlNode yaml)
+        public static IFieldSpec Create(YamlNode yaml, bool has_context)
         {
             if (yaml is YamlMappingNode map)
             {
@@ -27,14 +27,14 @@ namespace NaiveMusicUpdater
                         set = MetadataField.Values;
                     else
                         set = fields.ToList(x => MetadataField.FromID(x.String()));
-                    var setter = yaml.Go("set").Parse(x => FieldSetterFactory.Create(x));
+                    var setter = yaml.Go("set").Parse(x => FieldSetterFactory.Create(x, has_context));
                     return new SetAllFieldSpec(set.ToHashSet(), setter);
                 }
                 else
                 {
                     var direct = yaml.ToDictionary(
                         x => MetadataField.FromID(x.String()),
-                        x => FieldSetterFactory.Create(x)
+                        x => FieldSetterFactory.Create(x, has_context)
                     );
                     return new MapFieldSpec(direct);
                 }
