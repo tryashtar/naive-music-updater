@@ -25,7 +25,7 @@ namespace NaiveMusicUpdater
         public void UpdateLibrary()
         {
             Logger.Open(Path.Combine(GetCacheFolder(), "logs", DateTime.Now.ToString("yyyy-MM-dd HH_mm_ss") + ".txt"));
-            foreach (var child in ChildFolders)
+            foreach (var child in SubFolders)
             {
                 child.Update();
             }
@@ -77,7 +77,7 @@ namespace NaiveMusicUpdater
                 if (item.Value.NodeType == YamlNodeType.Sequence || item.Value.NodeType == YamlNodeType.Scalar)
                 {
                     // this is a song source
-                    string[] sourced = item.Value is YamlSequenceNode j ? YamlHelper.ToStringList(j).ToArray() : new string[] { (string)item.Value };
+                    IEnumerable<string> sourced = item.Value is YamlSequenceNode j ? j.ToList() : new[] { item.Value.String() };
 
                     foreach (string song in sourced)
                     {

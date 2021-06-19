@@ -13,7 +13,6 @@ namespace NaiveMusicUpdater
     {
         public readonly string Name;
         public readonly MetadataFieldType Type;
-        public readonly string[] Aliases;
         public Predicate<MetadataField> Only => x => x == this;
         public static Predicate<MetadataField> All => x => true;
         private static readonly Dictionary<string, MetadataField> AliasCache = new();
@@ -21,7 +20,6 @@ namespace NaiveMusicUpdater
         {
             Name = name;
             Type = type;
-            Aliases = aliases;
             foreach (var value in aliases)
             {
                 AliasCache.Add(value, this);
@@ -31,11 +29,16 @@ namespace NaiveMusicUpdater
             AllFields.Add(this);
         }
 
+        public override string ToString()
+        {
+            return Name;
+        }
+
         public static MetadataField FromID(string id)
         {
             if (AliasCache.TryGetValue(id, out var result))
                 return result;
-            return null;
+            throw new ArgumentException($"No metadata field named {id}");
         }
 
         public static readonly MetadataField Title = new("Title", MetadataFieldType.String, "title");

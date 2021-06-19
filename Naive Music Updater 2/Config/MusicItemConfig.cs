@@ -4,85 +4,72 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using YamlDotNet.Core;
-using YamlDotNet.Core.Events;
 using YamlDotNet.RepresentationModel;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace NaiveMusicUpdater
 {
-    public delegate (IItemSelector selector, IMetadataStrategy strategy) TargetedStrategyProducer();
-    public delegate (List<IItemSelector> selectors, IMetadataStrategy strategy) SharedStrategyProducer();
-    public delegate SongOrder OrderProducer();
-    public delegate IMetadataStrategy StrategyProducer();
     public class MusicItemConfig
     {
         public readonly string Location;
-        // have to defer these because some of the data needed isn't ready until after constructor is done
-        public readonly OrderProducer TrackOrder;
-        public readonly StrategyProducer SongsStrategy;
-        public readonly StrategyProducer FoldersStrategy;
-        public readonly List<TargetedStrategyProducer> MetadataStrategies;
-        public readonly List<SharedStrategyProducer> SharedStrategies;
+        public readonly ISongOrder TrackOrder;
+        public readonly IMetadataStrategy SongsStrategy;
+        public readonly IMetadataStrategy FoldersStrategy;
+        public readonly List<TargetedStrategy> MetadataStrategies;
+        public readonly List<TargetedStrategy> SharedStrategies;
         private readonly IMusicItem ConfiguredItem;
         public MusicItemConfig(string file, IMusicItem configured_item)
         {
             Location = file;
             ConfiguredItem = configured_item;
-            var root = YamlHelper.ParseFile(file);
-            if (root != null)
+            var yaml = YamlHelper.ParseFile(file);
+            if (configured_item is MusicFolder folder)
+                TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.Create(x, folder));
+            SongsStrategy = yaml.Go("songs").NullableParse(x => LiteralOrReference(x));
+            FoldersStrategy = yaml.Go("folders").NullableParse(x => LiteralOrReference(x));
+            MetadataStrategies = yaml.Go("set").ToList((k, v) => ParseStrategy(k, v)) ?? new();
+            SharedStrategies = yaml.Go("set all").ToList(x => ParseMultiple(x.Go("names"), x.Go("set"))) ?? new();
+        }
+
+        private TargetedStrategy ParseStrategy(YamlNode key, YamlNode value)
+        {
+            var selector = ItemSelectorFactory.Create(key);
+            var strategy = LiteralOrReference(value);
+            return new TargetedStrategy(selector, strategy);
+        }
+
+        private TargetedStrategy ParseMultiple(YamlNode names, YamlNode value)
+        {
+            var selectors = names.ToList(x => ItemSelectorFactory.Create(x));
+            var strategy = LiteralOrReference(value);
+            return new TargetedStrategy(new MultiItemSelector(selectors), strategy);
+        }
+
+        private IMetadataStrategy LiteralOrReference(YamlNode node)
+        {
+            if (node is YamlScalarNode scalar)
+                return ConfiguredItem.GlobalCache.Config.GetNamedStrategy(scalar.Value);
+            else
             {
-                var order = root.Go("order");
-                if (order != null && configured_item is MusicFolder folder)
-                    TrackOrder = () => SongOrderFactory.FromNode(order, folder);
-                var songs = root.Go("songs");
-                if (songs != null)
-                    SongsStrategy = () => LiteralOrReference(songs);
-                var folders = root.Go("folders");
-                if (folders != null)
-                    FoldersStrategy = () => LiteralOrReference(folders);
-                var set = root.Go("set") as YamlMappingNode;
-                if (set != null)
-                    MetadataStrategies = set.Children.Select(x => (TargetedStrategyProducer)(() => ParseStrategy(x.Key, x.Value))).ToList();
-                var shared = root.Go("set all") as YamlSequenceNode;
-                if (shared != null)
-                {
-                    SharedStrategies = new List<SharedStrategyProducer>();
-                    foreach (var item in shared)
-                    {
-                        var names = item.Go("names") as YamlSequenceNode;
-                        var setting = item.Go("set");
-                        SharedStrategies.Add(() => ParseMultiple(names, setting));
-                    }
-                }
+                if (node is YamlSequenceNode sequence)
+                    return new MultipleMetadataStrategy(sequence.Select(LiteralOrReference));
+                else
+                    return MetadataStrategyFactory.Create(node);
             }
-            if (MetadataStrategies == null)
-                MetadataStrategies = new List<TargetedStrategyProducer>();
-            if (SharedStrategies == null)
-                SharedStrategies = new List<SharedStrategyProducer>();
         }
 
         public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
         {
             var metadata = new Metadata();
             if (SongsStrategy != null && item is Song)
-                metadata.Merge(SongsStrategy().Get(item, desired));
+                metadata.Merge(SongsStrategy.Get(item, desired));
             if (FoldersStrategy != null && item is MusicFolder)
-                metadata.Merge(FoldersStrategy().Get(item, desired));
+                metadata.Merge(FoldersStrategy.Get(item, desired));
             if (TrackOrder != null && item is Song)
-                metadata.Merge(TrackOrder().Get(item));
-            foreach (var strat in SharedStrategies)
+                metadata.Merge(TrackOrder.Get(item));
+            foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
             {
-                var (selectors, strategy) = strat();
-                if (selectors.Any(x => x.IsSelectedFrom(ConfiguredItem, item)))
-                    metadata.Merge(strategy.Get(item, desired));
-            }
-            foreach (var strat in MetadataStrategies)
-            {
-                var (selector, strategy) = strat();
-                if (selector.IsSelectedFrom(ConfiguredItem, item))
-                    metadata.Merge(strategy.Get(item, desired));
+                if (strat.IsSelectedFrom(ConfiguredItem, item))
+                    metadata.Merge(strat.Get(item, desired));
             }
             return metadata;
         }
@@ -90,9 +77,8 @@ namespace NaiveMusicUpdater
         public CheckSelectorResults CheckSelectors()
         {
             var results = new CheckSelectorResults();
-            var all_selectors = SharedStrategies.SelectMany(x => x().selectors)
-                .Concat(MetadataStrategies.Select(x => x().selector));
-            if (TrackOrder != null && TrackOrder() is DefinedSongOrder defined)
+            IEnumerable<IItemSelector> all_selectors = SharedStrategies.Concat(MetadataStrategies);
+            if (TrackOrder is DefinedSongOrder defined)
             {
                 all_selectors = all_selectors.Append(defined.Order);
                 results.UnselectedItems.AddRange(defined.UnselectedItems);
@@ -103,32 +89,22 @@ namespace NaiveMusicUpdater
             }
             return results;
         }
+    }
 
-        private (IItemSelector selector, IMetadataStrategy strategy) ParseStrategy(YamlNode key, YamlNode value)
+    public class TargetedStrategy : IItemSelector, IMetadataStrategy
+    {
+        public readonly IItemSelector Selector;
+        public readonly IMetadataStrategy Strategy;
+
+        public TargetedStrategy(IItemSelector selector, IMetadataStrategy strategy)
         {
-            var selector = ItemSelectorFactory.FromNode(key);
-            var strategy = LiteralOrReference(value);
-            return (selector, strategy);
+            Selector = selector;
+            Strategy = strategy;
         }
 
-        private (List<IItemSelector> selectors, IMetadataStrategy strategy) ParseMultiple(YamlSequenceNode names, YamlNode value)
-        {
-            var selectors = names.Select(x => ItemSelectorFactory.FromNode(x)).ToList();
-            var strategy = LiteralOrReference(value);
-            return (selectors, strategy);
-        }
-
-        private IMetadataStrategy LiteralOrReference(YamlNode node)
-        {
-            if (node.NodeType == YamlNodeType.Scalar)
-                return ConfiguredItem.GlobalCache.Config.GetNamedStrategy((string)node);
-            else
-            {
-                if (node.NodeType == YamlNodeType.Sequence)
-                    return new MultipleMetadataStrategy(((YamlSequenceNode)node).Select(LiteralOrReference));
-                else
-                    return MetadataStrategyFactory.Create(node);
-            }
-        }
+        public IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start) => Selector.AllMatchesFrom(start);
+        public Metadata Get(IMusicItem item, Predicate<MetadataField> desired) => Strategy.Get(item, desired);
+        public bool IsSelectedFrom(IMusicItem start, IMusicItem item) => Selector.IsSelectedFrom(start, item);
+        public IEnumerable<IItemSelector> UnusedFrom(IMusicItem start) => Selector.UnusedFrom(start);
     }
 }

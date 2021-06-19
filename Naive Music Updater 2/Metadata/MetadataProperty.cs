@@ -13,56 +13,42 @@ namespace NaiveMusicUpdater
     // CombineMode determines whether this replaces other properties when merging
     public class MetadataProperty
     {
-        public readonly bool IsList;
-        public string Value { get; private set; }
-        public readonly List<string> ListValue;
-        public readonly CombineMode CombineMode;
+        public IValue Value { get; private set; }
+        public CombineMode Mode { get; private set; }
 
-        public static MetadataProperty Single(string value, CombineMode mode)
+        public MetadataProperty(IValue value, CombineMode mode)
         {
-            return new MetadataProperty(false, value, new List<string> { value }, mode);
+            Value = value ?? throw new ArgumentNullException(nameof(value));
+            Mode = mode;
         }
 
-        public static MetadataProperty List(List<string> value, CombineMode mode)
-        {
-            return new MetadataProperty(true, value.FirstOrDefault(), value, mode);
-        }
-
-        public static MetadataProperty Delete()
-        {
-            return new MetadataProperty(false, null, new List<string>(), CombineMode.Replace);
-        }
-
-        public static MetadataProperty Ignore()
-        {
-            return new MetadataProperty(false, null, new List<string>(), CombineMode.Ignore);
-        }
-
-        private MetadataProperty(bool is_list, string item, List<string> list, CombineMode mode)
-        {
-            IsList = is_list;
-            Value = item;
-            ListValue = list;
-            CombineMode = mode;
-        }
+        public static MetadataProperty Ignore() => new(BlankValue.Instance, CombineMode.Ignore);
+        public static MetadataProperty Delete() => new(BlankValue.Instance, CombineMode.Remove);
 
         public void CombineWith(MetadataProperty other)
         {
-            if (other.CombineMode == CombineMode.Replace)
+            switch (other.Mode)
             {
-                ListValue.Clear();
-                ListValue.AddRange(other.ListValue);
-                Value = other.Value;
-            }
-            if (other.CombineMode == CombineMode.Append)
-            {
-                ListValue.AddRange(other.ListValue);
-                Value = ListValue.FirstOrDefault();
-            }
-            if (other.CombineMode == CombineMode.Prepend)
-            {
-                ListValue.InsertRange(0, other.ListValue);
-                Value = ListValue.FirstOrDefault();
+                case CombineMode.Ignore:
+                    break;
+                case CombineMode.Replace:
+                    Value = other.Value;
+                    Mode = CombineMode.Replace;
+                    break;
+                case CombineMode.Append:
+                    Value = new ListValue(this.Value.AsList().Values.Concat(other.Value.AsList().Values));
+                    Mode = CombineMode.Replace;
+                    break;
+                case CombineMode.Prepend:
+                    Value = new ListValue(other.Value.AsList().Values.Concat(this.Value.AsList().Values));
+                    Mode = CombineMode.Replace;
+                    break;
+                case CombineMode.Remove:
+                    Value = BlankValue.Instance;
+                    Mode = CombineMode.Replace;
+                    break;
+                default:
+                    throw new ArgumentException($"Invalid combine mode {other.Mode}");
             }
         }
 
@@ -74,10 +60,7 @@ namespace NaiveMusicUpdater
             return property;
         }
 
-        public override string ToString()
-        {
-            return String.Join("; ", ListValue);
-        }
+        public override string ToString() => Value.ToString();
     }
 
     public enum CombineMode
@@ -85,6 +68,7 @@ namespace NaiveMusicUpdater
         Ignore,
         Replace,
         Append,
-        Prepend
+        Prepend,
+        Remove
     }
 }

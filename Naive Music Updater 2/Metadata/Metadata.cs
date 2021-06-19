@@ -9,7 +9,7 @@ namespace NaiveMusicUpdater
     // an actual mutable collection of metadata
     public class Metadata
     {
-        private readonly Dictionary<MetadataField, MetadataProperty> SavedFields = new Dictionary<MetadataField, MetadataProperty>();
+        private readonly Dictionary<MetadataField, MetadataProperty> SavedFields = new();
         public Metadata()
         { }
 
@@ -51,7 +51,7 @@ namespace NaiveMusicUpdater
             var builder = new StringBuilder();
             foreach (var item in SavedFields)
             {
-                builder.AppendLine($"{item.Key.Name}: {String.Join(";", item.Value.ListValue)}");
+                builder.AppendLine($"{item.Key.Name}: {item.Value}");
             }
             return builder.ToString();
         }

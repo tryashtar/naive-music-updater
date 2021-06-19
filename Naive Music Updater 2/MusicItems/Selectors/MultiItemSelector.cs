@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using YamlDotNet.RepresentationModel;
 
 namespace NaiveMusicUpdater
 {
     public class MultiItemSelector : IItemSelector
     {
-        private readonly IItemSelector[] Subselectors;
-        public MultiItemSelector(YamlSequenceNode sequence)
+        private readonly List<IItemSelector> Subselectors;
+
+        public MultiItemSelector(IEnumerable<IItemSelector> subselectors)
         {
-            Subselectors = sequence.Children.Select(x => ItemSelectorFactory.FromNode(x)).ToArray();
+            Subselectors = subselectors.ToList();
         }
 
         public IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start)

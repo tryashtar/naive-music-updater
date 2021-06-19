@@ -2,18 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-using YamlDotNet.RepresentationModel;
 using TagLib;
-using File = System.IO.File;
 using Tag = TagLib.Tag;
-using System.Text.RegularExpressions;
-using System.Globalization;
 using TagLib.Id3v2;
-using Microsoft.CSharp.RuntimeBinder;
 
 namespace NaiveMusicUpdater
 {
@@ -53,7 +46,7 @@ namespace NaiveMusicUpdater
             foreach (var interop in Interops)
             {
                 var result = interop.Get(field);
-                if (result.Value != null)
+                if (result.Value.IsBlank)
                     return result;
             }
             return MetadataProperty.Ignore();
@@ -169,54 +162,58 @@ namespace NaiveMusicUpdater
 
         protected static MetadataProperty Get(string str)
         {
-            return MetadataProperty.Single(str, CombineMode.Replace);
+            if (str == null)
+                return MetadataProperty.Ignore();
+            return new MetadataProperty(new StringValue(str), CombineMode.Replace);
         }
 
         protected static MetadataProperty Get(uint num)
         {
-            return MetadataProperty.Single(num.ToString(), CombineMode.Replace);
+            return new MetadataProperty(new StringValue(num.ToString()), CombineMode.Replace);
         }
 
         protected static MetadataProperty Get(string[] str)
         {
-            return MetadataProperty.List(str.ToList(), CombineMode.Replace);
+            if (str.Length == 0)
+                return MetadataProperty.Ignore();
+            return new MetadataProperty(new ListValue(str), CombineMode.Replace);
+        }
+
+        protected static string Value(MetadataProperty prop)
+        {
+            if (prop.Value.IsBlank)
+                return null;
+            return prop.Value.AsString().Value;
         }
 
         protected static string[] Array(MetadataProperty prop)
         {
-            return prop.ListValue.ToArray();
+            if (prop.Value.IsBlank)
+                return new string[0];
+            return prop.Value.AsList().Values.ToArray();
         }
 
         protected static uint Number(MetadataProperty prop)
         {
-            if (prop.Value == null)
+            if (prop.Value.IsBlank)
                 return 0;
-            return uint.Parse(prop.Value);
+            return uint.Parse(Value(prop));
         }
 
         protected static bool StringEqual(MetadataProperty p1, MetadataProperty p2)
         {
-            if (String.IsNullOrEmpty(p1.Value) && String.IsNullOrEmpty(p2.Value))
-                return true;
-            return p1.ListValue.SequenceEqual(p2.ListValue);
+            return Array(p1).SequenceEqual(Array(p2));
         }
 
         protected static bool NumberEqual(MetadataProperty p1, MetadataProperty p2)
         {
-            var n1 = p1.ListValue.Select(uint.Parse);
-            var n2 = p2.ListValue.Select(uint.Parse);
-            if (IsZero(n1) && IsZero(n2))
-                return true;
+            if (p1.Value.IsBlank)
+                p1 = Get(0);
+            if (p2.Value.IsBlank)
+                p2 = Get(0);
+            var n1 = Array(p1).Select(uint.Parse);
+            var n2 = Array(p2).Select(uint.Parse);
             return n1.SequenceEqual(n2);
-        }
-
-        private static bool IsZero(IEnumerable<uint> sequence)
-        {
-            if (!sequence.Any())
-                return true;
-            if (sequence.Count() == 1 && sequence.Single() == 0)
-                return true;
-            return false;
         }
 
         protected static InteropDelegates Delegates(Getter get, Setter set)
@@ -305,14 +302,14 @@ namespace NaiveMusicUpdater
         {
             return new Dictionary<MetadataField, InteropDelegates>
             {
-                { MetadataField.Album, Delegates(() => Get(tag.Album), x => tag.Album = x.Value) },
+                { MetadataField.Album, Delegates(() => Get(tag.Album), x => tag.Album = Value(x)) },
                 { MetadataField.AlbumArtists, Delegates(() => Get(tag.AlbumArtists), x => tag.AlbumArtists = Array(x)) },
-                { MetadataField.Arranger, Delegates(() => Get(tag.RemixedBy), x => tag.RemixedBy = x.Value) },
-                { MetadataField.Comment, Delegates(() => Get(tag.Comment), x => tag.Comment = x.Value) },
+                { MetadataField.Arranger, Delegates(() => Get(tag.RemixedBy), x => tag.RemixedBy = Value(x)) },
+                { MetadataField.Comment, Delegates(() => Get(tag.Comment), x => tag.Comment = Value(x)) },
                 { MetadataField.Composers, Delegates(() => Get(tag.Composers), x => tag.Composers = Array(x)) },
                 { MetadataField.Genres, Delegates(() => Get(tag.Genres), x => tag.Genres = Array(x)) },
                 { MetadataField.Performers, Delegates(() => Get(tag.Performers), x => tag.Performers = Array(x)) },
-                { MetadataField.Title, Delegates(() => Get(tag.Title), x => tag.Title = x.Value) },
+                { MetadataField.Title, Delegates(() => Get(tag.Title), x => tag.Title = Value(x)) },
                 { MetadataField.Track, NumDelegates(() => Get(tag.Track), x => tag.Track = Number(x)) },
                 { MetadataField.TrackTotal, NumDelegates(() => Get(tag.TrackCount), x => tag.TrackCount = Number(x)) },
                 { MetadataField.Year, NumDelegates(() => Get(tag.Year), x => tag.Year = Number(x)) },
@@ -378,7 +375,7 @@ namespace NaiveMusicUpdater
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
             var schema = BasicInterop.BasicSchema(Tag);
-            schema[MetadataField.Language] = Delegates(() => Get(GetLanguage(Tag)), x => SetLanguage(Tag, x.Value));
+            schema[MetadataField.Language] = Delegates(() => Get(GetLanguage(Tag)), x => SetLanguage(Tag, Value(x)));
             return schema;
         }
 
@@ -450,14 +447,14 @@ namespace NaiveMusicUpdater
             return schema;
         }
 
-        private bool PrimitiveEqual(MetadataProperty p1, MetadataProperty p2, int length)
+        private static bool PrimitiveEqual(MetadataProperty p1, MetadataProperty p2, int length)
         {
-            var value1 = PrimitiveIfy(p1.Value, length);
-            var value2 = PrimitiveIfy(p2.Value, length);
+            var value1 = PrimitiveIfy(Value(p1), length);
+            var value2 = PrimitiveIfy(Value(p2), length);
             return value1 == value2;
         }
 
-        private string PrimitiveIfy(string value, int length)
+        private static string PrimitiveIfy(string value, int length)
         {
             return TagLib.Id3v1.Tag.DefaultStringHandler.Render(value).Resize(length).ToString().Trim().TrimEnd('\0');
         }
