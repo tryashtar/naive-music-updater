@@ -1,3 +1,4 @@
+
 # Naive Music Updater
 I use this program to keep the music files on my computer consistently tagged and organized.
 
@@ -8,13 +9,39 @@ The idea is that all metadata can be derived from the song's name and location, 
 The name of a song is just its file name, without the file extension. A "clean name" is also derived from this name, by applying some of the settings defined in [`library.yaml`](#library.yaml). It includes case correction and custom substitutions. Doing this allows clean names to contain characters that aren't valid in file names, for example. The clean name is only used when requested, it doesn't get auto-assigned to the title or anything like that.
 
 ### Strategies
-A strategy decides how to assign metadata to a song. It consists of one or more [metadata fields](#metadata-fields), and a matching [metadata selector](#metadata-selectors).
+A strategy decides how to assign metadata to the [metadata fields](#metadata-fields) of a song.
 
-Here's an example of a simple strategy:
+The simplest form of a strategy is a context-free "field spec." There are two different types of field specs:
+
+**Mapping Field Spec**  
+This consists of a map of fields, and a matching [field setter](#field-setters).
+
+Here's an example of a simple strategy, using a mapping field spec:
 ```
 title: Joy to the World
 composer: Isaac Watts
 ```
+
+---
+
+**Multiple Field Spec**  
+This type allows you to set multiple fields to the same value. The fields are listed in `fields`, and the field setter to use for all of them is called `set`. You can also use `*` to assign the value to all fields.
+
+Here's an example of this kind of field spec:
+```
+fields: [performer, composer, album artist]
+set: Isaac Watts
+```
+
+---
+
+**Context Strategies**
+Each of those types of field specs works as a strategy on its own. However, you can also provide "context" to a strategy. This allows the field setters to modify a common value.
+
+To do this, put the field spec under a key called `apply`, and provide a [value provider](#value-providers) called `source`. Doing this will allow the field setters in the spec to reference and modify the provided value.
+
+---
+
 A list of strategies is also a valid strategy. Each strategy is applied in turn. A typical song will have many strategies applied to it; later metadata assignments will override earlier ones.
 
 ### Metadata Fields
@@ -39,14 +66,15 @@ An item selector lets you pick one or more songs that will be affected by someth
 
 If you select a folder this way, it will not result in all of the containing songs being selected. Usually, item selectors are for selecting specific songs only.
 
-A list of item selectors is by itself a valid item selector. Each selector is evaluated in turn, producing many selected songs. You can also write item selectors as an object to get special behavior. The behavior is defined by the value of the `type` key:
+A list of item selectors is by itself a valid item selector. Each selector is evaluated in turn, producing many selected songs.
 
-**`path`**  
-Allows you to define a list of each subfolder that must be navigated in turn to reach the song. Each list entry can either be a string, or an object with a `regex` value, which will navigate any item matching the [regular expression](https://en.wikipedia.org/wiki/Regular_expression).
+You can also write item selectors as an object to get special behavior. 
+
+**Predicate Path**  
+Allows you to define a list of each subfolder that must be navigated in turn to reach the song, called `path`. Each list entry can either be a string, or an object with a `regex` value, which will navigate any item matching the [regular expression](https://en.wikipedia.org/wiki/Regular_expression).
 
 For example, this selector selects all songs beginning with "C" across multiple folders:
 ```
-type: path
 path:
 - C418
 - regex: ^Volume .*$
@@ -54,12 +82,11 @@ path:
 ```
 
 ---
-**`subpath`**  
+**Subpath**  
 Allows you to change the folder a selector starts from. The new start folder is an item selector called `subpath`, and the selector to use is called `select`.
 
 For example, if you're in the C418 folder and want to select many songs in the Volume Alpha folder, you would have to write `Volume Alpha/` in front of every song. You can use `subpath` to avoid this:
 ```
-type: subpath
 subpath: Volume Alpha
 select:
 - Beginning
@@ -70,98 +97,169 @@ select:
 ---
 As a bonus, when the program finishes running, it will print out any item selectors that didn't find any songs. This is a sign that you made a typo, or something needs to be updated.
 
-### Metadata Selectors
-This is one of the more elaborate features of the program. Metadata selectors tell the program how to get a value that will be embedded in the song's metadata. There are many different kind of metadata selectors.
+### Field Setters
+A field setter determines how a value should be combined with existing song metadata. The simplest field setter is just a [value source](#value-sources), which replaces the existing metadata. However, you can also specify additional rules.
 
-**String**
-* A simple string will be used literally. For example, `title: Joy to the World` would set the title of all relevant songs to exactly that.
-* `<this>` will select the song's [clean name](#names). For example, `title: <this>` is an easy way to use file names to define your songs' titles.
-* `<exact>` will select the song's file name, as-is, instead of the clean name.
+Use `mode` to determine how the new metadata should be combined with previously assigned metadata. The combine mode can be one of the following:
+* `replace` (this is the default, it doesn't need to be specified)
+* `append`
+* `prepend`
+* `remove`
 
-**List**  
-A list of selectors allows you to set multiple values in one property. For example, `performer: [Ricardo Arjona, Gaby Moreno]` can be used to set multiple artists.
-
-**Object**  
-The behavior is defined by the value of the `operation` key.
-
-`parent`:  
-This selects the "clean name" of a parent folder. `up` specifies the number of folders to navigate. If positive, it's relative to the root, so `1` would be whichever folder in the library root contains the song, `2` would be one deeper, etc. If negative, it's relative to the song, so `-1` would be whichever folder directly contains the song, `-2` would be one higher, etc.
-
-For example, if the songs are inside a folder named after the album, you can use a strategy like this:
+When using `remove`, no other information needs to be provided. It results in the existing metadata being removed. For example:
 ```
-album:
-  operation: parent
-  up: -1
+title:
+  mode: remove
+```
+
+For the other options, you must include a value source called `source`. To add C418 to the list of composers, for example:
+```
+composer:
+  mode: append
+  source: C418
+```
+
+If this field setter is part of a field spec [with context](#context-strategies), then there's already a value source provided by the strategy itself. In this case, you don't need to specify a `source`, though you can specify a [value operator](#value-operators) called `modify` to change the value.
+
+For example, here is a complete strategy that splits the clean name of the file in half, and assigns each half to different fields:
+```
+source:
+  from: this
+  modify:
+    split: " - "
+apply:
+  album artist:
+    modify:
+      index: 0
+  album:
+    modify:
+      index: 1
+```
+
+### Value Sources
+A value source is a method for obtaining a value that can be modified, then ultimately embedded into metadata.
+
+The simplest value source is just a literal string or list of strings. For example, `title: Joy to the World` would set the title of all relevant songs to exactly that.
+
+To get information from the file structure of the songs, you have to use an object. It contains three values:
+
+**`from`**  
+This is a "single item selector." Its purpose is to uniquely identify a file or folder, relative to the song being modified, to fetch data from. It can be set to `this` or `self` to select the song file in question.
+
+Another option is using `up`. This is an integer value equal to the number of folders to navigate up towards the library root. That folder will be selected. For example, to select the parent folder:
+```
+from:
+  up: 1
+```
+
+Another option is using `from_root`. This is like the opposite of `up`; it's an integer value equal to the number of folders to navigate down, starting from the root, towards the song in question. For example, to select the folder in the library root that (eventually) contains the current song:
+```
+from:
+  from_root: 1
+```
+
+The last option is using a normal [item selector](#item-selectors). It's called `selector`, and the only important thing to know is that an error will be thrown if it selects more than one item. For example:
+```
+from:
+  selector: Volume Alpha/Living Mice
 ```
 
 ---
-`split`:  
-This allows you to grab a value from another metadata selector, split it, and take a specific piece. `from` is the selector to use. `separator` is what to split on. `index` is which piece to use. `no_separator` can be `ignore` or `exit`. If it's set to exit, the result must contain the separator somewhere. `out_of_bounds` can be `exit`, `wrap`, or `clamp`, which decides how the index should be used to choose the result.
 
-For example, if your songs are named like `C418 - wait`, you can use a strategy like this:
+**`value`**  
+This is to decide what kind of data should be acquired from the selected item. The default is [`clean_name`](#names), but you can use `file_name` to select the original file name.
+
+The other option is `copy`, which lets you choose a metadata field. Note that this will copy the "final" value that ends up in that field. This means if later strategies modify the field you're copying from, this field will end up with those modifications as well. For example:
+```
+album artist:
+  from: this
+  value:
+    copy: performer
+```
+
+---
+
+**`modify`**  
+Lastly, you can optionally provide a [value operator](#value-operators) that will modify the acquired value.
+
+### Value Operators
+Value operators let you modify a value before it gets ultimately assigned to metadata. A single value can be split into many values, or merged, or distributed around. There are quite a few value operators. Aside from a few string shortcuts, all are objects with a couple keys.
+
+**Strings**  
+`first` and `last` are shortcuts for index operators with index 0 and -1, respectively. Using a number directly is also a shortcut for an index operator. Each of these use "exit" out-of-bounds mode. To change that, use the full index operator.
+
+---
+
+**Split**  
+This splits a single string value into a list of values, using a separator. `split` is the string separator. `when_none` determines what to do if the separator wasn't found anywhere. `ignore` is the default, meaning you'll get a one-entry list. `exit` means the value will be discarded.
+
+For example, if your folder contains multiple artist names, separated by commas, you can use a strategy like this:
 ```
 performer:
-  operation: split
-  from: <this>
-  separator: " - "
-  index: 0
-  no_separator: exit
-title:
-  operation: split
-  from: <this>
-  separator: " - "
-  index: 1
-  out_of_bounds: clamp
+  from:
+    up: 1
+  modify:
+    split: ", "
 ```
 
 ---
-`regex`:  
-This is similar to `split`. It lets you extract a group from another selector according to a [regular expression](https://en.wikipedia.org/wiki/Regular_expression). `from` is the selector. `regex` is the expression, with at least one capture group. `group` is the name of the group to select. `fail` can be `ignore` or `exit`, to determine what to do if the regex didn't match.
+
+**Index**  
+This allows you to select a particular value from a list of values. `index` is the zero-based index to use. You can use negative values to start from the end. `out_of_bounds` decides what to do if the index falls out of bounds. It defaults to `exit`, meaning the value will be discarded. It can be set to `wrap` to perform modulo on the index, or `clamp`, to clamp the index to the nearest end of the list.
+
+This is most often used in tandem with an earlier `split` operation. For example, if your songs are named like `C418 - wait`, you can use a strategy like this:
+```
+source:
+  from: this
+  modify:
+    split: " - "
+apply:
+  performer:
+    modify:
+      index: 0
+  title:
+    modify:
+      index: 1
+```
+
+---
+
+**Regex**  
+There are two operators that deal with regex, that must be used one after the other. The first uses a [regular expression](https://en.wikipedia.org/wiki/Regular_expression) called `regex`. A value called `fail` determines what to do if the value did not match the expression. It defaults to `exit`, meaning the value is discarded, but can be set to `take_whole`, meaning the value is kept as-is.
+
+Your regular expression should contain groups. The values inside of those groups can then be extracted with another operator. It uses `group` to select the name of the group.
 
 For example, if your songs are named like `wait (C418)`, you can use a strategy like this:
 ```
-performer:
-  operation: regex
-  from: <this>
-  regex: ^(?<title>.*?) \((?<artist>.*?)\)$
-  group: artist
-  fail: exit
+source:
+  from: this
+  modify:
+    regex: ^(?<outside>.*?) \((?<in_parens>.*?)\)$
+apply:
+  performer:
+    modify:
+      group: outside
+  title:
+    modify:
+      group: in_parens
+```
+
+---
+
+**Prepend**  
+This prepends a string value to an existing string value. Because I was lazy, there is no equivalent "append" right now.
+
+Anyway, it's just a [value source](#value-sources) called `prepend`. The value obtained is prepended to the beginning of the value being modified.
+
+For example, if your songs are placed in folders named like `Piano Sonata No. 14/Movement 1`, and you want the full title to contain both, you can use a strategy like this:
+```
 title:
-  operation: regex
-  from: <this>
-  regex: ^(?<title>.*?) \((?<artist>.*?)\)$
-  group: title
+  from: this
+  modify:
+    prepend:
+      from:
+        up: 1
 ```
-
----
-`join`:  
-This lets you combine two selectors with something in between them. `from1` and `from2` are the selectors. `with` is what to put between.
-
-For example, if your songs are named like `Piano Sonata No. 14/Movement 1`, and you want the full title to contain both, you can use a strategy like this:
-```
-title:
-  operation: join
-  from1:
-    operation: parent
-    up: -1
-  with: ": "
-  from2: <this>
-```
-
----
-`copy`:  
-This lets you copy metadata from one field into another. The one value, `get`, is the field to copy. Note that this will copy the "final" value that ends up in that field. This means if later strategies modify the field you're copying from, this field will end up with those modifications as well.
-
-Example:
-```
-composer:
-  operation: copy
-  get: performer
-```
-
----
-`remove`:  
-This deletes any metadata set by previously run strategies.
 
 ## Configuration
 All songs start with "blank" or "ignore" metadata. This means the program will not make any changes to the song. Metadata is applied according to rules in `config.yaml` files. These files apply to any song they share a folder with, including subfolders.
