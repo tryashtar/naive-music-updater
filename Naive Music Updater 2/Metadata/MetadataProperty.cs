@@ -60,7 +60,12 @@ namespace NaiveMusicUpdater
             return property;
         }
 
-        public override string ToString() => Value.ToString();
+        public override string ToString()
+        {
+            if (Value.IsBlank)
+                return "(blank)";
+            return Value.ToString();
+        }
     }
 
     public enum CombineMode

@@ -68,6 +68,7 @@ namespace NaiveMusicUpdater
             modifier.UpdateMetadata(metadata);
             modifier.UpdateArt(art);
             modifier.WriteLyrics(path);
+
 #if !DEBUG
             bool success = true;
             if (modifier.HasChanged)
@@ -83,6 +84,9 @@ namespace NaiveMusicUpdater
             }
             if (success)
                 GlobalCache.MarkUpdatedRecently(this);
+#else
+            if (modifier.HasChanged)
+                Logger.WriteLine("Changed!");
 #endif
         }
 

@@ -21,7 +21,13 @@ namespace NaiveMusicUpdater
         }
 
         public ListValue AsList() => this;
-        public StringValue AsString() => new(Values.First());
+        public StringValue AsString()
+        {
+            if (Values.Count > 1)
+                Logger.WriteLine($"WARNING: downcasting list {this}");
+            return new(Values.First());
+        }
+
         public bool IsBlank => false;
 
         public override string ToString() => $"[{String.Join(", ", Values)}]";

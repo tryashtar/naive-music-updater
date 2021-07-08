@@ -25,6 +25,10 @@ namespace NaiveMusicUpdater
         public void UpdateMetadata(Metadata metadata)
         {
             var interop = TagInteropFactory.GetDynamicInterop(TagFile.Tag);
+#if DEBUG
+            if (interop.Changed)
+                Logger.WriteLine("Changed already??");
+#endif
             foreach (var field in MetadataField.Values)
             {
                 interop.Set(field, metadata.Get(field));
@@ -46,6 +50,7 @@ namespace NaiveMusicUpdater
 
             var id3v2 = (TagLib.Id3v2.Tag)TagFile.GetTag(TagTypes.Id3v2);
             var ogg = (TagLib.Ogg.XiphComment)TagFile.GetTag(TagTypes.Xiph);
+            List<string> rewrite_reasons = new();
 
             // load lyrics from cached file
             if (File.Exists(lyrics_file))
@@ -61,10 +66,25 @@ namespace NaiveMusicUpdater
             // load synced lyrics from id3v2 tag
             if (id3v2 != null)
             {
-                foreach (var frame in id3v2.GetFrames<SynchronisedLyricsFrame>())
+                var frames = id3v2.GetFrames<SynchronisedLyricsFrame>();
+                foreach (var frame in frames)
                 {
                     frame_lyrics = frame.Text;
+                    if (frame.Description != "")
+                        rewrite_reasons.Add($"non-empty description ({frame.Description})");
+                    if (frame.Language != (Id3v2TagInterop.GetLanguage(id3v2) ?? "XXX"))
+                        rewrite_reasons.Add($"mismatched language ({frame.Language} -> {Id3v2TagInterop.GetLanguage(id3v2)})");
+                    if (frame.Type != SynchedTextType.Lyrics)
+                        rewrite_reasons.Add($"wrong text type ({frame.Type} -> {SynchedTextType.Lyrics})");
+                    if (frame.Format != TimestampFormat.AbsoluteMilliseconds)
+                        rewrite_reasons.Add($"wrong timestamp format ({frame.Format} -> {TimestampFormat.AbsoluteMilliseconds})");
+                    if (frame.TextEncoding != StringType.Latin1)
+                        rewrite_reasons.Add($"wrong text encoding ({frame.TextEncoding} -> {StringType.Latin1})");
                     break;
+                }
+                if (frames.Skip(1).Any())
+                {
+                    rewrite_reasons.Add($"multiple lyrics frames ({frames.Skip(1).Count()})");
                 }
             }
             else
@@ -81,6 +101,9 @@ namespace NaiveMusicUpdater
 
             if (chosen_lyrics != null)
             {
+                if (chosen_lyrics != frame_lyrics)
+                    rewrite_reasons.Add("didn't exist");
+
                 if (chosen_lyrics != file_lyrics)
                 {
                     // write to file
@@ -113,20 +136,29 @@ namespace NaiveMusicUpdater
                     }
                 }
 
-                if (chosen_lyrics != frame_lyrics)
+                if (rewrite_reasons.Any())
                 {
                     if (id3v2 != null)
                     {
                         // add frame
                         if (chosen_lyrics == tag_lyrics)
                             Logger.WriteLine($"Wrote lyrics from simple tag to synced frame");
-                        if (chosen_lyrics == file_lyrics)
+                        else if (chosen_lyrics == file_lyrics)
                             Logger.WriteLine($"Wrote lyrics from file cache to synced frame");
+                        else
+                        {
+                            Logger.WriteLine("Rewriting existing lyrics frame because:");
+                            foreach (var item in rewrite_reasons)
+                            {
+                                Logger.WriteLine(item);
+                            }
+                        }
                         foreach (var frame in id3v2.GetFrames<SynchronisedLyricsFrame>().ToList())
                         {
                             id3v2.RemoveFrame(frame);
                         }
-                        var lyrics = new SynchronisedLyricsFrame("lyrics", Id3v2TagInterop.GetLanguage(id3v2), SynchedTextType.Lyrics, StringType.Latin1);
+                        var lyrics = new SynchronisedLyricsFrame("", Id3v2TagInterop.GetLanguage(id3v2), SynchedTextType.Lyrics, StringType.Latin1);
+                        lyrics.Format = TimestampFormat.AbsoluteMilliseconds;
                         lyrics.Text = chosen_lyrics;
                         id3v2.AddFrame(lyrics);
                         HasChanged = true;

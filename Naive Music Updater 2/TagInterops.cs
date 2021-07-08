@@ -107,7 +107,14 @@ namespace NaiveMusicUpdater
     {
         protected T Tag;
         private readonly TagTypes TagType;
-        public bool Changed { get; protected set; } = false;
+        private readonly ByteVector OriginalVector;
+        public bool Changed
+        {
+            get
+            {
+                return OriginalVector != RenderTag();
+            }
+        }
         private readonly Dictionary<MetadataField, InteropDelegates> Schema;
         private readonly Dictionary<string, WipeDelegates> WipeSchema;
 
@@ -117,7 +124,13 @@ namespace NaiveMusicUpdater
             TagType = tag.TagTypes;
             Schema = CreateSchema();
             WipeSchema = CreateWipeSchema();
+            CustomSetup();
+            OriginalVector = RenderTag();
         }
+
+        protected virtual void CustomSetup() { }
+
+        protected abstract ByteVector RenderTag();
 
         protected abstract Dictionary<MetadataField, InteropDelegates> CreateSchema();
         protected abstract Dictionary<string, WipeDelegates> CreateWipeSchema();
@@ -143,7 +156,6 @@ namespace NaiveMusicUpdater
             {
                 Logger.WriteLine($"Changing {field.Name} in {TagType} tag from \"{current}\" to \"{result}\"");
                 delegates.Setter(result);
-                Changed = true;
             }
         }
 
@@ -153,10 +165,7 @@ namespace NaiveMusicUpdater
             {
                 var result = item.Value.Wipe();
                 if (result.Changed)
-                {
                     Logger.WriteLine($"Wiped {item.Key} in {TagType} tag from \"{result.OldValue}\" to \"{result.NewValue}\"");
-                    Changed = true;
-                }
             }
         }
 
@@ -285,7 +294,7 @@ namespace NaiveMusicUpdater
         }
     }
 
-    public class BasicInterop : AbstractInterop<Tag>
+    public abstract class BasicInterop : AbstractInterop<Tag>
     {
         public BasicInterop(Tag tag) : base(tag) { }
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
@@ -366,10 +375,17 @@ namespace NaiveMusicUpdater
     {
         private static readonly string[] ReadDelimiters = new string[] { "/", "; ", ";" };
         private const string WriteDelimiter = "; ";
-        public Id3v2TagInterop(TagLib.Id3v2.Tag tag) : base(tag)
+        public Id3v2TagInterop(TagLib.Id3v2.Tag tag) : base(tag) { }
+
+        protected override void CustomSetup()
         {
-            tag.ReadArtistDelimiters = ReadDelimiters;
-            tag.WriteArtistDelimiter = WriteDelimiter;
+            Tag.ReadArtistDelimiters = ReadDelimiters;
+            Tag.WriteArtistDelimiter = WriteDelimiter;
+        }
+
+        protected override ByteVector RenderTag()
+        {
+            return Tag.Render();
         }
 
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
@@ -441,6 +457,11 @@ namespace NaiveMusicUpdater
             return schema;
         }
 
+        protected override ByteVector RenderTag()
+        {
+            return Tag.Render();
+        }
+
         protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
         {
             var schema = BasicInterop.BasicWipeSchema(Tag);
@@ -449,9 +470,15 @@ namespace NaiveMusicUpdater
 
         private static bool PrimitiveEqual(MetadataProperty p1, MetadataProperty p2, int length)
         {
-            var value1 = PrimitiveIfy(Value(p1), length);
-            var value2 = PrimitiveIfy(Value(p2), length);
+            var value1 = PrimitiveIfy(Array(p1), length);
+            var value2 = PrimitiveIfy(Array(p2), length);
             return value1 == value2;
+        }
+
+        private static string PrimitiveIfy(string[] values, int length)
+        {
+            string combined = String.Join(";", values.Select(x => x.Trim()));
+            return PrimitiveIfy(combined, length);
         }
 
         private static string PrimitiveIfy(string value, int length)
@@ -463,6 +490,12 @@ namespace NaiveMusicUpdater
     public class ApeTagInterop : AbstractInterop<TagLib.Ape.Tag>
     {
         public ApeTagInterop(TagLib.Ape.Tag tag) : base(tag) { }
+
+        protected override ByteVector RenderTag()
+        {
+            return Tag.Render();
+        }
+
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
             var schema = BasicInterop.BasicSchema(Tag);
@@ -480,6 +513,12 @@ namespace NaiveMusicUpdater
     public class XiphTagInterop : AbstractInterop<TagLib.Ogg.XiphComment>
     {
         public XiphTagInterop(TagLib.Ogg.XiphComment tag) : base(tag) { }
+
+        protected override ByteVector RenderTag()
+        {
+            return Tag.Render(false);
+        }
+
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
             var schema = BasicInterop.BasicSchema(Tag);
