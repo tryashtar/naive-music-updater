@@ -36,10 +36,13 @@ namespace NaiveMusicUpdater
 
         public static void WriteLine() => WriteLine("");
 
-        public static void WriteLine(string text)
+        public static void WriteLine(string text, ConsoleColor color = ConsoleColor.White)
         {
-            string tabs = new string('\t', TabCount);
+            string tabs = new('\t', TabCount);
+            var prev_color = Console.ForegroundColor;
+            Console.ForegroundColor = color;
             Console.WriteLine(tabs + text);
+            Console.ForegroundColor = prev_color;
             Write(tabs + text);
         }
 

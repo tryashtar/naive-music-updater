@@ -29,6 +29,7 @@ namespace NaiveMusicUpdater
         private static ITagInterop GetInterop(TagLib.Id3v1.Tag tag) => new Id3v1TagInterop(tag);
         private static ITagInterop GetInterop(TagLib.Ape.Tag tag) => new ApeTagInterop(tag);
         private static ITagInterop GetInterop(TagLib.Ogg.XiphComment tag) => new XiphTagInterop(tag);
+        private static ITagInterop GetInterop(TagLib.Mpeg4.AppleTag tag) => new AppleTagInterop(tag);
         private static ITagInterop GetInterop(CombinedTag tag) => new MultipleInterop(tag);
     }
 
@@ -253,7 +254,7 @@ namespace NaiveMusicUpdater
 
         protected static WipeDelegates SimpleWipe(Func<string> get, Action set)
         {
-            return SimpleWipeRet(get, () =>
+            return SimpleWipeRet(() => get() ?? "(blank)", () =>
             {
                 var before = get();
                 set();
@@ -275,7 +276,7 @@ namespace NaiveMusicUpdater
 
         protected static WipeDelegates SimpleWipe(Func<string[]> get, Action set)
         {
-            return SimpleWipeRet(() => get().ToString(), () =>
+            return SimpleWipeRet(() => String.Join(";", get()), () =>
             {
                 var before = get();
                 set();
@@ -500,6 +501,33 @@ namespace NaiveMusicUpdater
         {
             var schema = BasicInterop.BasicSchema(Tag);
             schema.Remove(MetadataField.Arranger);
+            return schema;
+        }
+
+        protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+        {
+            var schema = BasicInterop.BasicWipeSchema(Tag);
+            return schema;
+        }
+    }
+
+    public class AppleTagInterop : AbstractInterop<TagLib.Mpeg4.AppleTag>
+    {
+        public AppleTagInterop(TagLib.Mpeg4.AppleTag tag) : base(tag) { }
+
+        protected override ByteVector RenderTag()
+        {
+            var vector = new ByteVector();
+            foreach (var data in Tag.Select(x => x.Render()))
+            {
+                vector.Add(data);
+            }
+            return vector;
+        }
+
+        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
+        {
+            var schema = BasicInterop.BasicSchema(Tag);
             return schema;
         }
 

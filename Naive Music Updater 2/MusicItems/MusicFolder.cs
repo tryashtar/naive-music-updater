@@ -79,7 +79,7 @@ namespace NaiveMusicUpdater
 
         public void Update()
         {
-            Logger.WriteLine($"Folder: {SimpleName}");
+            Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
             var filename = GlobalCache.Config.ToFilesafe(GlobalCache.Config.CleanName(SimpleName), true);
             if (SimpleName != filename)
             {

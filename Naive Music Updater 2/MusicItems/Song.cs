@@ -35,7 +35,7 @@ namespace NaiveMusicUpdater
 
         public void Update()
         {
-            Logger.WriteLine($"Song: {SimpleName}");
+            Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
 #if !DEBUG
             if (!GlobalCache.NeedsUpdate(this))
                 return;
@@ -73,11 +73,11 @@ namespace NaiveMusicUpdater
             bool success = true;
             if (modifier.HasChanged)
             {
-                Logger.WriteLine("Saving...");
+                Logger.WriteLine("Saving...", ConsoleColor.Green);
                 try { file.Save(); }
                 catch (IOException ex)
                 {
-                    Logger.WriteLine($"Save failed because {ex.Message}! Skipping...");
+                    Logger.WriteLine($"Save failed because {ex.Message}! Skipping...", ConsoleColor.Red);
                     GlobalCache.MarkNeedsUpdateNextTime(this);
                     success = false;
                 }

@@ -25,6 +25,8 @@ namespace NaiveMusicUpdater
         private readonly string MP3GainArgs;
         private readonly string MetaFlacPath;
         private readonly string MetaFlacArgs;
+        private readonly string AACGainPath;
+        private readonly string AACGainArgs;
         private readonly List<string> IllegalPrivateOwners;
         private readonly List<string> KeepFrameIDs;
         private readonly List<string> SongExtensions;
@@ -61,6 +63,9 @@ namespace NaiveMusicUpdater
             var flac_gain = yaml.Go("replay_gain", "flac");
             MetaFlacPath = flac_gain.Go("path").String();
             MetaFlacArgs = flac_gain.Go("args").String();
+            var aac_gain = yaml.Go("replay_gain", "aac");
+            AACGainPath = flac_gain.Go("path").String();
+            AACGainArgs = flac_gain.Go("args").String();
         }
 
         public bool IsSongFile(string file)
@@ -176,6 +181,8 @@ namespace NaiveMusicUpdater
                 process.StartInfo = new ProcessStartInfo(MP3GainPath, $"{MP3GainArgs} \"{location}\"");
             else if (extension == ".flac")
                 process.StartInfo = new ProcessStartInfo(MetaFlacPath, $"{MetaFlacArgs} \"{location}\"");
+            else if (extension == ".m4a")
+                process.StartInfo = new ProcessStartInfo(AACGainPath, $"{AACGainArgs} \"{location}\"");
             process.StartInfo.UseShellExecute = false;
             process.Start();
             process.WaitForExit();
