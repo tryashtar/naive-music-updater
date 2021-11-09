@@ -56,7 +56,11 @@ namespace NaiveMusicUpdater
 
                 var prepend = map.Go("prepend").NullableParse(x => ValueSourceFactory.Create(x));
                 if (prepend != null)
-                    return new PrependValueOperator(prepend);
+                    return new AppendValueOperator(prepend, AppendMode.Prepend);
+
+                var append = map.Go("append").NullableParse(x => ValueSourceFactory.Create(x));
+                if (append != null)
+                    return new AppendValueOperator(append, AppendMode.Append);
             }
             else if (yaml is YamlSequenceNode sequence)
                 return new MultipleValueOperator(sequence.ToList(x => ValueOperatorFactory.Create(x)));

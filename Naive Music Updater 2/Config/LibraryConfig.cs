@@ -31,6 +31,7 @@ namespace NaiveMusicUpdater
         private readonly List<string> KeepFrameIDs;
         private readonly List<string> SongExtensions;
         private readonly List<Regex> KeepFrameTexts;
+        private readonly List<Regex> TitleSplits;
         public readonly int SourceAutoMaxDistance;
 
         public LibraryConfig(string file)
@@ -54,6 +55,7 @@ namespace NaiveMusicUpdater
             IllegalPrivateOwners = yaml.Go("clear_private_owners").ToList() ?? new();
             KeepFrameIDs = yaml.Go("keep_frames", "ids").ToList() ?? new();
             KeepFrameTexts = yaml.Go("keep_frames", "text").ToListFromStrings(x => new Regex(x)) ?? new();
+            TitleSplits = yaml.Go("title_splits").ToListFromStrings(x => new Regex(x)) ?? new();
             SongExtensions = yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
 
             SourceAutoMaxDistance = yaml.Go("source_auto_max_distance").Int() ?? 0;
@@ -205,33 +207,21 @@ namespace NaiveMusicUpdater
             // turn double-spaces into single spaces
             text = Regex.Replace(text, @"\s+", " ");
 
-            // treat "foo (bar)" like two titles
-            var parens = Regex.Match(text, @"^(.*) \((.+)\)$");
-            if (parens.Success)
+            foreach (var title in TitleSplits)
             {
-                var part1 = parens.Groups[1].Value;
-                var part2 = parens.Groups[2].Value;
-                return $"{CorrectCase(part1)} ({CorrectCase(part2)})";
-            }
-
-            // treat "foo - bar" like two titles
-            var hyphens = Regex.Match(text, @"^(.+) (-|–|—|_|\/) (.+)$");
-            if (hyphens.Success)
-            {
-                var part1 = hyphens.Groups[1].Value;
-                var part2 = hyphens.Groups[2].Value;
-                var part3 = hyphens.Groups[3].Value;
-                return $"{CorrectCase(part1)} {part2} {CorrectCase(part3)}";
-            }
-
-            // treat "foo! bar" like two titles
-            var exclam = Regex.Match(text, @"^(.+)(!|\?|:|\.|,|;) (.+)$");
-            if (exclam.Success)
-            {
-                var part1 = exclam.Groups[1].Value;
-                var part2 = exclam.Groups[2].Value;
-                var part3 = exclam.Groups[3].Value;
-                return $"{CorrectCase(part1)}{part2} {CorrectCase(part3)}";
+                var match = title.Match(text);
+                if (match.Success)
+                {
+                    var result = "";
+                    foreach (var group in ((IEnumerable<Group>)match.Groups).Skip(1))
+                    {
+                        if (group.Name.EndsWith("_title"))
+                            result += CorrectCase(group.Value);
+                        else if (group.Name.EndsWith("_skip"))
+                            result += group.Value;
+                    }
+                    return result;
+                }
             }
 
             string[] words = text.Split(' ');

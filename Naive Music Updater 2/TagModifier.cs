@@ -40,7 +40,7 @@ namespace NaiveMusicUpdater
 
         public void WriteLyrics(string location)
         {
-            var lyrics_file = Path.ChangeExtension(Path.Combine(Cache.Folder, "lyrics", location), ".lrc");
+            var lyrics_file = Path.Combine(Cache.Folder, "lyrics", location) + ".lrc";
 
             // higher priority first
             SynchedText[] frame_lyrics = null;
