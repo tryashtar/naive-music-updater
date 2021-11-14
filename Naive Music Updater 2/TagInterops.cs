@@ -179,7 +179,7 @@ namespace NaiveMusicUpdater
 
         protected static MetadataProperty Get(uint num)
         {
-            return new MetadataProperty(new StringValue(num.ToString()), CombineMode.Replace);
+            return new MetadataProperty(new NumberValue(num), CombineMode.Replace);
         }
 
         protected static MetadataProperty Get(string[] str)
@@ -322,6 +322,8 @@ namespace NaiveMusicUpdater
                 { MetadataField.Title, Delegates(() => Get(tag.Title), x => tag.Title = Value(x)) },
                 { MetadataField.Track, NumDelegates(() => Get(tag.Track), x => tag.Track = Number(x)) },
                 { MetadataField.TrackTotal, NumDelegates(() => Get(tag.TrackCount), x => tag.TrackCount = Number(x)) },
+                { MetadataField.Disc, NumDelegates(() => Get(tag.Disc), x => tag.Disc = Number(x)) },
+                { MetadataField.DiscTotal, NumDelegates(() => Get(tag.DiscCount), x => tag.DiscCount = Number(x)) },
                 { MetadataField.Year, NumDelegates(() => Get(tag.Year), x => tag.Year = Number(x)) },
             };
         }
@@ -338,8 +340,6 @@ namespace NaiveMusicUpdater
                 { "amazon id", SimpleWipe(() => tag.AmazonId, () => tag.AmazonId = null) },
                 { "conductor", SimpleWipe(() => tag.Conductor, () => tag.Conductor = null) },
                 { "copyright", SimpleWipe(() => tag.Copyright, () => tag.Copyright = null) },
-                { "disc number", SimpleWipe(() => tag.Disc, () => tag.Disc = 0) },
-                { "disc count", SimpleWipe(() => tag.DiscCount, () => tag.DiscCount = 0) },
                 { "musicbrainz data", SimpleWipe(() => GetMusicBrainz(tag), () => WipeMusicBrainz(tag)) },
                 { "music ip", SimpleWipe(() => tag.MusicIpId, () => tag.MusicIpId = null) },
             };

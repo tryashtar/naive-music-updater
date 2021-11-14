@@ -12,6 +12,7 @@ namespace NaiveMusicUpdater
     {
         public readonly string Location;
         public readonly ISongOrder TrackOrder;
+        public readonly ISongOrder DiscOrder;
         public readonly IMetadataStrategy SongsStrategy;
         public readonly IMetadataStrategy FoldersStrategy;
         public readonly List<TargetedStrategy> MetadataStrategies;
@@ -23,7 +24,11 @@ namespace NaiveMusicUpdater
             ConfiguredItem = configured_item;
             var yaml = YamlHelper.ParseFile(file);
             if (configured_item is MusicFolder folder)
-                TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.Create(x, folder));
+            {
+                DiscOrder = yaml.Go("discs").NullableParse(x => DiscOrderFactory.Create(x, folder));
+                if (DiscOrder == null)
+                    TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.Create(x, folder));
+            }
             SongsStrategy = yaml.Go("songs").NullableParse(x => LiteralOrReference(x));
             FoldersStrategy = yaml.Go("folders").NullableParse(x => LiteralOrReference(x));
             MetadataStrategies = yaml.Go("set").ToList((k, v) => ParseStrategy(k, v)) ?? new();
@@ -64,6 +69,8 @@ namespace NaiveMusicUpdater
                 metadata.Merge(SongsStrategy.Get(item, desired));
             if (FoldersStrategy != null && item is MusicFolder)
                 metadata.Merge(FoldersStrategy.Get(item, desired));
+            if (DiscOrder != null && item is Song)
+                metadata.Merge(DiscOrder.Get(item));
             if (TrackOrder != null && item is Song)
                 metadata.Merge(TrackOrder.Get(item));
             foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
@@ -78,10 +85,15 @@ namespace NaiveMusicUpdater
         {
             var results = new CheckSelectorResults();
             IEnumerable<IItemSelector> all_selectors = SharedStrategies.Concat(MetadataStrategies);
-            if (TrackOrder is DefinedSongOrder defined)
+            if (TrackOrder is DefinedSongOrder tracks)
             {
-                all_selectors = all_selectors.Append(defined.Order);
-                results.UnselectedItems.AddRange(defined.UnselectedItems);
+                all_selectors = all_selectors.Append(tracks.Order);
+                results.UnselectedItems.AddRange(tracks.UnselectedItems);
+            }
+            if (DiscOrder is DefinedDiscOrder discs)
+            {
+                all_selectors = all_selectors.Concat(discs.GetSelectors());
+                results.UnselectedItems.AddRange(discs.GetUnselectedItems());
             }
             foreach (var selector in all_selectors)
             {

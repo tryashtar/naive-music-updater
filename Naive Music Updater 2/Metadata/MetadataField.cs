@@ -50,6 +50,8 @@ namespace NaiveMusicUpdater
         public static readonly MetadataField Comment = new("Comment", MetadataFieldType.String, "comment");
         public static readonly MetadataField Track = new("Track Number", MetadataFieldType.Number, "track");
         public static readonly MetadataField TrackTotal = new("Track Total", MetadataFieldType.Number, "track count", "track total");
+        public static readonly MetadataField Disc = new("Disc Number", MetadataFieldType.Number, "disc");
+        public static readonly MetadataField DiscTotal = new("Disc Total", MetadataFieldType.Number, "disc count", "disc total");
         public static readonly MetadataField Year = new("Year", MetadataFieldType.Number, "year");
         public static readonly MetadataField Language = new("Language", MetadataFieldType.String, "lang", "language");
         public static readonly MetadataField Genres = new("Genres", MetadataFieldType.StringList, "genre", "genres");

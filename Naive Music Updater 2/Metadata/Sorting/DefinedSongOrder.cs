@@ -32,13 +32,20 @@ namespace NaiveMusicUpdater
             }
         }
 
+        public uint? GetTrack(IMusicItem item)
+        {
+            if (CachedResults.TryGetValue(item, out uint result))
+                return result;
+            return null;
+        }
+
         public Metadata Get(IMusicItem item)
         {
             var metadata = new Metadata();
             if (CachedResults.TryGetValue(item, out uint track))
             {
-                metadata.Register(MetadataField.Track, new MetadataProperty(new StringValue(track.ToString()), CombineMode.Replace));
-                metadata.Register(MetadataField.TrackTotal, new MetadataProperty(new StringValue(TotalNumber.ToString()), CombineMode.Replace));
+                metadata.Register(MetadataField.Track, new MetadataProperty(new NumberValue(track), CombineMode.Replace));
+                metadata.Register(MetadataField.TrackTotal, new MetadataProperty(new NumberValue(TotalNumber), CombineMode.Replace));
             }
             return metadata;
         }
