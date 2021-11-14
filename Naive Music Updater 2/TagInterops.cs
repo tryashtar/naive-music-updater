@@ -446,6 +446,8 @@ namespace NaiveMusicUpdater
             schema.Remove(MetadataField.Composers);
             schema.Remove(MetadataField.Arranger);
             schema.Remove(MetadataField.TrackTotal);
+            schema.Remove(MetadataField.Disc);
+            schema.Remove(MetadataField.DiscTotal);
             void SetPrimitive(MetadataField field, int length)
             {
                 var existing = schema[field];
@@ -550,6 +552,7 @@ namespace NaiveMusicUpdater
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
             var schema = BasicInterop.BasicSchema(Tag);
+            schema[MetadataField.Year] = new InteropDelegates(() => Get(Tag.GetField("YEAR")), x => Tag.SetField("YEAR", Number(x)), NumberEqual);
             return schema;
         }
 
