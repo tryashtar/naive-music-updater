@@ -41,7 +41,7 @@ namespace NaiveMusicUpdater
                 {
                     metadata.Merge(disc.Value.Get(item));
                     metadata.Register(MetadataField.Disc, new MetadataProperty(new NumberValue(disc.Key), CombineMode.Replace));
-                    metadata.Register(MetadataField.TrackTotal, new MetadataProperty(new NumberValue(TotalDiscs), CombineMode.Replace));
+                    metadata.Register(MetadataField.DiscTotal, new MetadataProperty(new NumberValue(TotalDiscs), CombineMode.Replace));
                 }
             }
             return metadata;
