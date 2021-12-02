@@ -1,8 +1,7 @@
-
 # Naive Music Updater
 I use this program to keep the music files on my computer consistently tagged and organized.
 
-The idea is that all metadata can be derived from the song's name and location, with all of the rules defined through moderately powerful configuration files.
+The idea is that you put your song files wherever you want, and then write configuration files that determine how the song's name and location can be converted into embedded metadata.
 
 ## Concepts
 ### Names
@@ -17,7 +16,7 @@ The simplest form of a strategy is a context-free "field spec." There are two di
 This consists of a map of fields, and a matching [field setter](#field-setters).
 
 Here's an example of a simple strategy, using a mapping field spec:
-```
+```yaml
 title: Joy to the World
 composer: Isaac Watts
 ```
@@ -28,7 +27,7 @@ composer: Isaac Watts
 This type allows you to set multiple fields to the same value. The fields are listed in `fields`, and the field setter to use for all of them is called `set`. You can also use `*` to assign the value to all fields.
 
 Here's an example of this kind of field spec:
-```
+```yaml
 fields: [performer, composer, album artist]
 set: Isaac Watts
 ```
@@ -55,6 +54,8 @@ All the valid metadata fields are as follows:
 * `comment`
 * `track`
 * `track total`
+* `disc`
+* `disc total`
 * `year`
 * `lang`
 * `genre`
@@ -74,7 +75,7 @@ You can also write item selectors as an object to get special behavior.
 Allows you to define a list of each subfolder that must be navigated in turn to reach the song, called `path`. Each list entry can either be a string, or an object with a `regex` value, which will navigate any item matching the [regular expression](https://en.wikipedia.org/wiki/Regular_expression).
 
 For example, this selector selects all songs beginning with "C" across multiple folders:
-```
+```yaml
 path:
 - C418
 - regex: ^Volume .*$
@@ -86,7 +87,7 @@ path:
 Allows you to change the folder a selector starts from. The new start folder is an item selector called `subpath`, and the selector to use is called `select`.
 
 For example, if you're in the C418 folder and want to select many songs in the Volume Alpha folder, you would have to write `Volume Alpha/` in front of every song. You can use `subpath` to avoid this:
-```
+```yaml
 subpath: Volume Alpha
 select:
 - Beginning
@@ -107,13 +108,13 @@ Use `mode` to determine how the new metadata should be combined with previously 
 * `remove`
 
 When using `remove`, no other information needs to be provided. It results in the existing metadata being removed. For example:
-```
+```yaml
 title:
   mode: remove
 ```
 
 For the other options, you must include a value source called `source`. To add C418 to the list of composers, for example:
-```
+```yaml
 composer:
   mode: append
   source: C418
@@ -122,7 +123,7 @@ composer:
 If this field setter is part of a field spec [with context](#context-strategies), then there's already a value source provided by the strategy itself. In this case, you don't need to specify a `source`, though you can specify a [value operator](#value-operators) called `modify` to change the value.
 
 For example, here is a complete strategy that splits the clean name of the file in half, and assigns each half to different fields:
-```
+```yaml
 source:
   from: this
   modify:
@@ -147,19 +148,19 @@ To get information from the file structure of the songs, you have to use an obje
 This is a "single item selector." Its purpose is to uniquely identify a file or folder, relative to the song being modified, to fetch data from. It can be set to `this` or `self` to select the song file in question.
 
 Another option is using `up`. This is an integer value equal to the number of folders to navigate up towards the library root. That folder will be selected. For example, to select the parent folder:
-```
+```yaml
 from:
   up: 1
 ```
 
 Another option is using `from_root`. This is like the opposite of `up`; it's an integer value equal to the number of folders to navigate down, starting from the root, towards the song in question. For example, to select the folder in the library root that (eventually) contains the current song:
-```
+```yaml
 from:
   from_root: 1
 ```
 
 The last option is using a normal [item selector](#item-selectors). It's called `selector`, and the only important thing to know is that an error will be thrown if it selects more than one item. For example:
-```
+```yaml
 from:
   selector: Volume Alpha/Living Mice
 ```
@@ -170,7 +171,7 @@ from:
 This is to decide what kind of data should be acquired from the selected item. The default is [`clean_name`](#names), but you can use `file_name` to select the original file name.
 
 The other option is `copy`, which lets you choose a metadata field. Note that this will copy the "final" value that ends up in that field. This means if later strategies modify the field you're copying from, this field will end up with those modifications as well. For example:
-```
+```yaml
 album artist:
   from: this
   value:
@@ -194,7 +195,7 @@ Value operators let you modify a value before it gets ultimately assigned to met
 This splits a single string value into a list of values, using a separator. `split` is the string separator. `when_none` determines what to do if the separator wasn't found anywhere. `ignore` is the default, meaning you'll get a one-entry list. `exit` means the value will be discarded.
 
 For example, if your folder contains multiple artist names, separated by commas, you can use a strategy like this:
-```
+```yaml
 performer:
   from:
     up: 1
@@ -208,7 +209,7 @@ performer:
 This allows you to select a particular value from a list of values. `index` is the zero-based index to use. You can use negative values to start from the end. `out_of_bounds` decides what to do if the index falls out of bounds. It defaults to `exit`, meaning the value will be discarded. It can be set to `wrap` to perform modulo on the index, or `clamp`, to clamp the index to the nearest end of the list.
 
 This is most often used in tandem with an earlier `split` operation. For example, if your songs are named like `C418 - wait`, you can use a strategy like this:
-```
+```yaml
 source:
   from: this
   modify:
@@ -230,7 +231,7 @@ There are two operators that deal with regex, that must be used one after the ot
 Your regular expression should contain groups. The values inside of those groups can then be extracted with another operator. It uses `group` to select the name of the group.
 
 For example, if your songs are named like `wait (C418)`, you can use a strategy like this:
-```
+```yaml
 source:
   from: this
   modify:
@@ -246,13 +247,13 @@ apply:
 
 ---
 
-**Prepend**  
-This prepends a string value to an existing string value. Because I was lazy, there is no equivalent "append" right now.
+**Append**  
+This appends a string value to an existing string value.
 
-Anyway, it's just a [value source](#value-sources) called `prepend`. The value obtained is prepended to the beginning of the value being modified.
+Anyway, it's just a [value source](#value-sources) called `append`. The value obtained is appended to the end of the value being modified. Use `prepend` to append to the beginning.
 
 For example, if your songs are placed in folders named like `Piano Sonata No. 14/Movement 1`, and you want the full title to contain both, you can use a strategy like this:
-```
+```yaml
 title:
   from: this
   modify:
@@ -272,9 +273,10 @@ Here are the options that can be included in a `config.yaml` file:
 The value for this is a [strategy](#strategies). If you use a string, it will use the strategy defined in [`library.yaml`](#library.yaml) with that name. This strategy applies to all relevant songs unconditionally.
 
 For example:
-```
+```yaml
 songs:
-  title: <this>
+  title:
+    from: this
   performer:
     operation: parent
     up: 2
@@ -285,7 +287,7 @@ songs:
 This allows you to apply strategies to specific songs. Each key is an [item selector](#item-selectors), and each value is a strategy.
 
 For example:
-```
+```yaml
 set:
   Beyond the Sea:
     performer: Robbie Williams
@@ -299,7 +301,7 @@ set:
 This is like `set`, but lets you apply the same strategy to multiple selectors. The main reason for this is that a YAML list doesn't work as a key. `set all` is a list of objects, with `names` as a list of item selectors, and `set` as a strategy.
 
 For example:
-```
+```yaml
 set all:
 - names: [Cat, Far, Ward]
   set:
@@ -314,14 +316,31 @@ set all:
 This is a more convenient way to set track number metadata than using the `track` and `track total` fields. It's simply an item selector. The items it selects will be assigned track metadata according to their order and count.
 
 For example, these tracks will be assigned a track number of 1, 2, and 3, respectively, and all will be assigned a track total of 3:
-```
+```yaml
 order:
 - Dearly Beloved
 - Destati
 - Treasured Memories
 ```
 
-As a bonus, at the same time the program checks for unused selectors, it will print out any `order`s that didn't select every song in the folders it looked at. This is a sign that it should be updated to include those in the order.
+---
+**`discs`**  
+Likewise, you can assign track and disc number metadata at the same time using this option. It's an object with disc numbers as keys, and item selectors as values.
+
+For example, these tracks will be assigned a track number of 1, 2, or 3, a track total of 3, a disc number of 1 or 2, and a disc total of 2.
+```yaml
+discs:
+  1:
+  - Night of Fate
+  - Destiny's Force
+  - The Deep End
+  2:
+  - Working Together
+  - Vim and Vigor
+  - Desire for All That is Lost
+```
+
+As a bonus, at the same time the program checks for unused selectors, it will print out any `order`s or `discs` that didn't select every song in the folders it looked at. This is a sign that it should be updated to include those in the order.
 
 ## `.music-cache`
 This hidden folder is created at the root of your music library folder. It contains a few things:
@@ -371,6 +390,7 @@ This is for configuration that applies to the entire library. It's mostly just s
 * `map`: Any song with its name as the key will have its "clean name" set exactly to the value with no further processing.
 * `title_to_filename`: For characters that can't be saved as file names, values for their replacements.
 * `title_to_foldername`: The same thing but for folders.
+* `title_splits`: List of [regular expressions](https://en.wikipedia.org/wiki/Regular_expression) with named groups. When generating a clean name, the program will recursively process any groups ending with `_title` when considering capitalization rules, and not process any groups ending with `_skip`. Other groups are entirely excluded from the final clean name.
 
 ## Sources
 The program writes a `sources.yaml` file to your library root. The intention of this file is to keep track of where you got your music from. As for me, I've downloaded my music from all kinds of random places, and it brings me peace of mind to know I can go back and get them again, or find them in a higher quality somewhere else.
@@ -378,7 +398,7 @@ The program writes a `sources.yaml` file to your library root. The intention of 
 Initially, it will list every folder as an object, with more objects for its subfolders. Songs will ultimately be listed under a `MISSING` object. This is where you can come in and manually write the URL or source you got those songs from. Each value can either be a list or a single song.
 
 Example:
-```
+```yaml
 C418:
   Volume Alpha:
     https://www.youtube.com/watch?v=wnHy42Zh14Y: Moog City
