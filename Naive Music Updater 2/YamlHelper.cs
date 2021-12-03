@@ -128,14 +128,9 @@ namespace NaiveMusicUpdater
 
         public static YamlNode TryGet(this YamlNode node, string key)
         {
-            try
-            {
-                return node[key];
-            }
-            catch (KeyNotFoundException)
-            {
-                return null;
-            }
+            if (node is YamlMappingNode map && map.Children.TryGetValue(key, out var result))
+                return result;
+            return null;
         }
     }
 }

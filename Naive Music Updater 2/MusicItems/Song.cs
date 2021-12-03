@@ -68,6 +68,7 @@ namespace NaiveMusicUpdater
             modifier.UpdateMetadata(metadata);
             modifier.UpdateArt(art);
             modifier.WriteLyrics(path);
+            modifier.WriteChapters(path);
 
 #if !DEBUG
             bool success = true;

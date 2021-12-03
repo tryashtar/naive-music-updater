@@ -11,6 +11,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\taglib-sharp\src\TaglibSharp\TaglibSharp.csproj" />
+    <ProjectReference Include="..\utils.music\TryashtarUtils.Music.csproj" />
+    <ProjectReference Include="..\utils.utility\TryashtarUtils.Utility.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
