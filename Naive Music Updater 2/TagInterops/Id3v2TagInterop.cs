@@ -3,6 +3,7 @@ using System.Linq;
 using TagLib;
 using Tag = TagLib.Tag;
 using TagLib.Id3v2;
+using TryashtarUtils.Music;
 
 namespace NaiveMusicUpdater
 {
@@ -26,7 +27,7 @@ namespace NaiveMusicUpdater
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
             var schema = BasicInterop.BasicSchema(Tag);
-            schema[MetadataField.Language] = Delegates(() => Get(GetLanguage(Tag)), x => SetLanguage(Tag, Value(x)));
+            schema[MetadataField.Language] = Delegates(() => Get(Language.Get(Tag)), x => Language.Set(Tag, Value(x)));
             return schema;
         }
 
@@ -41,32 +42,6 @@ namespace NaiveMusicUpdater
         private void AddFrameWipes(Dictionary<string, WipeDelegates> schema)
         {
 
-        }
-
-        private const string LANGUAGE_TAG = "TLAN";
-        public static string GetLanguage(TagLib.Id3v2.Tag tag)
-        {
-            foreach (var frame in tag.GetFrames<TextInformationFrame>().ToList())
-            {
-                if (frame.FrameId.ToString() == LANGUAGE_TAG)
-                {
-                    if (frame.Text.Length > 0)
-                        return frame.Text.First();
-                }
-            }
-            return null;
-        }
-
-        public static void SetLanguage(TagLib.Id3v2.Tag tag, string value)
-        {
-            foreach (var frame in tag.GetFrames<TextInformationFrame>().ToList())
-            {
-                if (frame.FrameId.ToString() == LANGUAGE_TAG)
-                    tag.RemoveFrame(frame);
-            }
-            var lang = new TextInformationFrame(ByteVector.FromString(LANGUAGE_TAG, StringType.UTF8));
-            lang.Text = new[] { value };
-            tag.AddFrame(lang);
         }
     }
 }
