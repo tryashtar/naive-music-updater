@@ -48,7 +48,7 @@ namespace NaiveMusicUpdater
 
             if (LyricsIO.ToFile(TagFile, best))
             {
-                Logger.WriteLine($"Rewriting lyrics");
+                Logger.WriteLine($"Rewriting embedded lyrics");
                 HasChanged = true;
             }
 
@@ -56,7 +56,10 @@ namespace NaiveMusicUpdater
             {
                 var writing = best.ToLrc();
                 if (!cached_text.SequenceEqual(writing))
+                {
+                    Logger.WriteLine($"Rewriting cached lyrics");
                     File.WriteAllLines(lyrics_file, writing);
+                }
             }
         }
 
@@ -71,7 +74,7 @@ namespace NaiveMusicUpdater
 
             if (ChaptersIO.ToFile(TagFile, best))
             {
-                Logger.WriteLine($"Rewriting chapters");
+                Logger.WriteLine($"Rewriting embedded chapters");
                 HasChanged = true;
             }
 
@@ -79,7 +82,10 @@ namespace NaiveMusicUpdater
             {
                 var writing = best.ToChp();
                 if (!cached_text.SequenceEqual(writing))
+                {
+                    Logger.WriteLine($"Rewriting cached chapters");
                     File.WriteAllLines(chapters_file, writing);
+                }
             }
         }
 
