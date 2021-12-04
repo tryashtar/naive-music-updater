@@ -11,7 +11,7 @@ namespace NaiveMusicUpdater
     {
         private static readonly string[] ReadDelimiters = new string[] { "/", "; ", ";" };
         private const string WriteDelimiter = "; ";
-        public Id3v2TagInterop(TagLib.Id3v2.Tag tag) : base(tag) { }
+        public Id3v2TagInterop(TagLib.Id3v2.Tag tag, LibraryConfig config) : base(tag, config) { }
 
         protected override void CustomSetup()
         {
@@ -39,9 +39,28 @@ namespace NaiveMusicUpdater
             return schema;
         }
 
+        private IEnumerable<Frame> UnwantedFrames()
+        {
+            return Config.DecideFrames(Tag).remove;
+        }
+
         private void AddFrameWipes(Dictionary<string, WipeDelegates> schema)
         {
-
+            schema.Add("unwanted frames", SimpleWipeRet(
+                () =>
+                {
+                    var frames = UnwantedFrames();
+                    return string.Join("\n", frames.Select(FrameViewer.ToString));
+                },
+                () =>
+                {
+                    var frames = UnwantedFrames().ToList();
+                    foreach (var frame in frames)
+                    {
+                        Tag.RemoveFrame(frame);
+                    }
+                    return frames.Count > 0;
+                }));
         }
     }
 }

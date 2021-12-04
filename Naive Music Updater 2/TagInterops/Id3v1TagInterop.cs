@@ -8,7 +8,7 @@ namespace NaiveMusicUpdater
 {
     public class Id3v1TagInterop : AbstractInterop<TagLib.Id3v1.Tag>
     {
-        public Id3v1TagInterop(TagLib.Id3v1.Tag tag) : base(tag) { }
+        public Id3v1TagInterop(TagLib.Id3v1.Tag tag, LibraryConfig config) : base(tag, config) { }
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
             var schema = BasicInterop.BasicSchema(Tag);

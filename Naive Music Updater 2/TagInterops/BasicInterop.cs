@@ -5,7 +5,7 @@ namespace NaiveMusicUpdater
 {
     public abstract class BasicInterop : AbstractInterop<Tag>
     {
-        public BasicInterop(Tag tag) : base(tag) { }
+        public BasicInterop(Tag tag, LibraryConfig config) : base(tag, config) { }
         protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
         {
             return BasicSchema(Tag);

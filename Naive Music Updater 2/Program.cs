@@ -95,7 +95,7 @@ namespace NaiveMusicUpdater
             {
                 foreach (var frame in id3v2.GetFrames().ToList())
                 {
-                    Console.WriteLine(FrameString(frame));
+                    Console.WriteLine(FrameViewer.ToString(frame));
                 }
             }
             if (tag is TagLib.Ape.Tag ape)
@@ -115,29 +115,6 @@ namespace NaiveMusicUpdater
                 }
             }
             Console.WriteLine(new String('-', name.Length));
-        }
-
-        private static string FrameString(TagLib.Id3v2.Frame frame)
-        {
-            var builder = new StringBuilder();
-            builder.AppendLine($"Type: {frame.GetType().Name}");
-            builder.AppendLine($"ID: {frame.FrameId}");
-            builder.AppendLine($"ToString: {frame}");
-            if (frame is TagLib.Id3v2.SynchronisedLyricsFrame lyrics)
-            {
-                builder.AppendLine($"Synced Lyrics Desc: {lyrics.Description}");
-                builder.AppendLine($"Synced Lyrics Format: {lyrics.Format}");
-                builder.AppendLine($"Synced Lyrics Language: {lyrics.Language}");
-                builder.AppendLine($"Synced Lyrics Encoding: {lyrics.TextEncoding}");
-                builder.AppendLine($"Synced Lyrics Type: {lyrics.Type}");
-                builder.AppendLine($"Synced Lyrics Text: {LyricsString(lyrics.Text)}");
-            }
-            return builder.ToString();
-        }
-
-        private static string LyricsString(TagLib.Id3v2.SynchedText[] text)
-        {
-            return String.Join("\n", text.Select(x => $"[{TimeSpan.FromMilliseconds(x.Time)}] {x.Text}"));
         }
     }
 }

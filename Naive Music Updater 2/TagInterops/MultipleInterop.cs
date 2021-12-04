@@ -8,9 +8,9 @@ namespace NaiveMusicUpdater
     {
         private readonly List<ITagInterop> Interops;
         public bool Changed => Interops.Any(x => x.Changed);
-        public MultipleInterop(CombinedTag tag)
+        public MultipleInterop(CombinedTag tag, LibraryConfig config)
         {
-            Interops = tag.Tags.Select(x => TagInteropFactory.GetDynamicInterop(x)).ToList();
+            Interops = tag.Tags.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();
         }
 
         public MetadataProperty Get(MetadataField field)

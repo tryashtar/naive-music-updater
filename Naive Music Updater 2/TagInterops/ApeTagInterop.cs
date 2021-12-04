@@ -6,7 +6,7 @@ namespace NaiveMusicUpdater
 {
     public class ApeTagInterop : AbstractInterop<TagLib.Ape.Tag>
     {
-        public ApeTagInterop(TagLib.Ape.Tag tag) : base(tag) { }
+        public ApeTagInterop(TagLib.Ape.Tag tag, LibraryConfig config) : base(tag, config) { }
 
         protected override ByteVector RenderTag()
         {

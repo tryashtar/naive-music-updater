@@ -7,7 +7,7 @@ namespace NaiveMusicUpdater
 {
     public class XiphTagInterop : AbstractInterop<TagLib.Ogg.XiphComment>
     {
-        public XiphTagInterop(TagLib.Ogg.XiphComment tag) : base(tag) { }
+        public XiphTagInterop(TagLib.Ogg.XiphComment tag, LibraryConfig config) : base(tag, config) { }
 
         protected override ByteVector RenderTag()
         {

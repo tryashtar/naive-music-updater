@@ -8,7 +8,8 @@ namespace NaiveMusicUpdater
 {
     public abstract class AbstractInterop<T> : ITagInterop where T : Tag
     {
-        protected T Tag;
+        protected readonly T Tag;
+        protected readonly LibraryConfig Config;
         private readonly TagTypes TagType;
         private readonly ByteVector OriginalVector;
         public bool Changed
@@ -21,9 +22,10 @@ namespace NaiveMusicUpdater
         private readonly Dictionary<MetadataField, InteropDelegates> Schema;
         private readonly Dictionary<string, WipeDelegates> WipeSchema;
 
-        public AbstractInterop(T tag)
+        public AbstractInterop(T tag, LibraryConfig config)
         {
             Tag = tag;
+            Config = config;
             TagType = tag.TagTypes;
             Schema = CreateSchema();
             WipeSchema = CreateWipeSchema();

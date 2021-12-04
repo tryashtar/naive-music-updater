@@ -28,7 +28,7 @@ namespace NaiveMusicUpdater
         private readonly string AACGainPath;
         private readonly string AACGainArgs;
         private readonly List<string> IllegalPrivateOwners;
-        private readonly List<string> KeepFrameIDs;
+        private readonly Dictionary<string, KeepFrameDefinition> KeepFrameIDs;
         private readonly List<string> SongExtensions;
         private readonly List<Regex> KeepFrameTexts;
         private readonly List<Regex> TitleSplits;
@@ -53,7 +53,7 @@ namespace NaiveMusicUpdater
             FoldersafeConversions = yaml.Go("title_to_foldername").ToDictionary() ?? new();
             NamedStrategies = yaml.Go("named_strategies").ToDictionary(x => MetadataStrategyFactory.Create(x)) ?? new();
             IllegalPrivateOwners = yaml.Go("clear_private_owners").ToList() ?? new();
-            KeepFrameIDs = yaml.Go("keep_frames", "ids").ToList() ?? new();
+            KeepFrameIDs = yaml.Go("keep_frames", "ids").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
             KeepFrameTexts = yaml.Go("keep_frames", "text").ToListFromStrings(x => new Regex(x)) ?? new();
             TitleSplits = yaml.Go("title_splits").ToListFromStrings(x => new Regex(x)) ?? new();
             SongExtensions = yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
@@ -68,6 +68,16 @@ namespace NaiveMusicUpdater
             var aac_gain = yaml.Go("replay_gain", "aac");
             AACGainPath = flac_gain.Go("path").String();
             AACGainArgs = flac_gain.Go("args").String();
+        }
+
+        private record KeepFrameDefinition(string ID, bool DuplicatesAllowed);
+        private KeepFrameDefinition MakeFrameDef(YamlNode node)
+        {
+            if (node is YamlScalarNode simple)
+                return new KeepFrameDefinition((string)simple, false);
+            if (node is YamlMappingNode map)
+                return new KeepFrameDefinition((string)map["id"], Boolean.Parse((string)map["dupes"]));
+            throw new FormatException();
         }
 
         public bool IsSongFile(string file)
@@ -93,15 +103,18 @@ namespace NaiveMusicUpdater
             return false;
         }
 
-        public bool ShouldKeepFrame(TextInformationFrame frame)
+        public (IEnumerable<Frame> keep, IEnumerable<Frame> remove) DecideFrames(TagLib.Id3v2.Tag tag)
         {
-            var id = frame.FrameId.ToString();
-            if (KeepFrameIDs.Contains(id))
-                return true;
-            var text = frame.Text.First();
-            if (KeepFrameTexts.Any(x => x.IsMatch(text)))
-                return true;
-            return false;
+            var remove = new List<Frame>();
+            var frame_types = tag.GetFrames().GroupBy(x => x.FrameId.ToString()).ToList();
+            foreach (var group in frame_types)
+            {
+                if (!KeepFrameIDs.TryGetValue(group.Key, out var definition))
+                    remove.AddRange(group);
+                else if (!definition.DuplicatesAllowed && group.Count() > 1)
+                    remove.AddRange(group.Skip(1));
+            }
+            return (frame_types.SelectMany(x => x).Except(remove), remove);
         }
 
         public string CleanName(string name)

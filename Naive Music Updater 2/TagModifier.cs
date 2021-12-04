@@ -25,7 +25,7 @@ namespace NaiveMusicUpdater
 
         public void UpdateMetadata(Metadata metadata)
         {
-            var interop = TagInteropFactory.GetDynamicInterop(TagFile.Tag);
+            var interop = TagInteropFactory.GetDynamicInterop(TagFile.Tag, Cache.Config);
             if (interop.Changed)
                 Logger.WriteLine("Change detected from creating interop!", ConsoleColor.Red);
             foreach (var field in MetadataField.Values)

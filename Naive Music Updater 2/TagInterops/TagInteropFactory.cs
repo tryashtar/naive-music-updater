@@ -15,16 +15,16 @@ namespace NaiveMusicUpdater
 
     public static class TagInteropFactory
     {
-        public static ITagInterop GetDynamicInterop(dynamic tag)
+        public static ITagInterop GetDynamicInterop(dynamic tag, LibraryConfig config)
         {
-            return GetInterop(tag);
+            return GetInterop(tag, config);
         }
 
-        private static ITagInterop GetInterop(TagLib.Id3v2.Tag tag) => new Id3v2TagInterop(tag);
-        private static ITagInterop GetInterop(TagLib.Id3v1.Tag tag) => new Id3v1TagInterop(tag);
-        private static ITagInterop GetInterop(TagLib.Ape.Tag tag) => new ApeTagInterop(tag);
-        private static ITagInterop GetInterop(TagLib.Ogg.XiphComment tag) => new XiphTagInterop(tag);
-        private static ITagInterop GetInterop(TagLib.Mpeg4.AppleTag tag) => new AppleTagInterop(tag);
-        private static ITagInterop GetInterop(CombinedTag tag) => new MultipleInterop(tag);
+        private static ITagInterop GetInterop(TagLib.Id3v2.Tag tag, LibraryConfig config) => new Id3v2TagInterop(tag, config);
+        private static ITagInterop GetInterop(TagLib.Id3v1.Tag tag, LibraryConfig config) => new Id3v1TagInterop(tag, config);
+        private static ITagInterop GetInterop(TagLib.Ape.Tag tag, LibraryConfig config) => new ApeTagInterop(tag, config);
+        private static ITagInterop GetInterop(TagLib.Ogg.XiphComment tag, LibraryConfig config) => new XiphTagInterop(tag, config);
+        private static ITagInterop GetInterop(TagLib.Mpeg4.AppleTag tag, LibraryConfig config) => new AppleTagInterop(tag, config);
+        private static ITagInterop GetInterop(CombinedTag tag, LibraryConfig config) => new MultipleInterop(tag, config);
     }
 }
