@@ -77,7 +77,7 @@ namespace NaiveMusicUpdater
                 if (item.Value.NodeType == YamlNodeType.Sequence || item.Value.NodeType == YamlNodeType.Scalar)
                 {
                     // this is a song source
-                    IEnumerable<string> sourced = item.Value is YamlSequenceNode j ? j.ToList() : new[] { item.Value.String() };
+                    IEnumerable<string> sourced = item.Value is YamlSequenceNode j ? j.ToStringList() : new[] { item.Value.String() };
 
                     foreach (string song in sourced)
                     {

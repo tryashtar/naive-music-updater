@@ -46,13 +46,13 @@ namespace NaiveMusicUpdater
             }
 
             LowercaseWords = yaml.Go("lowercase").ToListFromStrings(x => x.ToLower())?.ToHashSet() ?? new();
-            SkipNames = yaml.Go("skip").ToList()?.ToHashSet() ?? new();
+            SkipNames = yaml.Go("skip").ToStringList()?.ToHashSet() ?? new();
             FindReplace = yaml.Go("find_replace").ToDictionary() ?? new();
             MapNames = yaml.Go("map").ToDictionary() ?? new();
             FilesafeConversions = yaml.Go("title_to_filename").ToDictionary() ?? new();
             FoldersafeConversions = yaml.Go("title_to_foldername").ToDictionary() ?? new();
             NamedStrategies = yaml.Go("named_strategies").ToDictionary(x => MetadataStrategyFactory.Create(x)) ?? new();
-            IllegalPrivateOwners = yaml.Go("clear_private_owners").ToList() ?? new();
+            IllegalPrivateOwners = yaml.Go("clear_private_owners").ToStringList() ?? new();
             KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
             KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x)) ?? new();
             TitleSplits = yaml.Go("title_splits").ToListFromStrings(x => new Regex(x)) ?? new();

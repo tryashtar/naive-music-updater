@@ -97,7 +97,7 @@ namespace NaiveMusicUpdater
             File.Delete(subalbumini);
             if (art != null)
             {
-                File.WriteAllText(subalbumini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Util.RelativePath(Location, art), ".ico")}, 0");
+                File.WriteAllText(subalbumini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Path.GetRelativePath(Location, art), ".ico")}, 0");
                 File.SetAttributes(subalbumini, FileAttributes.System | FileAttributes.Hidden);
             }
 

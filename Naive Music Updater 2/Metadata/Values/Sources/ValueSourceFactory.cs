@@ -20,7 +20,7 @@ namespace NaiveMusicUpdater
             if (yaml is YamlScalarNode scalar)
                 return new LiteralStringSource(scalar.Value);
             else if (yaml is YamlSequenceNode sequence)
-                return new LiteralListSource(sequence.ToList());
+                return new LiteralListSource(sequence.ToStringList());
             else if (yaml is YamlMappingNode map)
             {
                 var selector = map.Go("from").Parse(x => SingleItemSelectorFactory.Create(x));
