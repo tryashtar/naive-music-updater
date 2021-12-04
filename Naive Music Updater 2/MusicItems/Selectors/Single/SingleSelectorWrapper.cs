@@ -1,20 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿namespace NaiveMusicUpdater;
 
-namespace NaiveMusicUpdater
+public class SingleSelectorWrapper : ISingleItemSelector
 {
-    public class SingleSelectorWrapper : ISingleItemSelector
+    public readonly IItemSelector Wrapped;
+    public SingleSelectorWrapper(IItemSelector wrapped)
     {
-        public readonly IItemSelector Wrapped;
-        public SingleSelectorWrapper(IItemSelector wrapped)
-        {
-            Wrapped = wrapped;
-        }
+        Wrapped = wrapped;
+    }
 
-        public IMusicItem SelectFrom(IMusicItem value)
-        {
-            return Wrapped.AllMatchesFrom(value).SingleOrDefault();
-        }
+    public IMusicItem SelectFrom(IMusicItem value)
+    {
+        return Wrapped.AllMatchesFrom(value).SingleOrDefault();
     }
 }

@@ -1,126 +1,113 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using TagLib;
-using TagLib.Id3v2;
-using YamlDotNet.Serialization;
-using File = System.IO.File;
+﻿using YamlDotNet.Serialization;
 
-namespace NaiveMusicUpdater
+namespace NaiveMusicUpdater;
+
+public class LibraryCache
 {
-    public class LibraryCache
+    public readonly string Folder;
+    public readonly LibraryConfig Config;
+    private readonly Dictionary<string, DateTime> DateCache;
+    private readonly Dictionary<string, DateTime> PendingDateCache;
+    private string DateCachePath => Path.Combine(Folder, "datecache.yaml");
+    private string ConfigPath => Path.Combine(Folder, "library.yaml");
+    public LibraryCache(string folder)
     {
-        public readonly string Folder;
-        public readonly LibraryConfig Config;
-        private readonly Dictionary<string, DateTime> DateCache;
-        private readonly Dictionary<string, DateTime> PendingDateCache;
-        private string DateCachePath => Path.Combine(Folder, "datecache.yaml");
-        private string ConfigPath => Path.Combine(Folder, "library.yaml");
-        public LibraryCache(string folder)
+        Folder = folder;
+        Config = new LibraryConfig(ConfigPath);
+        if (File.Exists(DateCachePath))
         {
-            Folder = folder;
-            Config = new LibraryConfig(ConfigPath);
-            if (File.Exists(DateCachePath))
-            {
-                var datecache = File.ReadAllText(DateCachePath);
-                var deserializer = new DeserializerBuilder().Build();
-                DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache) ?? new Dictionary<string, DateTime>();
-                PendingDateCache = new Dictionary<string, DateTime>(DateCache);
-            }
-            else
-            {
-                Logger.WriteLine($"Couldn't find date cache {DateCachePath}, starting fresh");
-                DateCache = new Dictionary<string, DateTime>();
-                PendingDateCache = new Dictionary<string, DateTime>();
-            }
+            var datecache = File.ReadAllText(DateCachePath);
+            var deserializer = new DeserializerBuilder().Build();
+            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache) ?? new Dictionary<string, DateTime>();
+            PendingDateCache = new Dictionary<string, DateTime>(DateCache);
         }
-
-        public void Save()
+        else
         {
-            foreach (var item in ArtCache.Cached.Keys)
-            {
-                PendingDateCache[item] = DateTime.Now;
-            }
-            var serializer = new SerializerBuilder().Build();
-            File.WriteAllText(DateCachePath, serializer.Serialize(PendingDateCache));
+            Logger.WriteLine($"Couldn't find date cache {DateCachePath}, starting fresh");
+            DateCache = new Dictionary<string, DateTime>();
+            PendingDateCache = new Dictionary<string, DateTime>();
         }
+    }
 
-        public bool NeedsUpdate(IMusicItem item)
+    public void Save()
+    {
+        foreach (var item in ArtCache.Cached.Keys)
         {
-            foreach (var path in RelevantPaths(item))
+            PendingDateCache[item] = DateTime.Now;
+        }
+        var serializer = new SerializerBuilder().Build();
+        File.WriteAllText(DateCachePath, serializer.Serialize(PendingDateCache));
+    }
+
+    public bool NeedsUpdate(IMusicItem item)
+    {
+        foreach (var path in RelevantPaths(item))
+        {
+            var date = TouchedTime(path);
+            if (DateCache.TryGetValue(path, out var cached))
             {
-                var date = TouchedTime(path);
-                if (DateCache.TryGetValue(path, out var cached))
-                {
-                    if (date - TimeSpan.FromSeconds(5) > cached)
-                        return true;
-                }
-                else
+                if (date - TimeSpan.FromSeconds(5) > cached)
                     return true;
             }
-            return false;
+            else
+                return true;
         }
+        return false;
+    }
 
-        private IEnumerable<string> RelevantPaths(IMusicItem item)
+    private IEnumerable<string> RelevantPaths(IMusicItem item)
+    {
+        yield return item.Location;
+        var art = GetArtPathFor(item);
+        if (art != null)
+            yield return art;
+        foreach (var parent in item.PathFromRoot())
         {
-            yield return item.Location;
-            var art = GetArtPathFor(item);
-            if (art != null)
-                yield return art;
-            foreach (var parent in item.PathFromRoot())
+            if (parent.LocalConfig != null)
+                yield return parent.LocalConfig.Location;
+        }
+    }
+
+    private static DateTime TouchedTime(string filepath)
+    {
+        DateTime modified = File.GetLastWriteTime(filepath);
+        DateTime created = File.GetCreationTime(filepath);
+        return modified > created ? modified : created;
+    }
+
+    public string GetArtPathFor(IMusicItem item)
+    {
+        while (item != null)
+        {
+            var partial = Util.StringPathAfterRoot(item);
+            if (item is Song)
+                partial = Path.ChangeExtension(partial, null);
+            var path = Path.Combine(Folder, "art", partial + ".png");
+            if (File.Exists(path))
+                return path;
+            if (item is Song)
             {
-                if (parent.LocalConfig != null)
-                    yield return parent.LocalConfig.Location;
+                string parent = Path.GetDirectoryName(partial);
+                string contents = Path.Combine(parent, "__contents__");
+                var contents_path = Path.Combine(Folder, "art", contents + ".png");
+                if (File.Exists(contents_path))
+                    return contents_path;
             }
+            item = item.Parent;
         }
+        return null;
+    }
 
-        private static DateTime TouchedTime(string filepath)
+    public void MarkUpdatedRecently(IMusicItem item)
+    {
+        foreach (var path in RelevantPaths(item))
         {
-            DateTime modified = File.GetLastWriteTime(filepath);
-            DateTime created = File.GetCreationTime(filepath);
-            return modified > created ? modified : created;
+            PendingDateCache[path] = DateTime.Now;
         }
+    }
 
-        public string GetArtPathFor(IMusicItem item)
-        {
-            while (item != null)
-            {
-                var partial = Util.StringPathAfterRoot(item);
-                if (item is Song)
-                    partial = Path.ChangeExtension(partial, null);
-                var path = Path.Combine(Folder, "art", partial + ".png");
-                if (File.Exists(path))
-                    return path;
-                if (item is Song)
-                {
-                    string parent = Path.GetDirectoryName(partial);
-                    string contents = Path.Combine(parent, "__contents__");
-                    var contents_path = Path.Combine(Folder, "art", contents + ".png");
-                    if (File.Exists(contents_path))
-                        return contents_path;
-                }
-                item = item.Parent;
-            }
-            return null;
-        }
-
-        public void MarkUpdatedRecently(IMusicItem item)
-        {
-            foreach (var path in RelevantPaths(item))
-            {
-                PendingDateCache[path] = DateTime.Now;
-            }
-        }
-
-        public void MarkNeedsUpdateNextTime(IMusicItem item)
-        {
-            PendingDateCache.Remove(item.Location);
-        }
+    public void MarkNeedsUpdateNextTime(IMusicItem item)
+    {
+        PendingDateCache.Remove(item.Location);
     }
 }

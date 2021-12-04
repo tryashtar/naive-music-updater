@@ -1,28 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿namespace NaiveMusicUpdater;
 
-namespace NaiveMusicUpdater
+public class MultipleValueOperator : IValueOperator
 {
-    public class MultipleValueOperator : IValueOperator
+    private readonly List<IValueOperator> Operators;
+
+    public MultipleValueOperator(IEnumerable<IValueOperator> operators)
     {
-        private readonly List<IValueOperator> Operators;
+        Operators = operators.ToList();
+    }
 
-        public MultipleValueOperator(IEnumerable<IValueOperator> operators)
+    public IValue Apply(IMusicItem item, IValue original)
+    {
+        foreach (var op in Operators)
         {
-            Operators = operators.ToList();
+            original = op.Apply(item, original);
         }
-
-        public IValue Apply(IMusicItem item, IValue original)
-        {
-            foreach (var op in Operators)
-            {
-                original = op.Apply(item, original);
-            }
-            return original;
-        }
+        return original;
     }
 }

@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>NaiveMusicUpdater</AssemblyName>
     <RootNamespace>NaiveMusicUpdater</RootNamespace>
+    <LangVersion>10.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Drawing.Common" Version="5.0.2" />

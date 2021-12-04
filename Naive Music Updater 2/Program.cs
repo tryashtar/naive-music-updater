@@ -1,60 +1,53 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace NaiveMusicUpdater;
 
-namespace NaiveMusicUpdater
+public static class Program
 {
-    public static class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
-        {
-            Console.OutputEncoding = Encoding.UTF8;
-            Logger.WriteLine("NAIVE MUSIC UPDATER");
+        Console.OutputEncoding = Encoding.UTF8;
+        Logger.WriteLine("NAIVE MUSIC UPDATER");
 
-            // allows album art to show up in explorer
-            TagLib.Id3v2.Tag.DefaultVersion = 3;
-            TagLib.Id3v2.Tag.ForceDefaultVersion = true;
+        // allows album art to show up in explorer
+        TagLib.Id3v2.Tag.DefaultVersion = 3;
+        TagLib.Id3v2.Tag.ForceDefaultVersion = true;
 
 #if DEBUG
-            if (args.Length > 0)
+        if (args.Length > 0)
+        {
+            try
             {
-                try
-                {
-                    PrintFrames(args);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.ToString());
-                }
-                Console.ReadLine();
-                return;
+                PrintFrames(args);
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            Console.ReadLine();
+            return;
+        }
 #endif
 
-            string FolderPath;
+        string FolderPath;
 #if DEBUG
-            FolderPath = File.ReadAllText("folder.txt");
+        FolderPath = File.ReadAllText("folder.txt");
 #else
             FolderPath = Directory.GetCurrentDirectory();
 #endif
 #if !DEBUG
             try
 #endif
-            {
-                var library = new MusicLibrary(FolderPath);
-                library.UpdateLibrary();
-                Logger.WriteLine();
-                library.UpdateSources();
-                Logger.WriteLine();
-                var results = library.CheckSelectors();
-# if !DEBUG
+        {
+            var library = new MusicLibrary(FolderPath);
+            library.UpdateLibrary();
+            Logger.WriteLine();
+            library.UpdateSources();
+            Logger.WriteLine();
+            var results = library.CheckSelectors();
+#if !DEBUG
                 if (results.AnyUnused)
                     Console.ReadLine();
 #endif
-            }
+        }
 #if !DEBUG
             catch (Exception ex)
             {
@@ -62,59 +55,58 @@ namespace NaiveMusicUpdater
                 Console.ReadLine();
             }
 #endif
-            Logger.Close();
-        }
+        Logger.Close();
+    }
 
-        public static void PrintFrames(string[] paths)
+    public static void PrintFrames(string[] paths)
+    {
+        foreach (var item in paths)
         {
-            foreach (var item in paths)
+            if (File.Exists(item))
             {
-                if (File.Exists(item))
-                {
-                    var song = TagLib.File.Create(item);
-                    Console.WriteLine(item);
-                    var tag = song.Tag;
-                    PrintTag(tag);
-                }
+                var song = TagLib.File.Create(item);
+                Console.WriteLine(item);
+                var tag = song.Tag;
+                PrintTag(tag);
             }
         }
+    }
 
-        private static void PrintTag(TagLib.Tag tag)
+    private static void PrintTag(TagLib.Tag tag)
+    {
+        var name = tag.GetType().ToString();
+        Console.WriteLine(name);
+        Console.WriteLine(new String('-', name.Length));
+        if (tag is TagLib.CombinedTag combined)
         {
-            var name = tag.GetType().ToString();
-            Console.WriteLine(name);
-            Console.WriteLine(new String('-', name.Length));
-            if (tag is TagLib.CombinedTag combined)
+            foreach (var sub in combined.Tags)
             {
-                foreach (var sub in combined.Tags)
-                {
-                    PrintTag(sub);
-                }
+                PrintTag(sub);
             }
-            if (tag is TagLib.Id3v2.Tag id3v2)
-            {
-                foreach (var frame in id3v2.GetFrames().ToList())
-                {
-                    Console.WriteLine(FrameViewer.ToString(frame));
-                }
-            }
-            if (tag is TagLib.Ape.Tag ape)
-            {
-                foreach (var key in ape)
-                {
-                    var value = ape.GetItem(key);
-                    Console.WriteLine($"{key}: {value}");
-                }
-            }
-            if (tag is TagLib.Ogg.XiphComment xiph)
-            {
-                foreach (var key in xiph)
-                {
-                    var value = xiph.GetField(key);
-                    Console.WriteLine($"{key}: {String.Join("\n", value)}");
-                }
-            }
-            Console.WriteLine(new String('-', name.Length));
         }
+        if (tag is TagLib.Id3v2.Tag id3v2)
+        {
+            foreach (var frame in id3v2.GetFrames().ToList())
+            {
+                Console.WriteLine(FrameViewer.ToString(frame));
+            }
+        }
+        if (tag is TagLib.Ape.Tag ape)
+        {
+            foreach (var key in ape)
+            {
+                var value = ape.GetItem(key);
+                Console.WriteLine($"{key}: {value}");
+            }
+        }
+        if (tag is TagLib.Ogg.XiphComment xiph)
+        {
+            foreach (var key in xiph)
+            {
+                var value = xiph.GetField(key);
+                Console.WriteLine($"{key}: {String.Join("\n", value)}");
+            }
+        }
+        Console.WriteLine(new String('-', name.Length));
     }
 }

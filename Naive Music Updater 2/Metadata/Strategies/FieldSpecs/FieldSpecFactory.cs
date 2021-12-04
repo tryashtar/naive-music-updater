@@ -1,45 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using YamlDotNet.RepresentationModel;
+﻿namespace NaiveMusicUpdater;
 
-namespace NaiveMusicUpdater
+public interface IFieldSpec
 {
-    public interface IFieldSpec
-    {
-        Metadata Apply(IMusicItem item, Predicate<MetadataField> desired);
-        Metadata ApplyWithContext(IMusicItem item, IValue value, Predicate<MetadataField> desired);
-    }
+    Metadata Apply(IMusicItem item, Predicate<MetadataField> desired);
+    Metadata ApplyWithContext(IMusicItem item, IValue value, Predicate<MetadataField> desired);
+}
 
-    public static class FieldSpecFactory
+public static class FieldSpecFactory
+{
+    public static IFieldSpec Create(YamlNode yaml, bool has_context)
     {
-        public static IFieldSpec Create(YamlNode yaml, bool has_context)
+        if (yaml is YamlMappingNode map)
         {
-            if (yaml is YamlMappingNode map)
+            var fields = yaml.Go("fields");
+            if (fields != null)
             {
-                var fields = yaml.Go("fields");
-                if (fields != null)
-                {
-                    IEnumerable<MetadataField> set;
-                    if (fields is YamlScalarNode scalar && scalar.Value == "*")
-                        set = MetadataField.Values;
-                    else
-                        set = fields.ToList(x => MetadataField.FromID(x.String()));
-                    var setter = yaml.Go("set").Parse(x => FieldSetterFactory.Create(x, has_context));
-                    return new SetAllFieldSpec(set.ToHashSet(), setter);
-                }
+                IEnumerable<MetadataField> set;
+                if (fields is YamlScalarNode scalar && scalar.Value == "*")
+                    set = MetadataField.Values;
                 else
-                {
-                    var direct = yaml.ToDictionary(
-                        x => MetadataField.FromID(x.String()),
-                        x => FieldSetterFactory.Create(x, has_context)
-                    );
-                    return new MapFieldSpec(direct);
-                }
+                    set = fields.ToList(x => MetadataField.FromID(x.String()));
+                var setter = yaml.Go("set").Parse(x => FieldSetterFactory.Create(x, has_context));
+                return new SetAllFieldSpec(set.ToHashSet(), setter);
             }
-            throw new ArgumentException($"Can't make field spec from {yaml}");
+            else
+            {
+                var direct = yaml.ToDictionary(
+                    x => MetadataField.FromID(x.String()),
+                    x => FieldSetterFactory.Create(x, has_context)
+                );
+                return new MapFieldSpec(direct);
+            }
         }
+        throw new ArgumentException($"Can't make field spec from {yaml}");
     }
 }

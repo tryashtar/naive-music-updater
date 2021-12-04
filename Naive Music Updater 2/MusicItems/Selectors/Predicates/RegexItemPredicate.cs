@@ -1,23 +1,20 @@
-﻿using System.Text.RegularExpressions;
+﻿namespace NaiveMusicUpdater;
 
-namespace NaiveMusicUpdater
+public class RegexItemPredicate : IItemPredicate
 {
-    public class RegexItemPredicate : IItemPredicate
+    public readonly Regex Matcher;
+    public RegexItemPredicate(Regex regex)
     {
-        public readonly Regex Matcher;
-        public RegexItemPredicate(Regex regex)
-        {
-            Matcher = regex;
-        }
+        Matcher = regex;
+    }
 
-        public bool Matches(IMusicItem item)
-        {
-            return Matcher.IsMatch(item.SimpleName);
-        }
+    public bool Matches(IMusicItem item)
+    {
+        return Matcher.IsMatch(item.SimpleName);
+    }
 
-        public override string ToString()
-        {
-            return Matcher.ToString();
-        }
+    public override string ToString()
+    {
+        return Matcher.ToString();
     }
 }

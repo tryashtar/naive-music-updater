@@ -1,24 +1,21 @@
-﻿using System.Collections.Generic;
-using Tag = TagLib.Tag;
+﻿namespace NaiveMusicUpdater;
 
-namespace NaiveMusicUpdater
+public abstract class BasicInterop : AbstractInterop<Tag>
 {
-    public abstract class BasicInterop : AbstractInterop<Tag>
+    public BasicInterop(Tag tag, LibraryConfig config) : base(tag, config) { }
+    protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
     {
-        public BasicInterop(Tag tag, LibraryConfig config) : base(tag, config) { }
-        protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
-        {
-            return BasicSchema(Tag);
-        }
+        return BasicSchema(Tag);
+    }
 
-        protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
-        {
-            return BasicWipeSchema(Tag);
-        }
+    protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+    {
+        return BasicWipeSchema(Tag);
+    }
 
-        public static Dictionary<MetadataField, InteropDelegates> BasicSchema(Tag tag)
-        {
-            return new Dictionary<MetadataField, InteropDelegates>
+    public static Dictionary<MetadataField, InteropDelegates> BasicSchema(Tag tag)
+    {
+        return new Dictionary<MetadataField, InteropDelegates>
             {
                 { MetadataField.Album, Delegates(() => Get(tag.Album), x => tag.Album = Value(x)) },
                 { MetadataField.AlbumArtists, Delegates(() => Get(tag.AlbumArtists), x => tag.AlbumArtists = Array(x)) },
@@ -34,11 +31,11 @@ namespace NaiveMusicUpdater
                 { MetadataField.DiscTotal, NumDelegates(() => Get(tag.DiscCount), x => tag.DiscCount = Number(x)) },
                 { MetadataField.Year, NumDelegates(() => Get(tag.Year), x => tag.Year = Number(x)) },
             };
-        }
+    }
 
-        public static Dictionary<string, WipeDelegates> BasicWipeSchema(Tag tag)
-        {
-            return new Dictionary<string, WipeDelegates>
+    public static Dictionary<string, WipeDelegates> BasicWipeSchema(Tag tag)
+    {
+        return new Dictionary<string, WipeDelegates>
             {
                 { "publisher", SimpleWipe(() => tag.Publisher, () => tag.Publisher = null) },
                 { "bpm", SimpleWipe(() => tag.BeatsPerMinute, () => tag.BeatsPerMinute = 0) },
@@ -51,11 +48,11 @@ namespace NaiveMusicUpdater
                 { "musicbrainz data", SimpleWipe(() => GetMusicBrainz(tag), () => WipeMusicBrainz(tag)) },
                 { "music ip", SimpleWipe(() => tag.MusicIpId, () => tag.MusicIpId = null) },
             };
-        }
+    }
 
-        private static string[] GetMusicBrainz(Tag tag)
-        {
-            return new string[] {
+    private static string[] GetMusicBrainz(Tag tag)
+    {
+        return new string[] {
                 tag.MusicBrainzArtistId,
                 tag.MusicBrainzDiscId,
                 tag.MusicBrainzReleaseArtistId,
@@ -65,18 +62,17 @@ namespace NaiveMusicUpdater
                 tag.MusicBrainzReleaseType,
                 tag.MusicBrainzTrackId,
             };
-        }
+    }
 
-        private static void WipeMusicBrainz(Tag tag)
-        {
-            tag.MusicBrainzArtistId = null;
-            tag.MusicBrainzDiscId = null;
-            tag.MusicBrainzReleaseArtistId = null;
-            tag.MusicBrainzReleaseCountry = null;
-            tag.MusicBrainzReleaseId = null;
-            tag.MusicBrainzReleaseStatus = null;
-            tag.MusicBrainzReleaseType = null;
-            tag.MusicBrainzTrackId = null;
-        }
+    private static void WipeMusicBrainz(Tag tag)
+    {
+        tag.MusicBrainzArtistId = null;
+        tag.MusicBrainzDiscId = null;
+        tag.MusicBrainzReleaseArtistId = null;
+        tag.MusicBrainzReleaseCountry = null;
+        tag.MusicBrainzReleaseId = null;
+        tag.MusicBrainzReleaseStatus = null;
+        tag.MusicBrainzReleaseType = null;
+        tag.MusicBrainzTrackId = null;
     }
 }

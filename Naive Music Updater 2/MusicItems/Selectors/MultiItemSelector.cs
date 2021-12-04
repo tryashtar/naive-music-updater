@@ -1,35 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿namespace NaiveMusicUpdater;
 
-namespace NaiveMusicUpdater
+public class MultiItemSelector : IItemSelector
 {
-    public class MultiItemSelector : IItemSelector
+    private readonly List<IItemSelector> Subselectors;
+
+    public MultiItemSelector(IEnumerable<IItemSelector> subselectors)
     {
-        private readonly List<IItemSelector> Subselectors;
+        Subselectors = subselectors.ToList();
+    }
 
-        public MultiItemSelector(IEnumerable<IItemSelector> subselectors)
+    public IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start)
+    {
+        foreach (var item in Subselectors)
         {
-            Subselectors = subselectors.ToList();
+            var submatches = item.AllMatchesFrom(start);
+            foreach (var sub in submatches) { yield return sub; }
         }
+    }
 
-        public IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start)
-        {
-            foreach (var item in Subselectors)
-            {
-                var submatches = item.AllMatchesFrom(start);
-                foreach (var sub in submatches) { yield return sub; }
-            }
-        }
+    public bool IsSelectedFrom(IMusicItem start, IMusicItem item)
+    {
+        return Subselectors.Any(x => x.IsSelectedFrom(start, item));
+    }
 
-        public bool IsSelectedFrom(IMusicItem start, IMusicItem item)
-        {
-            return Subselectors.Any(x => x.IsSelectedFrom(start, item));
-        }
-
-        public IEnumerable<IItemSelector> UnusedFrom(IMusicItem start)
-        {
-            return Subselectors.SelectMany(x => x.UnusedFrom(start));
-        }
+    public IEnumerable<IItemSelector> UnusedFrom(IMusicItem start)
+    {
+        return Subselectors.SelectMany(x => x.UnusedFrom(start));
     }
 }
