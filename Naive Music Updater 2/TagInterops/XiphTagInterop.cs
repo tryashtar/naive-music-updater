@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using TagLib;
 using Tag = TagLib.Tag;
@@ -24,16 +25,36 @@ namespace NaiveMusicUpdater
         protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
         {
             var schema = BasicInterop.BasicWipeSchema(Tag);
-            AddFieldWipes(schema, "LABEL", "ISRC", "BARCODE");
+            AddFieldWipes(schema);
             return schema;
         }
 
-        private void AddFieldWipes(Dictionary<string, WipeDelegates> schema, params string[] fields)
+        private IEnumerable<(string key, string val)> UnwantedMetadata()
         {
-            foreach (var field in fields)
+            foreach (var key in Tag)
             {
-                schema.Add(field, SimpleWipe(() => String.Join(";", Tag.GetField(field)), () => Tag.RemoveField(field)));
+                if (!Config.ShouldKeepXiph(key))
+                    yield return (key, String.Join("; ", Tag.GetField(key)));
             }
+        }
+
+        private void AddFieldWipes(Dictionary<string, WipeDelegates> schema)
+        {
+            schema.Add("unwanted metadata", SimpleWipeRet(
+                () =>
+                {
+                    var unwanted = UnwantedMetadata();
+                    return string.Join("\n", unwanted.Select(x => $"Key: {x.key}, Value: {x.val}"));
+                },
+                () =>
+                {
+                    var unwanted = UnwantedMetadata().ToList();
+                    foreach (var meta in unwanted)
+                    {
+                        Tag.RemoveField(meta.key);
+                    }
+                    return unwanted.Count > 0;
+                }));
         }
     }
 }

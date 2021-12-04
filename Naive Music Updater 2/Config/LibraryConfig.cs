@@ -29,8 +29,8 @@ namespace NaiveMusicUpdater
         private readonly string AACGainArgs;
         private readonly List<string> IllegalPrivateOwners;
         private readonly Dictionary<string, KeepFrameDefinition> KeepFrameIDs;
+        private readonly List<Regex> KeepXiphMetadata;
         private readonly List<string> SongExtensions;
-        private readonly List<Regex> KeepFrameTexts;
         private readonly List<Regex> TitleSplits;
         public readonly int SourceAutoMaxDistance;
 
@@ -53,8 +53,8 @@ namespace NaiveMusicUpdater
             FoldersafeConversions = yaml.Go("title_to_foldername").ToDictionary() ?? new();
             NamedStrategies = yaml.Go("named_strategies").ToDictionary(x => MetadataStrategyFactory.Create(x)) ?? new();
             IllegalPrivateOwners = yaml.Go("clear_private_owners").ToList() ?? new();
-            KeepFrameIDs = yaml.Go("keep_frames", "ids").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
-            KeepFrameTexts = yaml.Go("keep_frames", "text").ToListFromStrings(x => new Regex(x)) ?? new();
+            KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
+            KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x)) ?? new();
             TitleSplits = yaml.Go("title_splits").ToListFromStrings(x => new Regex(x)) ?? new();
             SongExtensions = yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
 
@@ -115,6 +115,11 @@ namespace NaiveMusicUpdater
                     remove.AddRange(group.Skip(1));
             }
             return (frame_types.SelectMany(x => x).Except(remove), remove);
+        }
+
+        public bool ShouldKeepXiph(string key)
+        {
+            return KeepXiphMetadata.Any(x => x.IsMatch(key));
         }
 
         public string CleanName(string name)
