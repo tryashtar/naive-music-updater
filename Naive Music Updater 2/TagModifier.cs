@@ -25,6 +25,32 @@ public class TagModifier
             HasChanged = true;
     }
 
+    private static Lyrics Better(Lyrics l1, Lyrics l2)
+    {
+        if (l1 == null)
+            return l2;
+        if (l2 == null)
+            return l1;
+        if (l1.Lines.Count == 0)
+            return l2;
+        if (l2.Lines.Count == 0)
+            return l1;
+        return l1;
+    }
+
+    private static ChapterCollection Better(ChapterCollection l1, ChapterCollection l2)
+    {
+        if (l1 == null)
+            return l2;
+        if (l2 == null)
+            return l1;
+        if (l1.Chapters.Count == 0)
+            return l2;
+        if (l2.Chapters.Count == 0)
+            return l1;
+        return l1;
+    }
+
     public void WriteLyrics(string location)
     {
         var lyrics_file = Path.Combine(Cache.Folder, "lyrics", location) + ".lrc";
@@ -32,7 +58,9 @@ public class TagModifier
 
         var embedded = LyricsIO.FromFile(TagFile);
         var cached = cached_text == null ? null : LyricsIO.FromLrc(cached_text);
-        var best = embedded ?? cached;
+        var best = Better(embedded, cached);
+        if (best != null && best.Lines.Count == 0)
+            best = null; // wipe when empty
 
         if (LyricsIO.ToFile(TagFile, best))
         {
@@ -59,7 +87,9 @@ public class TagModifier
 
         var embedded = ChaptersIO.FromFile(TagFile);
         var cached = cached_text == null ? null : ChaptersIO.FromChp(cached_text);
-        var best = embedded ?? cached;
+        var best = Better(embedded, cached);
+        if (best != null && best.Chapters.Count == 0)
+            best = null; // wipe when empty
 
         if (ChaptersIO.ToFile(TagFile, best))
         {
