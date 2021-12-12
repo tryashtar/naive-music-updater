@@ -71,7 +71,7 @@ public class TagModifier
         if (best != cached && best != null)
         {
             var writing = best.ToLrc();
-            if (!cached_text.SequenceEqual(writing))
+            if (cached_text == null || !cached_text.SequenceEqual(writing))
             {
                 Logger.WriteLine($"Rewriting cached lyrics");
                 Directory.CreateDirectory(Path.GetDirectoryName(lyrics_file));

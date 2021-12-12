@@ -1,4 +1,6 @@
-﻿namespace NaiveMusicUpdater;
+﻿using System.Runtime.InteropServices;
+
+namespace NaiveMusicUpdater;
 
 public class MusicFolder : IMusicItem
 {
@@ -70,6 +72,9 @@ public class MusicFolder : IMusicItem
     public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
     public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
 
+    [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+    static extern void SHChangeNotify(int wEventId, int uFlags, [MarshalAs(UnmanagedType.LPWStr)] string dwItem1, [MarshalAs(UnmanagedType.LPWStr)] string dwItem2);
+
     public void Update()
     {
         Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
@@ -86,12 +91,13 @@ public class MusicFolder : IMusicItem
         //var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
         var art = GlobalCache.GetArtPathFor(this);
         ArtCache.LoadAndMakeIcon(art);
-        string subalbumini = Path.Combine(Location, "desktop.ini");
-        File.Delete(subalbumini);
+        string desktop_ini = Path.Combine(Location, "desktop.ini");
+        File.Delete(desktop_ini);
         if (art != null)
         {
-            File.WriteAllText(subalbumini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Path.GetRelativePath(Location, art), ".ico")}, 0");
-            File.SetAttributes(subalbumini, FileAttributes.System | FileAttributes.Hidden);
+            File.WriteAllText(desktop_ini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Path.GetRelativePath(Location, art), ".ico")}, 0");
+            File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
+            SHChangeNotify(0x08000000, 0x0005 | 0x2000, Location, null);
         }
 
         Logger.TabIn();

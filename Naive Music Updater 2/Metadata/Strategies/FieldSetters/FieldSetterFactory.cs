@@ -15,15 +15,12 @@ public static class FieldSetterFactory
             var mode = map.Go("mode").ToEnum(def: CombineMode.Replace);
             if (mode == CombineMode.Remove)
                 return RemoveFieldSetter.Instance;
+            var modify = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
             var source = map.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
             if (source != null)
-                return new ModeValueSourceFieldSetter(mode, source);
-            if (has_context)
-            {
-                var modify = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
-                if (modify != null)
-                    return new ModeContextFieldSetter(mode, modify);
-            }
+                return new ModeValueSourceFieldSetter(mode, source, modify);
+            if (has_context && modify != null)
+                return new ModeContextFieldSetter(mode, modify);
         }
         var direct_source = ValueSourceFactory.Create(yaml);
         return new DirectValueSourceFieldSetter(direct_source);
