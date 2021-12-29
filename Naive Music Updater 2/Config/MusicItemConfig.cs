@@ -3,8 +3,8 @@
 public class MusicItemConfig
 {
     public readonly string Location;
-    public readonly ISongOrder TrackOrder;
-    public readonly ISongOrder DiscOrder;
+    public readonly ISongOrder? TrackOrder;
+    public readonly ISongOrder? DiscOrder;
     public readonly IMetadataStrategy SongsStrategy;
     public readonly IMetadataStrategy FoldersStrategy;
     public readonly List<TargetedStrategy> MetadataStrategies;
@@ -43,7 +43,7 @@ public class MusicItemConfig
 
     private IMetadataStrategy LiteralOrReference(YamlNode node)
     {
-        if (node is YamlScalarNode scalar)
+        if (node is YamlScalarNode scalar && scalar.Value != null)
             return ConfiguredItem.GlobalCache.Config.GetNamedStrategy(scalar.Value);
         else
         {

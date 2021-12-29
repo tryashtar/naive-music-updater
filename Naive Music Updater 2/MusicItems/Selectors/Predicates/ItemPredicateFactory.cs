@@ -9,7 +9,7 @@ public static class ItemPredicateFactory
 {
     public static IItemPredicate FromNode(YamlNode node)
     {
-        if (node is YamlScalarNode scalar)
+        if (node is YamlScalarNode scalar && scalar.Value != null)
             return new ExactItemPredicate(scalar.Value);
         if (node is YamlMappingNode map)
         {

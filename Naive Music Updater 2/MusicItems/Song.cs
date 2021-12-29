@@ -5,7 +5,7 @@ public class Song : IMusicItem
     public string Location { get; private set; }
     protected readonly MusicFolder _Parent;
     public MusicFolder Parent => _Parent;
-    public MusicItemConfig LocalConfig => null;
+    public MusicItemConfig? LocalConfig => null;
     public LibraryCache GlobalCache => _Parent.GlobalCache;
     public Song(MusicFolder parent, string file)
     {
@@ -14,7 +14,7 @@ public class Song : IMusicItem
     }
 
 #if DEBUG
-    private static string Breakpoint;
+    private static readonly string? Breakpoint;
     static Song()
     {
         if (File.Exists("break.txt"))

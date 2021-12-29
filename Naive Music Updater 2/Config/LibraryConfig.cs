@@ -117,7 +117,7 @@ public class LibraryConfig
             if (String.Equals(skip, name, StringComparison.OrdinalIgnoreCase))
                 return skip;
         }
-        if (MapNames.TryGetValue(name, out string result))
+        if (MapNames.TryGetValue(name, out var result))
             return result;
         name = FindReplaceName(name);
         name = CorrectCase(name);
@@ -173,7 +173,7 @@ public class LibraryConfig
         string location = song.Location;
         bool abnormal_chars = song.Location.Any(x => x > 255);
         string temp_file = Path.Combine(Path.GetTempPath(), "temp-song" + Path.GetExtension(song.Location));
-        string text_file = Path.Combine(Path.GetDirectoryName(song.Location), "temp-song-original.txt");
+        string text_file = Path.Combine(Path.GetDirectoryName(song.Location)!, "temp-song-original.txt");
         if (abnormal_chars)
         {
             Logger.WriteLine("Weird characters detected, doing weird rename thingy");

@@ -176,7 +176,7 @@ public class MusicLibrary : MusicFolder
 
     private static (string result, int distance)? MinLevenshtein(string template, IEnumerable<string> options)
     {
-        string result = null;
+        string? result = null;
         int min = int.MaxValue;
         foreach (var item in options)
         {

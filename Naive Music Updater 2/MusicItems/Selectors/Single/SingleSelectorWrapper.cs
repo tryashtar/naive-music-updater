@@ -8,7 +8,7 @@ public class SingleSelectorWrapper : ISingleItemSelector
         Wrapped = wrapped;
     }
 
-    public IMusicItem SelectFrom(IMusicItem value)
+    public IMusicItem? SelectFrom(IMusicItem value)
     {
         return Wrapped.AllMatchesFrom(value).SingleOrDefault();
     }

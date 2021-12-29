@@ -10,7 +10,7 @@ public class ParentItemSelector : ISingleItemSelector
         MustBe = must_be;
     }
 
-    public IMusicItem SelectFrom(IMusicItem value)
+    public IMusicItem? SelectFrom(IMusicItem value)
     {
         for (int i = 0; i < Up; i++)
         {
@@ -21,7 +21,7 @@ public class ParentItemSelector : ISingleItemSelector
         return CheckMustBe(value);
     }
 
-    private IMusicItem CheckMustBe(IMusicItem item)
+    private IMusicItem? CheckMustBe(IMusicItem item)
     {
         if (MustBe == null)
             return item;

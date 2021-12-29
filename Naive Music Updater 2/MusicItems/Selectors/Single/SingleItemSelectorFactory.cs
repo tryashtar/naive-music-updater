@@ -2,7 +2,7 @@
 
 public interface ISingleItemSelector
 {
-    IMusicItem SelectFrom(IMusicItem start);
+    IMusicItem? SelectFrom(IMusicItem start);
 }
 
 public static class SingleItemSelectorFactory

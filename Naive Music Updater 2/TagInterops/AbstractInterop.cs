@@ -68,7 +68,7 @@ public abstract class AbstractInterop<T> : ITagInterop where T : Tag
         }
     }
 
-    protected static MetadataProperty Get(string str)
+    protected static MetadataProperty Get(string? str)
     {
         if (str == null)
             return MetadataProperty.Ignore();
@@ -87,7 +87,7 @@ public abstract class AbstractInterop<T> : ITagInterop where T : Tag
         return new MetadataProperty(new ListValue(str), CombineMode.Replace);
     }
 
-    protected static string Value(MetadataProperty prop)
+    protected static string? Value(MetadataProperty prop)
     {
         if (prop.Value.IsBlank)
             return null;
@@ -105,7 +105,7 @@ public abstract class AbstractInterop<T> : ITagInterop where T : Tag
     {
         if (prop.Value.IsBlank)
             return 0;
-        return uint.Parse(Value(prop));
+        return uint.Parse(Value(prop)!);
     }
 
     protected static bool StringEqual(MetadataProperty p1, MetadataProperty p2)
@@ -141,12 +141,7 @@ public abstract class AbstractInterop<T> : ITagInterop where T : Tag
             var before = get();
             bool changed = set();
             var after = get();
-            return new WipeResult()
-            {
-                OldValue = before,
-                NewValue = after,
-                Changed = changed
-            };
+            return new WipeResult(before, after, changed);
         });
     }
 

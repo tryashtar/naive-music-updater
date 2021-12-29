@@ -8,11 +8,11 @@ public class MusicFolder : IMusicItem
     public string Location { get; private set; }
     protected readonly MusicItemConfig _LocalConfig;
     public MusicItemConfig LocalConfig => _LocalConfig;
-    public virtual LibraryCache GlobalCache => _Parent.GlobalCache;
-    protected readonly MusicFolder _Parent;
-    public MusicFolder Parent => _Parent;
-    protected List<MusicFolder> ChildFolders;
-    protected List<Song> SongList;
+    public virtual LibraryCache GlobalCache => _Parent?.GlobalCache ?? throw new NullReferenceException();
+    protected readonly MusicFolder? _Parent;
+    public MusicFolder? Parent => _Parent;
+    protected readonly List<MusicFolder> ChildFolders = new();
+    protected readonly List<Song> SongList = new();
     public IReadOnlyList<MusicFolder> SubFolders
     {
         get
@@ -35,7 +35,7 @@ public class MusicFolder : IMusicItem
     public MusicFolder(string folder) : this(null, folder)
     { }
 
-    private MusicFolder(MusicFolder parent, string folder)
+    private MusicFolder(MusicFolder? parent, string folder)
     {
         Location = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).TrimEnd('.');
         _Parent = parent;
@@ -73,7 +73,7 @@ public class MusicFolder : IMusicItem
     public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
 
     [DllImport("shell32.dll", CharSet = CharSet.Auto)]
-    static extern void SHChangeNotify(int wEventId, int uFlags, [MarshalAs(UnmanagedType.LPWStr)] string dwItem1, [MarshalAs(UnmanagedType.LPWStr)] string dwItem2);
+    static extern void SHChangeNotify(int wEventId, int uFlags, [MarshalAs(UnmanagedType.LPWStr)] string dwItem1, [MarshalAs(UnmanagedType.LPWStr)] string? dwItem2);
 
     public void Update()
     {
@@ -82,7 +82,7 @@ public class MusicFolder : IMusicItem
         if (SimpleName != filename)
         {
             Logger.WriteLine($"Renaming folder: \"{filename}\"");
-            var newpath = Path.Combine(Path.GetDirectoryName(Location), filename);
+            var newpath = Path.Combine(Path.GetDirectoryName(Location)!, filename);
             Util.MoveDirectory(Location, newpath);
             Location = newpath;
             ScanContents();
@@ -90,11 +90,11 @@ public class MusicFolder : IMusicItem
 
         //var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
         var art = GlobalCache.GetArtPathFor(this);
-        ArtCache.LoadAndMakeIcon(art);
         string desktop_ini = Path.Combine(Location, "desktop.ini");
         File.Delete(desktop_ini);
         if (art != null)
         {
+            ArtCache.LoadAndMakeIcon(art);
             File.WriteAllText(desktop_ini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Path.GetRelativePath(Location, art), ".ico")}, 0");
             File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
             SHChangeNotify(0x08000000, 0x0005 | 0x2000, Location, null);
@@ -114,7 +114,7 @@ public class MusicFolder : IMusicItem
 
     private void ScanContents()
     {
-        ChildFolders = new List<MusicFolder>();
+        ChildFolders.Clear();
         var info = new DirectoryInfo(Location);
         foreach (DirectoryInfo dir in info.EnumerateDirectories())
         {
@@ -124,7 +124,7 @@ public class MusicFolder : IMusicItem
             if (child.Songs.Any() || child.SubFolders.Any())
                 ChildFolders.Add(child);
         }
-        SongList = new List<Song>();
+        SongList.Clear();
         foreach (var file in Directory.EnumerateFiles(Location))
         {
             if (GlobalCache.Config.IsSongFile(file))

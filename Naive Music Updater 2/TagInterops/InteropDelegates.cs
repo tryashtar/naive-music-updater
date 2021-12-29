@@ -26,9 +26,5 @@ public class WipeDelegates
     }
 }
 
-public record WipeResult
-{
-    public string OldValue { get; init; }
-    public string NewValue { get; init; }
-    public bool Changed { get; init; }
-}
+public record WipeResult(string OldValue, string NewValue, bool Changed);
+

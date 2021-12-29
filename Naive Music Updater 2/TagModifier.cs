@@ -25,7 +25,7 @@ public class TagModifier
             HasChanged = true;
     }
 
-    private static Lyrics Better(Lyrics l1, Lyrics l2)
+    private static Lyrics? Better(Lyrics? l1, Lyrics? l2)
     {
         if (l1 == null)
             return l2;
@@ -38,7 +38,7 @@ public class TagModifier
         return l1;
     }
 
-    private static ChapterCollection Better(ChapterCollection l1, ChapterCollection l2)
+    private static ChapterCollection? Better(ChapterCollection? l1, ChapterCollection? l2)
     {
         if (l1 == null)
             return l2;
@@ -74,7 +74,7 @@ public class TagModifier
             if (cached_text == null || !cached_text.SequenceEqual(writing))
             {
                 Logger.WriteLine($"Rewriting cached lyrics");
-                Directory.CreateDirectory(Path.GetDirectoryName(lyrics_file));
+                Directory.CreateDirectory(Path.GetDirectoryName(lyrics_file)!);
                 File.WriteAllLines(lyrics_file, writing);
             }
         }
@@ -103,13 +103,13 @@ public class TagModifier
             if (cached_text == null || !cached_text.SequenceEqual(writing))
             {
                 Logger.WriteLine($"Rewriting cached chapters");
-                Directory.CreateDirectory(Path.GetDirectoryName(chapters_file));
+                Directory.CreateDirectory(Path.GetDirectoryName(chapters_file)!);
                 File.WriteAllLines(chapters_file, writing);
             }
         }
     }
 
-    public void UpdateArt(string art_path)
+    public void UpdateArt(string? art_path)
     {
         var picture = art_path == null ? null : ArtCache.GetPicture(art_path);
         if (!IsSingleValue(TagFile.Tag.Pictures, picture))
@@ -130,7 +130,7 @@ public class TagModifier
         }
     }
 
-    private static bool IsSingleValue(IPicture[] array, IPicture value)
+    private static bool IsSingleValue(IPicture[]? array, IPicture? value)
     {
         if (array == null)
             return false;

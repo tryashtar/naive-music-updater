@@ -75,7 +75,7 @@ public class LibraryCache
         return modified > created ? modified : created;
     }
 
-    public string GetArtPathFor(IMusicItem item)
+    public string? GetArtPathFor(IMusicItem? item)
     {
         while (item != null)
         {
@@ -87,7 +87,7 @@ public class LibraryCache
                 return path;
             if (item is Song)
             {
-                string parent = Path.GetDirectoryName(partial);
+                string parent = Path.GetDirectoryName(partial)!;
                 string contents = Path.Combine(parent, "__contents__");
                 var contents_path = Path.Combine(Folder, "art", contents + ".png");
                 if (File.Exists(contents_path))

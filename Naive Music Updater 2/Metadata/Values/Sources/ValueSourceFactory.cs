@@ -9,7 +9,7 @@ public static class ValueSourceFactory
 {
     public static IValueSource Create(YamlNode yaml)
     {
-        if (yaml is YamlScalarNode scalar)
+        if (yaml is YamlScalarNode scalar && scalar.Value != null)
             return new LiteralStringSource(scalar.Value);
         else if (yaml is YamlSequenceNode sequence)
             return new LiteralListSource(sequence.ToStringList());

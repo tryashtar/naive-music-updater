@@ -6,8 +6,8 @@ namespace NaiveMusicUpdater;
 
 public static class ArtCache
 {
-    public static Dictionary<string, TagLib.IPicture> Cached = new Dictionary<string, TagLib.IPicture>();
-    public static TagLib.IPicture GetPicture(string path)
+    public static Dictionary<string, IPicture> Cached = new();
+    public static IPicture? GetPicture(string path)
     {
         if (Cached.TryGetValue(path, out var result))
             return result;
@@ -18,7 +18,7 @@ public static class ArtCache
         return art;
     }
 
-    public static TagLib.IPicture LoadAndMakeIcon(string png)
+    public static IPicture? LoadAndMakeIcon(string png)
     {
         if (!File.Exists(png))
             return null;
@@ -35,7 +35,7 @@ public static class ArtCache
                     File.WriteAllBytes(ico, bytes);
                 }
             }
-            var icon = new TagLib.Picture(new TagLib.ByteVector((byte[])new ImageConverter().ConvertTo(image, typeof(byte[]))));
+            var icon = new Picture(new ByteVector((byte[])new ImageConverter().ConvertTo(image, typeof(byte[]))));
             return icon;
         }
     }

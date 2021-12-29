@@ -2,7 +2,7 @@
 
 public static class Logger
 {
-    private static StreamWriter Writer;
+    private static StreamWriter? Writer;
     private static string UnwrittenData = "";
     private static int TabCount = 0;
 
@@ -28,7 +28,7 @@ public static class Logger
 
     public static void WriteLine() => WriteLine("");
 
-    public static void WriteLine(string text, ConsoleColor color = ConsoleColor.White)
+    public static void WriteLine(string? text, ConsoleColor color = ConsoleColor.White)
     {
         string tabs = new('\t', TabCount);
         var prev_color = Console.ForegroundColor;
@@ -40,7 +40,7 @@ public static class Logger
 
     public static string ReadLine()
     {
-        string text = Console.ReadLine();
+        string text = Console.ReadLine() ?? "";
         string tabs = new string('\t', TabCount);
         Write(tabs + text);
         return text;

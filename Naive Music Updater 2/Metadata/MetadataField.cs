@@ -17,8 +17,6 @@ public class MetadataField
         {
             AliasCache.Add(value, this);
         }
-        if (AllFields == null)
-            AllFields = new();
         AllFields.Add(this);
     }
 
@@ -49,7 +47,7 @@ public class MetadataField
     public static readonly MetadataField Language = new("Language", MetadataFieldType.String, "lang", "language");
     public static readonly MetadataField Genres = new("Genres", MetadataFieldType.StringList, "genre", "genres");
 
-    private static List<MetadataField> AllFields;
+    private static readonly List<MetadataField> AllFields = new();
     public static ReadOnlyCollection<MetadataField> Values => AllFields.AsReadOnly();
 }
 

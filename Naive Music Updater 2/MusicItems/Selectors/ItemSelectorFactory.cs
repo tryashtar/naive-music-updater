@@ -11,7 +11,7 @@ public static class ItemSelectorFactory
 {
     public static IItemSelector Create(YamlNode node)
     {
-        if (node is YamlScalarNode scalar)
+        if (node is YamlScalarNode scalar && scalar.Value != null)
             return new PathItemSelector(scalar.Value);
         if (node is YamlSequenceNode sequence)
         {

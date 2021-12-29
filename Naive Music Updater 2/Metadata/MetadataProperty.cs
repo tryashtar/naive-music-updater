@@ -54,7 +54,7 @@ public class MetadataProperty
         return property;
     }
 
-    public override string ToString()
+    public override string? ToString()
     {
         if (Value.IsBlank)
             return "(blank)";

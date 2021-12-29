@@ -10,7 +10,7 @@ public class RootItemSelector : ISingleItemSelector
         MustBe = must_be;
     }
 
-    public IMusicItem SelectFrom(IMusicItem value)
+    public IMusicItem? SelectFrom(IMusicItem value)
     {
         var path = value.PathFromRoot().ToList();
         if (Down >= path.Count)
@@ -18,7 +18,7 @@ public class RootItemSelector : ISingleItemSelector
         return CheckMustBe(path[Down]);
     }
 
-    private IMusicItem CheckMustBe(IMusicItem item)
+    private IMusicItem? CheckMustBe(IMusicItem item)
     {
         if (MustBe == null)
             return item;
