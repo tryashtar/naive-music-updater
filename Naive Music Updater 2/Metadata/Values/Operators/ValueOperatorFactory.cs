@@ -46,16 +46,20 @@ public static class ValueOperatorFactory
                 return new RegexValueOperator(regex, decision);
             }
 
-            var prepend = map.Go("prepend").NullableParse(x => ValueSourceFactory.Create(x));
+            var prepend = map.Go("prepend").NullableParse(ValueSourceFactory.Create);
             if (prepend != null)
                 return new AppendValueOperator(prepend, AppendMode.Prepend);
 
-            var append = map.Go("append").NullableParse(x => ValueSourceFactory.Create(x));
+            var append = map.Go("append").NullableParse(ValueSourceFactory.Create);
             if (append != null)
                 return new AppendValueOperator(append, AppendMode.Append);
+
+            var join = map.Go("join").NullableParse(ValueSourceFactory.Create);
+            if (join != null)
+                return new JoinOperator(join);
         }
         else if (yaml is YamlSequenceNode sequence)
-            return new MultipleValueOperator(sequence.ToList(x => ValueOperatorFactory.Create(x)));
+            return new MultipleValueOperator(sequence.ToList(ValueOperatorFactory.Create));
         throw new ArgumentException($"Can't make value operator from {yaml}");
     }
 }

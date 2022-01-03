@@ -32,6 +32,7 @@ public class MetadataField
         throw new ArgumentException($"No metadata field named {id}");
     }
 
+    private static readonly List<MetadataField> AllFields = new();
     public static readonly MetadataField Title = new("Title", MetadataFieldType.String, "title");
     public static readonly MetadataField Album = new("Album", MetadataFieldType.String, "album");
     public static readonly MetadataField Performers = new("Performers", MetadataFieldType.StringList, "performer", "performers");
@@ -47,7 +48,6 @@ public class MetadataField
     public static readonly MetadataField Language = new("Language", MetadataFieldType.String, "lang", "language");
     public static readonly MetadataField Genres = new("Genres", MetadataFieldType.StringList, "genre", "genres");
 
-    private static readonly List<MetadataField> AllFields = new();
     public static ReadOnlyCollection<MetadataField> Values => AllFields.AsReadOnly();
 }
 

@@ -2,11 +2,11 @@
 
 public class MusicItemSource : IValueSource
 {
-    public readonly ISingleItemSelector Selector;
+    public readonly ILocalItemSelector Selector;
     public readonly IMusicItemValueSource Getter;
     public readonly IValueOperator Modifier;
 
-    public MusicItemSource(ISingleItemSelector selector, IMusicItemValueSource getter, IValueOperator modifier)
+    public MusicItemSource(ILocalItemSelector selector, IMusicItemValueSource getter, IValueOperator modifier)
     {
         Selector = selector;
         Getter = getter;
@@ -15,9 +15,17 @@ public class MusicItemSource : IValueSource
 
     public IValue Get(IMusicItem item)
     {
-        item = Selector.SelectFrom(item);
-        if (item == null)
+        var items = Selector.AllMatchesFrom(item);
+        if (!items.Any())
             return BlankValue.Instance;
+        var values = items.Select(GetAndModify).ToArray();
+        if (values.Length == 1)
+            return values[0];
+        return new ListValue(values.Select(x => x.AsString().Value));
+    }
+
+    private IValue GetAndModify(IMusicItem item)
+    {
         var value = Getter.Get(item);
         if (Modifier != null)
             value = Modifier.Apply(item, value);

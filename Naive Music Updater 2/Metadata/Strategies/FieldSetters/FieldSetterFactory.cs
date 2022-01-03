@@ -15,8 +15,8 @@ public static class FieldSetterFactory
             var mode = map.Go("mode").ToEnum(def: CombineMode.Replace);
             if (mode == CombineMode.Remove)
                 return RemoveFieldSetter.Instance;
-            var modify = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
-            var source = map.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
+            var modify = map.Go("modify").NullableParse(ValueOperatorFactory.Create);
+            var source = map.Go("source").NullableParse(ValueSourceFactory.Create);
             if (source != null)
                 return new ModeValueSourceFieldSetter(mode, source, modify);
             if (has_context && modify != null)

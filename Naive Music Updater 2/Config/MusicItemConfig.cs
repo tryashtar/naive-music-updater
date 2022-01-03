@@ -21,9 +21,9 @@ public class MusicItemConfig
             if (DiscOrder == null)
                 TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.Create(x, folder));
         }
-        SongsStrategy = yaml.Go("songs").NullableParse(x => LiteralOrReference(x));
-        FoldersStrategy = yaml.Go("folders").NullableParse(x => LiteralOrReference(x));
-        MetadataStrategies = yaml.Go("set").ToList((k, v) => ParseStrategy(k, v)) ?? new();
+        SongsStrategy = yaml.Go("songs").NullableParse(LiteralOrReference);
+        FoldersStrategy = yaml.Go("folders").NullableParse(LiteralOrReference);
+        MetadataStrategies = yaml.Go("set").ToList(ParseStrategy) ?? new();
         SharedStrategies = yaml.Go("set all").ToList(x => ParseMultiple(x.Go("names"), x.Go("set"))) ?? new();
     }
 
@@ -36,7 +36,7 @@ public class MusicItemConfig
 
     private TargetedStrategy ParseMultiple(YamlNode names, YamlNode value)
     {
-        var selectors = names.ToList(x => ItemSelectorFactory.Create(x));
+        var selectors = names.ToList(ItemSelectorFactory.Create);
         var strategy = LiteralOrReference(value);
         return new TargetedStrategy(new MultiItemSelector(selectors), strategy);
     }

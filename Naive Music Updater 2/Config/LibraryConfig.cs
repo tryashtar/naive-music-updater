@@ -39,7 +39,7 @@ public class LibraryConfig
         MapNames = yaml.Go("map").ToDictionary() ?? new();
         FilesafeConversions = yaml.Go("title_to_filename").ToDictionary() ?? new();
         FoldersafeConversions = yaml.Go("title_to_foldername").ToDictionary() ?? new();
-        NamedStrategies = yaml.Go("named_strategies").ToDictionary(x => MetadataStrategyFactory.Create(x)) ?? new();
+        NamedStrategies = yaml.Go("named_strategies").ToDictionary(MetadataStrategyFactory.Create) ?? new();
         IllegalPrivateOwners = yaml.Go("clear_private_owners").ToStringList() ?? new();
         KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
         KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x)) ?? new();

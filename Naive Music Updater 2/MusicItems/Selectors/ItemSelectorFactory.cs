@@ -15,7 +15,7 @@ public static class ItemSelectorFactory
             return new PathItemSelector(scalar.Value);
         if (node is YamlSequenceNode sequence)
         {
-            var subselectors = sequence.ToList(x => ItemSelectorFactory.Create(x));
+            var subselectors = sequence.ToList(ItemSelectorFactory.Create);
             return new MultiItemSelector(subselectors);
         }
         if (node is YamlMappingNode map)
@@ -23,13 +23,13 @@ public static class ItemSelectorFactory
             var path = node.Go("path");
             if (path != null)
             {
-                var predicates = path.ToList(x => ItemPredicateFactory.FromNode(x)).ToArray();
+                var predicates = path.ToList(ItemPredicateFactory.Create).ToArray();
                 return new PathItemSelector(predicates);
             }
-            var subpath = node.Go("subpath").NullableParse(x => ItemSelectorFactory.Create(x));
+            var subpath = node.Go("subpath").NullableParse(ItemSelectorFactory.Create);
             if (subpath != null)
             {
-                var select = node.Go("select").Parse(x => ItemSelectorFactory.Create(x));
+                var select = node.Go("select").Parse(ItemSelectorFactory.Create);
                 return new SubPathItemSelector(subpath, select);
             }
         }

@@ -7,7 +7,7 @@ public interface IItemPredicate
 
 public static class ItemPredicateFactory
 {
-    public static IItemPredicate FromNode(YamlNode node)
+    public static IItemPredicate Create(YamlNode node)
     {
         if (node is YamlScalarNode scalar && scalar.Value != null)
             return new ExactItemPredicate(scalar.Value);

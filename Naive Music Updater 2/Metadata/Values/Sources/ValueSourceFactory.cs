@@ -15,9 +15,9 @@ public static class ValueSourceFactory
             return new LiteralListSource(sequence.ToStringList());
         else if (yaml is YamlMappingNode map)
         {
-            var selector = map.Go("from").Parse(x => SingleItemSelectorFactory.Create(x));
-            var getter = map.Go("value").NullableParse(x => MusicItemGetterFactory.Create(x)) ?? CleanNameGetter.Instance;
-            var modifier = map.Go("modify").NullableParse(x => ValueOperatorFactory.Create(x));
+            var selector = map.Go("from").Parse(LocalItemSelectorFactory.Create);
+            var getter = map.Go("value").NullableParse(MusicItemGetterFactory.Create) ?? CleanNameGetter.Instance;
+            var modifier = map.Go("modify").NullableParse(ValueOperatorFactory.Create);
             return new MusicItemSource(selector, getter, modifier);
         }
         throw new ArgumentException($"Can't make value resolver from {yaml}");

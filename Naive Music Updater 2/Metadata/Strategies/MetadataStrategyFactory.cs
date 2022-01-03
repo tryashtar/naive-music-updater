@@ -11,7 +11,7 @@ public static class MetadataStrategyFactory
     {
         if (yaml is YamlMappingNode map)
         {
-            var source = map.Go("source").NullableParse(x => ValueSourceFactory.Create(x));
+            var source = map.Go("source").NullableParse(ValueSourceFactory.Create);
             if (source != null)
             {
                 var apply = map.Go("apply").Parse(x => FieldSpecFactory.Create(x, true));
@@ -25,7 +25,7 @@ public static class MetadataStrategyFactory
         }
         if (yaml is YamlSequenceNode list)
         {
-            var substrats = list.ToList(x => MetadataStrategyFactory.Create(x));
+            var substrats = list.ToList(MetadataStrategyFactory.Create);
             return new MultipleMetadataStrategy(substrats);
         }
         throw new ArgumentException($"Can't make metadata strategy from {yaml}");
