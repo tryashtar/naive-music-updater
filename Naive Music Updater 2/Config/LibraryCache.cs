@@ -75,11 +75,13 @@ public class LibraryCache
         return modified > created ? modified : created;
     }
 
+    private static readonly Regex NonAscii = new(@"[^\u0000-\u007F]+");
     public string? GetArtPathFor(IMusicItem? item)
     {
         while (item != null)
         {
             var partial = Util.StringPathAfterRoot(item);
+            partial = NonAscii.Replace(partial, "_");
             if (item is Song)
                 partial = Path.ChangeExtension(partial, null);
             var path = Path.Combine(Folder, "art", partial + ".png");

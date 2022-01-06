@@ -6,7 +6,7 @@ namespace NaiveMusicUpdater;
 
 public static class ArtCache
 {
-    public static Dictionary<string, IPicture> Cached = new();
+    public static readonly Dictionary<string, IPicture> Cached = new();
     public static IPicture? GetPicture(string path)
     {
         if (Cached.TryGetValue(path, out var result))
