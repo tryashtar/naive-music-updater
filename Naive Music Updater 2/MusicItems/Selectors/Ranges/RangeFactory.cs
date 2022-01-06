@@ -24,6 +24,7 @@ public record Range(int Start, int End)
     {
         int end = End >= 0 ? End : length + End;
         end = Math.Clamp(end, 1, length);
-        return new Range(Start, end);
+        int start = Start >= length ? end : Start;
+        return new Range(start, end);
     }
 }
