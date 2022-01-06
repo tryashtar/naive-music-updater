@@ -5,7 +5,7 @@ The idea is that you put your song files wherever you want, and then write confi
 
 ## Concepts
 ### Names
-The name of a song is just its file name, without the file extension. A "clean name" is also derived from this name, by applying some of the settings defined in [`library.yaml`](#library.yaml). It includes case correction and custom substitutions. Doing this allows clean names to contain characters that aren't valid in file names, for example. The clean name is only used when requested, it doesn't get auto-assigned to the title or anything like that.
+The name of a song is just its file name, without the file extension. A "clean name" is also derived from this name, by applying some of the settings defined in [`library.yaml`](#library.yaml). Doing this allows clean names to contain characters that aren't valid in file names, for example. The clean name is only used when requested, it doesn't get auto-assigned to the title or anything like that.
 
 ### Strategies
 A strategy decides how to assign metadata to the [metadata fields](#metadata-fields) of a song.
@@ -393,13 +393,7 @@ This is for configuration that applies to the entire library. It's mostly just s
   * `xiph`: List of xiph metadata keys that should not be wiped. By default the program wipes them all.
 * `source_auto_max_distance`: This is used to suggest corrections of [song source](#sources) names.
 * `named_strategies`: Every object in this has a name for a key, and a [strategy](#strategies) as a value.
-* `lowercase`: List of words that should be made lowercase when case-correcting file names.
-* `skip`: List of song names that should be left exactly the same and not be case-corrected.
-* `find_replace`: When generating the song's "clean name" from its file name, all of these will be run.
-* `map`: Any song with its name as the key will have its "clean name" set exactly to the value with no further processing.
-* `title_to_filename`: For characters that can't be saved as file names, values for their replacements.
-* `title_to_foldername`: The same thing but for folders.
-* `title_splits`: List of [regular expressions](https://en.wikipedia.org/wiki/Regular_expression) with named groups. When generating a clean name, the program will recursively process any groups ending with `_title` when considering capitalization rules, and not process any groups ending with `_skip`. Other groups are entirely excluded from the final clean name.
+* `find_replace`: Keys are [regular expressions](https://en.wikipedia.org/wiki/Regular_expression), values are strings. When generating a [clean name](#names) from a file name, all of these substitutions are performed.
 
 ## Sources
 The program writes a `sources.yaml` file to your library root. The intention of this file is to keep track of where you got your music from. As for me, I've downloaded my music from all kinds of random places, and it brings me peace of mind to know I can go back and get them again, or find them in a higher quality somewhere else.
