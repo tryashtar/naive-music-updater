@@ -15,7 +15,6 @@ public class LibraryConfig
     private readonly string MetaFlacArgs;
     private readonly string AACGainPath;
     private readonly string AACGainArgs;
-    private readonly List<string> IllegalPrivateOwners;
     private readonly Dictionary<string, KeepFrameDefinition> KeepFrameIDs;
     private readonly List<Regex> KeepXiphMetadata;
     private readonly List<string> SongExtensions;
@@ -40,7 +39,6 @@ public class LibraryConfig
         FilesafeConversions = yaml.Go("title_to_filename").ToDictionary() ?? new();
         FoldersafeConversions = yaml.Go("title_to_foldername").ToDictionary() ?? new();
         NamedStrategies = yaml.Go("named_strategies").ToDictionary(MetadataStrategyFactory.Create) ?? new();
-        IllegalPrivateOwners = yaml.Go("clear_private_owners").ToStringList() ?? new();
         KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
         KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x)) ?? new();
         TitleSplits = yaml.Go("title_splits").ToListFromStrings(x => new Regex(x)) ?? new();
@@ -77,18 +75,6 @@ public class LibraryConfig
     public IMetadataStrategy GetNamedStrategy(string name)
     {
         return NamedStrategies[name];
-    }
-
-    public bool IsIllegalPrivateOwner(string owner)
-    {
-        if (IllegalPrivateOwners == null)
-            return false;
-        foreach (var item in IllegalPrivateOwners)
-        {
-            if (Regex.IsMatch(owner, item))
-                return true;
-        }
-        return false;
     }
 
     public (IEnumerable<Frame> keep, IEnumerable<Frame> remove) DecideFrames(TagLib.Id3v2.Tag tag)

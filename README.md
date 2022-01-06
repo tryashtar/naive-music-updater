@@ -120,7 +120,9 @@ composer:
   source: C418
 ```
 
-If this field setter is part of a field spec [with context](#context-strategies), then there's already a value source provided by the strategy itself. In this case, you don't need to specify a `source`, though you can specify a [value operator](#value-operators) called `modify` to change the value.
+If this field setter is part of a field spec [with context](#context-strategies), then there's already a value source provided by the strategy itself. In this case, you don't need to specify a `source`.
+
+Either way, you can specify a [value operator](#value-operators) called `modify` to change the value.
 
 For example, here is a complete strategy that splits the clean name of the file in half, and assigns each half to different fields:
 ```yaml
@@ -145,21 +147,29 @@ The simplest value source is just a literal string or list of strings. For examp
 To get information from the file structure of the songs, you have to use an object. It contains three values:
 
 **`from`**  
-This is a "single item selector." Its purpose is to uniquely identify a file or folder, relative to the song being modified, to fetch data from. It can be set to `this` or `self` to select the song file in question.
+This is a "local item selector." Its purpose is to select a file or folder, relative to the song being modified, to fetch data from. It can be set to `this` or `self` to select the song file in question.
 
-Another option is using `up`. This is an integer value equal to the number of folders to navigate up towards the library root. That folder will be selected. For example, to select the parent folder:
+Another option is using `up`. This allows you to "navigate up" from the song being modified towards the library root. For example, to select the parent folder:
 ```yaml
 from:
   up: 1
 ```
 
-Another option is using `from_root`. This is like the opposite of `up`; it's an integer value equal to the number of folders to navigate down, starting from the root, towards the song in question. For example, to select the folder in the library root that (eventually) contains the current song:
+Instead of a single integer, you can specify a range with `start` and `stop` to select multiple folders. If `stop` is negative, it will target a folder relative to the end of the navigation path.
+```yaml
+from:
+  up:
+    start: 1
+    stop: 2
+```
+
+Another option is using `from_root`. This is like the opposite of `up`; it navigates down, starting from the library root, towards the song in question. For example, to select the folder in the library root that (eventually) contains the current song:
 ```yaml
 from:
   from_root: 1
 ```
 
-The last option is using a normal [item selector](#item-selectors). It's called `selector`, and the only important thing to know is that an error will be thrown if it selects more than one item. For example:
+The last option is using a normal [item selector](#item-selectors). It's called `selector`.
 ```yaml
 from:
   selector: Volume Alpha/Living Mice
@@ -378,10 +388,9 @@ This is for configuration that applies to the entire library. It's mostly just s
     * `path`: File path to `metaflac.exe`. This is run on every FLAC file in your library.
     * `args`: Arguments to pass to [metaflac](https://ftp.osuosl.org/pub/xiph/releases/flac/).
 * `extensions`: List of file extensions that should be considered songs.
-* `clear_private_owners`: List of certain frames that should be removed from MP3s, though this doesn't currently do anything right now.
-* `keep_frames`
-  * `ids`: List of MP3 frame IDs that should not be wiped. By default the program wipes them all.
-  * `text`: List of [regular expressions](https://en.wikipedia.org/wiki/Regular_expression). Frames with text that matches any of these will not be wiped, regardless of its ID.
+* `keep`
+  * `id3v2`: List of MP3 frame IDs that should not be wiped. By default the program wipes them all. The program also removes duplicate frames, leaving only one. To preserve duplicates, use an object with `id` set to the ID and `dupes` set to `true`.
+  * `xiph`: List of xiph metadata keys that should not be wiped. By default the program wipes them all.
 * `source_auto_max_distance`: This is used to suggest corrections of [song source](#sources) names.
 * `named_strategies`: Every object in this has a name for a key, and a [strategy](#strategies) as a value.
 * `lowercase`: List of words that should be made lowercase when case-correcting file names.
