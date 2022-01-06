@@ -78,15 +78,6 @@ public class MusicFolder : IMusicItem
     public void Update()
     {
         Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
-        var filename = GlobalCache.Config.ToFilesafe(GlobalCache.Config.CleanName(SimpleName), true);
-        if (SimpleName != filename)
-        {
-            Logger.WriteLine($"Renaming folder: \"{filename}\"");
-            var newpath = Path.Combine(Path.GetDirectoryName(Location)!, filename);
-            Util.MoveDirectory(Location, newpath);
-            Location = newpath;
-            ScanContents();
-        }
 
         //var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
         var art = GlobalCache.GetArtPathFor(this);
