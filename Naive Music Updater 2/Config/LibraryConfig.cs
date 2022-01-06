@@ -2,12 +2,7 @@
 
 public class LibraryConfig
 {
-    private readonly HashSet<string> LowercaseWords;
-    private readonly HashSet<string> SkipNames;
-    private readonly Dictionary<string, string> FindReplace;
-    private readonly Dictionary<string, string> MapNames;
-    private readonly Dictionary<string, string> FilesafeConversions;
-    private readonly Dictionary<string, string> FoldersafeConversions;
+    private readonly Dictionary<Regex, string> FindReplace;
     private readonly Dictionary<string, IMetadataStrategy> NamedStrategies;
     private readonly string MP3GainPath;
     private readonly string MP3GainArgs;
@@ -18,7 +13,6 @@ public class LibraryConfig
     private readonly Dictionary<string, KeepFrameDefinition> KeepFrameIDs;
     private readonly List<Regex> KeepXiphMetadata;
     private readonly List<string> SongExtensions;
-    private readonly List<Regex> TitleSplits;
     public readonly int SourceAutoMaxDistance;
 
     public LibraryConfig(string file)
@@ -32,16 +26,10 @@ public class LibraryConfig
             yaml = new YamlMappingNode();
         }
 
-        LowercaseWords = yaml.Go("lowercase").ToListFromStrings(x => x.ToLower())?.ToHashSet() ?? new();
-        SkipNames = yaml.Go("skip").ToStringList()?.ToHashSet() ?? new();
-        FindReplace = yaml.Go("find_replace").ToDictionary() ?? new();
-        MapNames = yaml.Go("map").ToDictionary() ?? new();
-        FilesafeConversions = yaml.Go("title_to_filename").ToDictionary() ?? new();
-        FoldersafeConversions = yaml.Go("title_to_foldername").ToDictionary() ?? new();
+        FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()), x => x.String()) ?? new();
         NamedStrategies = yaml.Go("named_strategies").ToDictionary(MetadataStrategyFactory.Create) ?? new();
         KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
         KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x)) ?? new();
-        TitleSplits = yaml.Go("title_splits").ToListFromStrings(x => new Regex(x)) ?? new();
         SongExtensions = yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
 
         SourceAutoMaxDistance = yaml.Go("source_auto_max_distance").Int() ?? 0;
@@ -98,38 +86,11 @@ public class LibraryConfig
 
     public string CleanName(string name)
     {
-        foreach (var skip in SkipNames)
-        {
-            if (String.Equals(skip, name, StringComparison.OrdinalIgnoreCase))
-                return skip;
-        }
-        if (MapNames.TryGetValue(name, out var result))
-            return result;
-        name = FindReplaceName(name);
-        name = CorrectCase(name);
-        name = FindReplaceName(name);
-        return name;
-    }
-
-    private string FindReplaceName(string name)
-    {
         foreach (var findrepl in FindReplace)
         {
-            name = name.Replace(findrepl.Key, findrepl.Value);
+            name = findrepl.Key.Replace(name, findrepl.Value);
         }
         return name;
-    }
-
-    public string ToFilesafe(string text, bool isfolder)
-    {
-        var conv = isfolder ? FoldersafeConversions : FilesafeConversions;
-        foreach (var filenamechar in conv)
-        {
-            text = text.Replace(filenamechar.Key, filenamechar.Value);
-        }
-        if (isfolder)
-            text = text.TrimEnd('.');
-        return text;
     }
 
     public bool NormalizeAudio(Song song)
@@ -166,66 +127,5 @@ public class LibraryConfig
             File.Delete(text_file);
         }
         return process.ExitCode == 0;
-    }
-
-    public string CorrectCase(string text)
-    {
-        if (text == "")
-            return text;
-
-        // remove whitespace from beginning and end
-        text = text.Trim();
-
-        // turn double-spaces into single spaces
-        text = Regex.Replace(text, @"\s+", " ");
-
-        foreach (var title in TitleSplits)
-        {
-            var match = title.Match(text);
-            if (match.Success)
-            {
-                var result = "";
-                foreach (var group in ((IEnumerable<Group>)match.Groups).Skip(1))
-                {
-                    if (group.Name.EndsWith("_title"))
-                        result += CorrectCase(group.Value);
-                    else if (group.Name.EndsWith("_skip"))
-                        result += group.Value;
-                }
-                return result;
-            }
-        }
-
-        string[] words = text.Split(' ');
-        // capitalize first and last words of title always
-        Capitalize(words, 0);
-        Capitalize(words, words.Length - 1);
-        bool prevallcaps = (words[0] == words[0].ToUpper());
-        for (int i = 1; i < words.Length - 1; i++)
-        {
-            bool allcaps = words[i] == words[i].ToUpper();
-            if (!(allcaps && prevallcaps) && IsLowercase(words[i]))
-                Lowercase(words, i);
-            else
-                Capitalize(words, i);
-            prevallcaps = allcaps;
-        }
-        return String.Join(" ", words);
-    }
-
-    private bool IsLowercase(string word)
-    {
-        string nopunc = new String(word.Where(c => !Char.IsPunctuation(c)).ToArray());
-        return LowercaseWords.Contains(nopunc.ToLower());
-    }
-
-    private static void Capitalize(string[] input, int index)
-    {
-        input[index] = Char.ToUpper(input[index][0]) + input[index].Substring(1);
-    }
-
-    private static void Lowercase(string[] input, int index)
-    {
-        input[index] = Char.ToLower(input[index][0]) + input[index].Substring(1);
     }
 }
