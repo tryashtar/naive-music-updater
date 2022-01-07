@@ -260,7 +260,7 @@ apply:
 **Append**  
 This appends a string value to an existing string value.
 
-Anyway, it's just a [value source](#value-sources) called `append`. The value obtained is appended to the end of the value being modified. Use `prepend` to append to the beginning.
+It's just a [value source](#value-sources) called `append`. The value obtained is appended to the end of the value being modified. Use `prepend` to append to the beginning.
 
 For example, if your songs are placed in folders named like `Piano Sonata No. 14/Movement 1`, and you want the full title to contain both, you can use a strategy like this:
 ```yaml
@@ -270,6 +270,22 @@ title:
     prepend:
       from:
         up: 1
+```
+
+---
+
+**Join**  
+This combines a list of values into a single value, placing a separator between each one.
+
+It's just a [value source](#value-sources) called `join`. For example, to embed the full path to a song into its comment field, you can use a strategy like this:
+```yaml
+comment:
+  from:
+    from_root:
+      start: 1
+      stop: -1
+  modify:
+    join: '/'
 ```
 
 ## Configuration
