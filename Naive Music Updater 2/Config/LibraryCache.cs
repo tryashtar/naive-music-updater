@@ -82,8 +82,6 @@ public class LibraryCache
         {
             var partial = Util.StringPathAfterRoot(item);
             partial = NonAscii.Replace(partial, "_");
-            if (item is Song)
-                partial = Path.ChangeExtension(partial, null);
             var path = Path.Combine(Folder, "art", partial + ".png");
             if (File.Exists(path))
                 return path;
