@@ -6,6 +6,16 @@ public interface ITagInterop
     void Set(MetadataField field, MetadataProperty value);
     void WipeUselessProperties();
     bool Changed { get; }
+    sealed Metadata GetFullMetadata(Predicate<MetadataField> desired)
+    {
+        var meta = new Metadata();
+        foreach (var field in MetadataField.Values)
+        {
+            if (desired(field))
+                meta.Register(field, Get(field));
+        }
+        return meta;
+    }
 }
 
 public static class TagInteropFactory

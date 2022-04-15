@@ -6,8 +6,7 @@ public class MusicFolder : IMusicItem
 {
     private bool HasScanned = false;
     public string Location { get; private set; }
-    protected readonly MusicItemConfig _LocalConfig;
-    public MusicItemConfig LocalConfig => _LocalConfig;
+    public IMusicItemConfig LocalConfig { get; protected set; }
     public virtual LibraryCache GlobalCache => _Parent?.GlobalCache ?? throw new NullReferenceException();
     protected readonly MusicFolder? _Parent;
     public MusicFolder? Parent => _Parent;
@@ -41,20 +40,7 @@ public class MusicFolder : IMusicItem
         _Parent = parent;
         string config = Path.Combine(folder, "config.yaml");
         if (File.Exists(config))
-        {
-#if !DEBUG2
-            _LocalConfig = new MusicItemConfig(config, this);
-#else
-                try
-                {
-                    _LocalConfig = new MusicItemConfig(config, this);
-                }
-                catch (Exception ex)
-                {
-                    Logger.WriteLine($"Failed to parse config for {this}: {ex.Message}");
-                }
-#endif
-        }
+            LocalConfig = MusicItemConfigFactory.Create(config, this);
     }
 
     public IEnumerable<Song> GetAllSongs()
