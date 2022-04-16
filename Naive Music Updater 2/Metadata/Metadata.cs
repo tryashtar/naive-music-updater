@@ -45,7 +45,7 @@ public class Metadata
         var builder = new StringBuilder();
         foreach (var item in SavedFields)
         {
-            builder.AppendLine($"{item.Key.Name}: {item.Value}");
+            builder.AppendLine($"{item.Key.DisplayName}: {item.Value}");
         }
         return builder.ToString();
     }

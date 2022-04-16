@@ -6,8 +6,7 @@ public class MusicFolder : IMusicItem
 {
     private bool HasScanned = false;
     public string Location { get; private set; }
-    protected readonly MusicItemConfig _LocalConfig;
-    public MusicItemConfig LocalConfig => _LocalConfig;
+    public IMusicItemConfig LocalConfig { get; protected set; }
     public virtual LibraryCache GlobalCache => _Parent?.GlobalCache ?? throw new NullReferenceException();
     protected readonly MusicFolder? _Parent;
     public MusicFolder? Parent => _Parent;
@@ -41,20 +40,7 @@ public class MusicFolder : IMusicItem
         _Parent = parent;
         string config = Path.Combine(folder, "config.yaml");
         if (File.Exists(config))
-        {
-#if !DEBUG2
-            _LocalConfig = new MusicItemConfig(config, this);
-#else
-                try
-                {
-                    _LocalConfig = new MusicItemConfig(config, this);
-                }
-                catch (Exception ex)
-                {
-                    Logger.WriteLine($"Failed to parse config for {this}: {ex.Message}");
-                }
-#endif
-        }
+            LocalConfig = MusicItemConfigFactory.Create(config, this);
     }
 
     public IEnumerable<Song> GetAllSongs()
@@ -80,6 +66,7 @@ public class MusicFolder : IMusicItem
         Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
 
         //var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
+#if !DEBUG
         var art = GlobalCache.GetArtPathFor(this);
         string desktop_ini = Path.Combine(Location, "desktop.ini");
         File.Delete(desktop_ini);
@@ -90,6 +77,7 @@ public class MusicFolder : IMusicItem
             File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
             SHChangeNotify(0x08000000, 0x0005 | 0x2000, Location, null);
         }
+#endif
 
         Logger.TabIn();
         foreach (var child in SubFolders)

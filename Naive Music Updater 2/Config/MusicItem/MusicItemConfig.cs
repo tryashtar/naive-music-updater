@@ -1,20 +1,19 @@
 ﻿namespace NaiveMusicUpdater;
 
-public class MusicItemConfig
+public class MusicItemConfig : IMusicItemConfig
 {
-    public readonly string Location;
+    public string Location { get; }
     public readonly ISongOrder? TrackOrder;
     public readonly ISongOrder? DiscOrder;
-    public readonly IMetadataStrategy SongsStrategy;
-    public readonly IMetadataStrategy FoldersStrategy;
+    public readonly IMetadataStrategy? SongsStrategy;
+    public readonly IMetadataStrategy? FoldersStrategy;
     public readonly List<TargetedStrategy> MetadataStrategies;
     public readonly List<TargetedStrategy> SharedStrategies;
     private readonly IMusicItem ConfiguredItem;
-    public MusicItemConfig(string file, IMusicItem configured_item)
+    public MusicItemConfig(string file, IMusicItem configured_item, YamlNode yaml)
     {
         Location = file;
         ConfiguredItem = configured_item;
-        var yaml = YamlHelper.ParseFile(file);
         if (configured_item is MusicFolder folder)
         {
             DiscOrder = yaml.Go("discs").NullableParse(x => DiscOrderFactory.Create(x, folder));
@@ -25,6 +24,12 @@ public class MusicItemConfig
         FoldersStrategy = yaml.Go("folders").NullableParse(LiteralOrReference);
         MetadataStrategies = yaml.Go("set").ToList(ParseStrategy) ?? new();
         SharedStrategies = yaml.Go("set all").ToList(x => ParseMultiple(x.Go("names"), x.Go("set"))) ?? new();
+    }
+
+    public YamlNode Serialize()
+    {
+        var node = new YamlMappingNode();
+        return node;
     }
 
     private TargetedStrategy ParseStrategy(YamlNode key, YamlNode value)
@@ -93,21 +98,4 @@ public class MusicItemConfig
         }
         return results;
     }
-}
-
-public class TargetedStrategy : IItemSelector, IMetadataStrategy
-{
-    public readonly IItemSelector Selector;
-    public readonly IMetadataStrategy Strategy;
-
-    public TargetedStrategy(IItemSelector selector, IMetadataStrategy strategy)
-    {
-        Selector = selector;
-        Strategy = strategy;
-    }
-
-    public IEnumerable<IMusicItem> AllMatchesFrom(IMusicItem start) => Selector.AllMatchesFrom(start);
-    public Metadata Get(IMusicItem item, Predicate<MetadataField> desired) => Strategy.Get(item, desired);
-    public bool IsSelectedFrom(IMusicItem start, IMusicItem item) => Selector.IsSelectedFrom(start, item);
-    public IEnumerable<IItemSelector> UnusedFrom(IMusicItem start) => Selector.UnusedFrom(start);
 }

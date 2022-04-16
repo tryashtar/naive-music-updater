@@ -14,7 +14,7 @@ public class MultipleInterop : ITagInterop
         foreach (var interop in Interops)
         {
             var result = interop.Get(field);
-            if (result.Value.IsBlank)
+            if (!result.Value.IsBlank)
                 return result;
         }
         return MetadataProperty.Ignore();

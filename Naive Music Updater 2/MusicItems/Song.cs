@@ -5,7 +5,7 @@ public class Song : IMusicItem
     public string Location { get; private set; }
     protected readonly MusicFolder _Parent;
     public MusicFolder Parent => _Parent;
-    public MusicItemConfig? LocalConfig => null;
+    public IMusicItemConfig? LocalConfig => null;
     public LibraryCache GlobalCache => _Parent.GlobalCache;
     public Song(MusicFolder parent, string file)
     {
@@ -30,7 +30,7 @@ public class Song : IMusicItem
                 return;
 #endif
 #if DEBUG
-        if (Breakpoint != null && !SimpleName.ToLower().Contains(Breakpoint))
+        if (Breakpoint != null && !SimpleName.ToLower().Contains(Breakpoint) && !String.Join('/', PathFromRoot().Select(x => x.SimpleName)).ToLower().Contains(Breakpoint))
             return;
 #endif
         Logger.WriteLine($"(checking)");
@@ -103,4 +103,11 @@ public class Song : IMusicItem
 
     public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
     public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
+
+    public Metadata GetEmbeddedMetadata(Predicate<MetadataField> desired)
+    {
+        using var file = TagLib.File.Create(Location);
+        var interop = TagInteropFactory.GetDynamicInterop(file.Tag, GlobalCache.Config);
+        return interop.GetFullMetadata(desired);
+    }
 }
