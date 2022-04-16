@@ -3,9 +3,100 @@ I use this program to keep the music files on my computer consistently tagged an
 
 The idea is that you put your song files wherever you want, and then write configuration files that determine how the song's name and location can be converted into embedded metadata.
 
+## Configuration
+All songs start with "blank" or "ignore" metadata. This means the program will not make any changes to the song. Metadata is applied according to rules in `config.yaml` files. These files apply to any song they share a folder with, including subfolders.
+
+For example, if you have a `config.yaml` file in the root of your library, those rules apply to every song in your entire library. If you have a `config.yaml` file in the C418 folder, those rules only apply to songs in that folder, and can override the root library rules.
+
+Here are the options that can be included in a `config.yaml` file:
+
+**`songs`**  
+The value for this is a [strategy](#strategies). If you use a string, it will use the strategy defined in [`library.yaml`](#library.yaml) with that name. This strategy applies to all relevant songs unconditionally.
+
+For example:
+```yaml
+songs:
+  title:
+    from: this
+  performer:
+    operation: parent
+    up: 2
+```
+
+---
+**`set`**  
+This allows you to apply strategies to specific songs. Each key is an [item selector](#item-selectors), and each value is a strategy.
+
+For example:
+```yaml
+set:
+  Beyond the Sea:
+    performer: Robbie Williams
+    language: eng
+  Classic/Maple Leaf Rag:
+    performer: Scott Joplin
+```
+
+---
+**`set all`**  
+This is like `set`, but lets you apply the same strategy to multiple selectors. The main reason for this is that a YAML list doesn't work as a key. `set all` is a list of objects, with `names` as a list of item selectors, and `set` as a strategy.
+
+For example:
+```yaml
+set all:
+- names: [Cat, Far, Ward]
+  set:
+    comment: Green
+- names: [Blocks, Chirp]
+  set:
+    comment: Red
+```
+
+---
+**`order`**  
+This is a more convenient way to set track number metadata than using the `track` and `track total` fields. It's simply an item selector. The items it selects will be assigned track metadata according to their order and count.
+
+For example, these tracks will be assigned a track number of 1, 2, and 3, respectively, and all will be assigned a track total of 3:
+```yaml
+order:
+- Dearly Beloved
+- Destati
+- Treasured Memories
+```
+
+---
+**`discs`**  
+Likewise, you can assign track and disc number metadata at the same time using this option. It's an object with disc numbers as keys, and item selectors as values.
+
+For example, these tracks will be assigned a track number of 1, 2, or 3, a track total of 3, a disc number of 1 or 2, and a disc total of 2.
+```yaml
+discs:
+  1:
+  - Night of Fate
+  - Destiny's Force
+  - The Deep End
+  2:
+  - Working Together
+  - Vim and Vigor
+  - Desire for All That is Lost
+```
+
+As a bonus, at the same time the program checks for unused selectors, it will print out any `order`s or `discs` that didn't select every song in the folders it looked at. This is a sign that it should be updated to include those in the order.
+
+## Automatic Config
+If your songs already have metadata embedded, you can actually generate a config file from that! Just make the `config.yaml` look like one of these:
+```yaml
+reverse: full
+# or
+reverse: minimal
+```
+The config file will automatically be replaced with a full one that sets all of the metadata in your songs to what it already is. If you use `minimal`, it will only include metadata that wouldn't have already been set to the correct value by an earlier config. If you use `full`, it will include everything no matter what. Either way, the songs should end up untouched, with any changes caused by earlier configs overwritten by the newly created config.
+
+This is a handy way to see how config files can look, although all [item selectors](#item-selectors) and [strategies](#strategies) generated will be simple and "hardcoded." It's also useful for preserving information that would otherwise be overwritten by broader configs.
+
 ## Concepts
 ### Names
-The name of a song is just its file name, without the file extension. A "clean name" is also derived from this name, by applying some of the settings defined in [`library.yaml`](#library.yaml). Doing this allows clean names to contain characters that aren't valid in file names, for example. The clean name is only used when requested, it doesn't get auto-assigned to the title or anything like that.
+The name of a song is just its file name, without the file extension. A "clean name" is also derived from this name, by applying some of the settings defined in [`library.yaml`](#library.yaml). Doing this allows clean names to contain characters that aren't valid in file names, for example. The clean name is only used when requested by a [value source](#value-sources), it doesn't get auto-assigned to the title or anything like that.
 
 ### Strategies
 A strategy decides how to assign metadata to the [metadata fields](#metadata-fields) of a song.
@@ -34,14 +125,29 @@ set: Isaac Watts
 
 ---
 
-**Context Strategies**
+**Context Strategies**  
 Each of those types of field specs works as a strategy on its own. However, you can also provide "context" to a strategy. This allows the field setters to modify a common value.
 
 To do this, put the field spec under a key called `apply`, and provide a [value provider](#value-providers) called `source`. Doing this will allow the field setters in the spec to reference and modify the provided value.
 
+For example, this splits the clean name of the file in half, and assigns each half to different fields:
+```yaml
+source:
+  from: this
+  modify:
+    split: " - "
+apply:
+  album artist:
+    modify:
+      index: 0
+  album:
+    modify:
+      index: 1
+```
+
 ---
 
-A list of strategies is also a valid strategy. Each strategy is applied in turn. A typical song will have many strategies applied to it; later metadata assignments will override earlier ones.
+A list of strategies is by itself a valid strategy. Each strategy is applied in turn. A typical song will have many strategies applied to it; later metadata assignments will override earlier ones.
 
 ### Metadata Fields
 All the valid metadata fields are as follows:
@@ -124,21 +230,6 @@ If this field setter is part of a field spec [with context](#context-strategies)
 
 Either way, you can specify a [value operator](#value-operators) called `modify` to change the value.
 
-For example, here is a complete strategy that splits the clean name of the file in half, and assigns each half to different fields:
-```yaml
-source:
-  from: this
-  modify:
-    split: " - "
-apply:
-  album artist:
-    modify:
-      index: 0
-  album:
-    modify:
-      index: 1
-```
-
 ### Value Sources
 A value source is a method for obtaining a value that can be modified, then ultimately embedded into metadata.
 
@@ -196,6 +287,8 @@ Lastly, you can optionally provide a [value operator](#value-operators) that wil
 ### Value Operators
 Value operators let you modify a value before it gets ultimately assigned to metadata. A single value can be split into many values, or merged, or distributed around. There are quite a few value operators. Aside from a few string shortcuts, all are objects with a couple keys.
 
+A list of value operators is by itself a valid value operator. Each operation is performed in turn.
+
 **Strings**  
 `first` and `last` are shortcuts for index operators with index 0 and -1, respectively. Using a number directly is also a shortcut for an index operator. Each of these use "exit" out-of-bounds mode. To change that, use the full index operator.
 
@@ -218,19 +311,13 @@ performer:
 **Index**  
 This allows you to select a particular value from a list of values. `index` is the zero-based index to use. You can use negative values to start from the end. `out_of_bounds` decides what to do if the index falls out of bounds. It defaults to `exit`, meaning the value will be discarded. It can be set to `wrap` to perform modulo on the index, or `clamp`, to clamp the index to the nearest end of the list.
 
-This is most often used in tandem with an earlier `split` operation. For example, if your songs are named like `C418 - wait`, you can use a strategy like this:
+This is most often used in tandem with an earlier `split` operation. For example:
 ```yaml
-source:
+performer:
   from: this
   modify:
-    split: " - "
-apply:
-  performer:
-    modify:
-      index: 0
-  title:
-    modify:
-      index: 1
+  - split: " - "
+  - index: 0
 ```
 
 ---
@@ -267,9 +354,11 @@ For example, if your songs are placed in folders named like `Piano Sonata No. 14
 title:
   from: this
   modify:
-    prepend:
+  - prepend: " ("
+  - prepend:
       from:
         up: 1
+  - append: ")"
 ```
 
 ---
@@ -288,86 +377,6 @@ comment:
     join: '/'
 ```
 
-## Configuration
-All songs start with "blank" or "ignore" metadata. This means the program will not make any changes to the song. Metadata is applied according to rules in `config.yaml` files. These files apply to any song they share a folder with, including subfolders.
-
-For example, if you have a `config.yaml` file in the root of your library, those rules apply to every song in your entire library. If you have a `config.yaml` file in the C418 folder, those rules only apply to songs in that folder, and can override the root library rules.
-
-Here are the options that can be included in a `config.yaml` file:
-
-**`songs`**  
-The value for this is a [strategy](#strategies). If you use a string, it will use the strategy defined in [`library.yaml`](#library.yaml) with that name. This strategy applies to all relevant songs unconditionally.
-
-For example:
-```yaml
-songs:
-  title:
-    from: this
-  performer:
-    operation: parent
-    up: 2
-```
-
----
-**`set`**  
-This allows you to apply strategies to specific songs. Each key is an [item selector](#item-selectors), and each value is a strategy.
-
-For example:
-```yaml
-set:
-  Beyond the Sea:
-    performer: Robbie Williams
-    language: eng
-  Classic/Maple Leaf Rag:
-    performer: Scott Joplin
-```
-
----
-**`set all`**  
-This is like `set`, but lets you apply the same strategy to multiple selectors. The main reason for this is that a YAML list doesn't work as a key. `set all` is a list of objects, with `names` as a list of item selectors, and `set` as a strategy.
-
-For example:
-```yaml
-set all:
-- names: [Cat, Far, Ward]
-  set:
-    comment: Green
-- names: [Blocks, Chirp]
-  set:
-    comment: Red
-```
-
----
-**`order`**  
-This is a more convenient way to set track number metadata than using the `track` and `track total` fields. It's simply an item selector. The items it selects will be assigned track metadata according to their order and count.
-
-For example, these tracks will be assigned a track number of 1, 2, and 3, respectively, and all will be assigned a track total of 3:
-```yaml
-order:
-- Dearly Beloved
-- Destati
-- Treasured Memories
-```
-
----
-**`discs`**  
-Likewise, you can assign track and disc number metadata at the same time using this option. It's an object with disc numbers as keys, and item selectors as values.
-
-For example, these tracks will be assigned a track number of 1, 2, or 3, a track total of 3, a disc number of 1 or 2, and a disc total of 2.
-```yaml
-discs:
-  1:
-  - Night of Fate
-  - Destiny's Force
-  - The Deep End
-  2:
-  - Working Together
-  - Vim and Vigor
-  - Desire for All That is Lost
-```
-
-As a bonus, at the same time the program checks for unused selectors, it will print out any `order`s or `discs` that didn't select every song in the folders it looked at. This is a sign that it should be updated to include those in the order.
-
 ## `.music-cache`
 This hidden folder is created at the root of your music library folder. It contains a few things:
 
@@ -383,14 +392,14 @@ All of the program output is both displayed to the console and written to a log 
 
 ### `lyrics`
 The program looks for three different sources of lyrics and tries to make them consistent. They are, in order of priority:
-1. Embedded synchronized lyrics. For MP3s, this is a `SynchronisedLyricsFrame`. For FLACs, this is found in the values of the `SYNCED LYRICS` field, in [LRC format](https://en.wikipedia.org/wiki/LRC_(file_format)).
+1. Embedded synchronized lyrics. For MP3s, this is a `SynchronisedLyricsFrame`. For FLACs, this is found in the values of the `LYRICS` field, in [LRC format](https://en.wikipedia.org/wiki/LRC_(file_format)).
 2. Lyrics in this folder. These are `.lrc` files in [LRC format](https://en.wikipedia.org/wiki/LRC_(file_format)), named corresponding to their names in your music library.
 3. Embedded unsynchronized lyrics. These are simple text lyrics without timestamps for each line.
 
 The highest priority source of lyrics for a song is treated as the source of truth, and the others are modified to match. For example, if you have a song in `Take That/Shine.mp3` with embedded synchronized lyrics, the program will write them to `.music-cache/lyrics/Take That/Shine.lrc`, and copy them to the unsynchronized lyrics field. If you have a song with no embedded lyrics, you can write some yourself here and the program will embed them for you.
 
 ### `datecache.yaml`
-The program does not scan every file every time, that would take forever, especially for someone like me who has like 12,000 songs. Every time the program modifies a file, it saves the date here. Next time, if the file's last modified date isn't any more recent than the date it saved before, the file will just be skipped.
+The program does not scan every file every time, that would take forever, especially for someone like me who has like 18,000 songs. Every time the program modifies a file, it saves the date here. Next time, if the file's last modified date isn't any more recent than the date it saved before, the file will just be skipped.
 
 If the program notices that a [config](#configuration) or art file that would apply to a song has changed, it will also decide to scan the file. For example, this means if you change a `config.yaml` in your library root, the program will scan everything the next time it runs.
 
@@ -403,12 +412,15 @@ This is for configuration that applies to the entire library. It's mostly just s
   * `flac`
     * `path`: File path to `metaflac.exe`. This is run on every FLAC file in your library.
     * `args`: Arguments to pass to [metaflac](https://ftp.osuosl.org/pub/xiph/releases/flac/).
+  * `aac`
+    * `path`: File path to `aacgain.exe`. This is run on every M4A file in your library.
+    * `args`: Arguments to pass to [aacgain](http://aacgain.altosdesign.com/).
 * `extensions`: List of file extensions that should be considered songs.
 * `keep`
   * `id3v2`: List of MP3 frame IDs that should not be wiped. By default the program wipes them all. The program also removes duplicate frames, leaving only one. To preserve duplicates, use an object with `id` set to the ID and `dupes` set to `true`.
   * `xiph`: List of xiph metadata keys that should not be wiped. By default the program wipes them all.
 * `source_auto_max_distance`: This is used to suggest corrections of [song source](#sources) names.
-* `named_strategies`: Every object in this has a name for a key, and a [strategy](#strategies) as a value.
+* `named_strategies`: Every object in this has a name for a key, and a [strategy](#strategies) as a value. The names can be used in config files as shortcuts to reference this strategy.
 * `find_replace`: Keys are [regular expressions](https://en.wikipedia.org/wiki/Regular_expression), values are strings. When generating a [clean name](#names) from a file name, all of these substitutions are performed.
 
 ## Sources
@@ -427,6 +439,7 @@ C418:
     - Sweden
     https://www.youtube.com/watch?v=4i0d6CPLSGoL: Dry Hands
 ```
+
 When the program finishes running, it will print out the names of any songs whose source is missing, as well as any songs that have a listed source, but actually aren't in your library, probably because they were removed.
 
 In case it was just because you renamed a file, the program tries to figure out if it can autocorrect song names. The threshold for how hard it tries (according to [levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance)) is configurable in [`library.yaml`](#library.yaml). It will print out its suggestions, and you can simply press enter to reject, or type anything first to accept.
