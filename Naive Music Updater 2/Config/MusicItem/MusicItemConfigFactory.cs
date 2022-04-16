@@ -27,6 +27,7 @@ public static class MusicItemConfigFactory
     {
         var item_depth = folder.PathFromRoot().Count();
         var sets = new Dictionary<IMusicItem, Dictionary<MetadataField, MetadataProperty>>();
+        var tracks = new Dictionary<IMusicItem, uint>();
         var reverse_sets = new Dictionary<MetadataField, Dictionary<MetadataProperty, List<IMusicItem>>>();
         var checker = new MetadataEqualityChecker();
         foreach (var field in MetadataField.Values)
@@ -40,10 +41,17 @@ public static class MusicItemConfigFactory
             var incoming = song.GetMetadata(MetadataField.All);
             foreach (var field in MetadataField.Values)
             {
-                var val = incoming.Get(field);
-                if (!reverse_sets[field].ContainsKey(val))
-                    reverse_sets[field][val] = new();
-                reverse_sets[field][val].Add(song);
+                var val = current.Get(field);
+                if (type == ReversalType.Full || !checker.Equals(val, incoming.Get(field)))
+                {
+                    if (val.Mode == CombineMode.Ignore)
+                        val = new MetadataProperty(BlankValue.Instance, CombineMode.Remove);
+                    if (!reverse_sets[field].ContainsKey(val))
+                        reverse_sets[field][val] = new();
+                    reverse_sets[field][val].Add(song);
+                }
+                if (field == MetadataField.Track && val.Value is NumberValue n)
+                    tracks[song] = n.Value;
             }
         }
         YamlNode ItemToPath(IMusicItem item)
@@ -54,13 +62,10 @@ public static class MusicItemConfigFactory
         {
             YamlNode MetadataContentsToNode()
             {
-                if (prop.Value is StringValue s)
-                    return s.Value;
-                if (prop.Value is ListValue l)
-                    return new YamlSequenceNode(l.Values.ToArray());
-                if (prop.Value is NumberValue n)
-                    return n.Value.ToString();
-                throw new ArgumentException();
+                var l = prop.Value.AsList();
+                if (l.Values.Count == 1)
+                    return l.Values[0];
+                return new YamlSequenceNode(l.Values.ToArray());
             }
             if (prop.Mode == CombineMode.Replace)
                 return MetadataContentsToNode();
@@ -75,16 +80,40 @@ public static class MusicItemConfigFactory
         var songs_node = new YamlMappingNode();
         var set_all_node = new YamlSequenceNode();
         var set_node = new YamlMappingNode();
+        var order_node = new YamlSequenceNode();
+        var discs_node = new YamlMappingNode();
+        var discs = reverse_sets[MetadataField.Disc];
+        if (discs.Count > 1)
+        {
+            foreach (var disc in discs.OrderBy(x => ((NumberValue)x.Key.Value).Value))
+            {
+                var dn = new YamlSequenceNode(disc.Value.OrderBy(x => tracks[x]).Select(ItemToPath));
+                discs_node.Add(disc.Key.Value.AsString().Value, dn);
+            }
+            reverse_sets.Remove(MetadataField.Track);
+            reverse_sets.Remove(MetadataField.TrackTotal);
+            reverse_sets.Remove(MetadataField.Disc);
+            reverse_sets.Remove(MetadataField.DiscTotal);
+        }
+        else
+        {
+            foreach (var track in tracks.OrderBy(x => x.Value))
+            {
+                order_node.Add(ItemToPath(track.Key));
+            }
+        }
         foreach (var prop in reverse_sets)
         {
-            var max_list = prop.Value.MaxBy(x => x.Value.Count);
-            if (max_list.Value.Count > 1)
+            if (prop.Value.Count == 0)
+                continue;
+            var max_list = prop.Value.OrderBy(x => x.Value.Count).ToList();
+            if (prop.Value.Count == 1 || max_list[0].Value.Count > max_list[1].Value.Count)
             {
-                songs_node.Add(prop.Key.Id, MetadataToNode(max_list.Key));
+                songs_node.Add(prop.Key.Id, MetadataToNode(max_list[0].Key));
             }
             foreach (var val in prop.Value)
             {
-                if (val.Value != max_list.Value && val.Value.Count > 1)
+                if (val.Value != max_list[0].Value && val.Value.Count > 1)
                 {
                     set_all_node.Add(new YamlMappingNode
                         {
@@ -107,7 +136,8 @@ public static class MusicItemConfigFactory
                 var node = MetadataToNode(field.Value);
                 spec.Add(field.Key.Id, node);
             }
-            set_node.Add(path, spec);
+            if (spec.Children.Count > 0)
+                set_node.Add(path, spec);
         }
         var final_node = new YamlMappingNode();
         if (songs_node.Children.Count > 0)
@@ -116,7 +146,11 @@ public static class MusicItemConfigFactory
             final_node.Add("set all", set_all_node);
         if (set_node.Children.Count > 0)
             final_node.Add("set", set_node);
-        YamlHelper.SaveToFile(final_node, @"zebra.txt");
+        if (order_node.Children.Count > 0)
+            final_node.Add("order", order_node);
+        if (discs_node.Children.Count > 0)
+            final_node.Add("discs", discs_node);
+        YamlHelper.SaveToFile(final_node, file);
         return final_node;
     }
 
@@ -126,26 +160,16 @@ public static class MusicItemConfigFactory
         {
             if (x.Value.IsBlank && y.Value.IsBlank)
                 return true;
-            if (x.Value is StringValue sx && y.Value is StringValue sy)
-                return sx.Value == sy.Value;
-            if (x.Value is NumberValue nx && y.Value is NumberValue ny)
-                return nx.Value == ny.Value;
-            if (x.Value is ListValue lx && y.Value is ListValue ly)
-                return lx.Values.SequenceEqual(ly.Values);
-            return false;
+            if (x.Value.IsBlank || y.Value.IsBlank)
+                return false;
+            return x.Value.AsList().Values.SequenceEqual(y.Value.AsList().Values);
         }
 
         public int GetHashCode([DisallowNull] MetadataProperty obj)
         {
             if (obj.Value is BlankValue)
                 return 0;
-            if (obj.Value is StringValue s)
-                return s.Value.GetHashCode();
-            if (obj.Value is NumberValue n)
-                return n.Value.GetHashCode();
-            if (obj.Value is ListValue l)
-                return l.Values.GetHashCode();
-            return obj.GetHashCode();
+            return String.Join(';', obj.Value.AsList().Values).GetHashCode();
         }
     }
 }

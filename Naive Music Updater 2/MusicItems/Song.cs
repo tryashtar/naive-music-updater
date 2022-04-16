@@ -30,7 +30,7 @@ public class Song : IMusicItem
                 return;
 #endif
 #if DEBUG
-        if (Breakpoint != null && !SimpleName.ToLower().Contains(Breakpoint))
+        if (Breakpoint != null && !SimpleName.ToLower().Contains(Breakpoint) && !String.Join('/', PathFromRoot().Select(x => x.SimpleName)).ToLower().Contains(Breakpoint))
             return;
 #endif
         Logger.WriteLine($"(checking)");

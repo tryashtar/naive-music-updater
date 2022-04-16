@@ -66,6 +66,7 @@ public class MusicFolder : IMusicItem
         Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
 
         //var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
+#if !DEBUG
         var art = GlobalCache.GetArtPathFor(this);
         string desktop_ini = Path.Combine(Location, "desktop.ini");
         File.Delete(desktop_ini);
@@ -76,6 +77,7 @@ public class MusicFolder : IMusicItem
             File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
             SHChangeNotify(0x08000000, 0x0005 | 0x2000, Location, null);
         }
+#endif
 
         Logger.TabIn();
         foreach (var child in SubFolders)
