@@ -53,7 +53,7 @@ public abstract class AbstractInterop<T> : ITagInterop where T : Tag
         var result = MetadataProperty.Combine(current, incoming);
         if (!delegates.Equal(current, result))
         {
-            Logger.WriteLine($"Changing {field.Name} in {TagType} tag from \"{current}\" to \"{result}\"");
+            Logger.WriteLine($"Changing {field.DisplayName} in {TagType} tag from \"{current}\" to \"{result}\"");
             delegates.Setter(result);
         }
     }

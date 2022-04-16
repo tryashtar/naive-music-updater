@@ -4,15 +4,18 @@
 // handles conversions from string identifiers
 public class MetadataField
 {
-    public readonly string Name;
+    public readonly string DisplayName;
     public readonly MetadataFieldType Type;
     public Predicate<MetadataField> Only => x => x == this;
     public static Predicate<MetadataField> All => x => true;
     private static readonly Dictionary<string, MetadataField> AliasCache = new();
+    private readonly string[] Aliases;
+    public string Id => Aliases[0];
     private MetadataField(string name, MetadataFieldType type, params string[] aliases)
     {
-        Name = name;
+        DisplayName = name;
         Type = type;
+        Aliases = aliases;
         foreach (var value in aliases)
         {
             AliasCache.Add(value, this);
@@ -22,7 +25,7 @@ public class MetadataField
 
     public override string ToString()
     {
-        return Name;
+        return DisplayName;
     }
 
     public static MetadataField FromID(string id)
