@@ -34,7 +34,8 @@ public static class MusicItemConfigFactory
         {
             reverse_sets[field] = new(checker);
         }
-        foreach (var song in folder.GetAllSongs())
+        var songs = folder.GetAllSongs();
+        foreach (var song in songs)
         {
             var setter = sets[song] = new();
             var current = song.GetEmbeddedMetadata(MetadataField.All);
@@ -101,13 +102,18 @@ public static class MusicItemConfigFactory
             {
                 order_node.Add(ItemToPath(track.Key));
             }
+            if (tracks.Count == songs.Count())
+            {
+                reverse_sets.Remove(MetadataField.Track);
+                reverse_sets.Remove(MetadataField.TrackTotal);
+            }
         }
         foreach (var prop in reverse_sets)
         {
             if (prop.Value.Count == 0)
                 continue;
             var max_list = prop.Value.OrderBy(x => x.Value.Count).ToList();
-            if (prop.Value.Count == 1 || max_list[0].Value.Count > max_list[1].Value.Count)
+            if ((prop.Value.Count == 1 && prop.Value.Single().Value.Count == songs.Count()) || (max_list.Count > 1 && max_list[0].Value.Count > max_list[1].Value.Count))
             {
                 songs_node.Add(prop.Key.Id, MetadataToNode(max_list[0].Key));
             }
