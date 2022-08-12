@@ -30,5 +30,9 @@ public static class TagInteropFactory
     private static ITagInterop GetInterop(TagLib.Ape.Tag tag, LibraryConfig config) => new ApeTagInterop(tag, config);
     private static ITagInterop GetInterop(TagLib.Ogg.XiphComment tag, LibraryConfig config) => new XiphTagInterop(tag, config);
     private static ITagInterop GetInterop(TagLib.Mpeg4.AppleTag tag, LibraryConfig config) => new AppleTagInterop(tag, config);
+    private static ITagInterop GetInterop(TagLib.Riff.InfoTag tag, LibraryConfig config) => new RiffTagInterop(tag, config);
+    private static ITagInterop GetInterop(TagLib.Riff.MovieIdTag tag, LibraryConfig config) => new MovieTagInterop(tag, config);
+    private static ITagInterop GetInterop(TagLib.Riff.DivXTag tag, LibraryConfig config) => new DivTagInterop(tag, config);
     private static ITagInterop GetInterop(CombinedTag tag, LibraryConfig config) => new MultipleInterop(tag, config);
+    private static ITagInterop GetInterop(TagLib.Ogg.GroupedComment tag, LibraryConfig config) => new MultipleXiphInterop(tag, config);
 }

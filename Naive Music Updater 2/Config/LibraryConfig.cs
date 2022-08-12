@@ -4,12 +4,7 @@ public class LibraryConfig
 {
     private readonly Dictionary<Regex, string> FindReplace;
     private readonly Dictionary<string, IMetadataStrategy> NamedStrategies;
-    private readonly string MP3GainPath;
-    private readonly string MP3GainArgs;
-    private readonly string MetaFlacPath;
-    private readonly string MetaFlacArgs;
-    private readonly string AACGainPath;
-    private readonly string AACGainArgs;
+    private readonly Dictionary<string, ReplayGain> ReplayGains;
     private readonly Dictionary<string, KeepFrameDefinition> KeepFrameIDs;
     private readonly List<Regex> KeepXiphMetadata;
     private readonly List<string> SongExtensions;
@@ -31,17 +26,8 @@ public class LibraryConfig
         KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
         KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x)) ?? new();
         SongExtensions = yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
-
         SourceAutoMaxDistance = yaml.Go("source_auto_max_distance").Int() ?? 0;
-        var mp3_gain = yaml.Go("replay_gain", "mp3");
-        MP3GainPath = mp3_gain.Go("path").String();
-        MP3GainArgs = mp3_gain.Go("args").String();
-        var flac_gain = yaml.Go("replay_gain", "flac");
-        MetaFlacPath = flac_gain.Go("path").String();
-        MetaFlacArgs = flac_gain.Go("args").String();
-        var aac_gain = yaml.Go("replay_gain", "aac");
-        AACGainPath = flac_gain.Go("path").String();
-        AACGainArgs = flac_gain.Go("args").String();
+        ReplayGains = yaml.Go("replay_gain").ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(), x => new ReplayGain(x["path"].String(), x["args"].String()));
     }
 
     private record KeepFrameDefinition(string ID, bool DuplicatesAllowed);
@@ -95,7 +81,7 @@ public class LibraryConfig
 
     public bool NormalizeAudio(Song song)
     {
-        if (MP3GainPath == null)
+        if (!ReplayGains.TryGetValue(Path.GetExtension(song.Location), out var relevant))
             return true;
         string location = song.Location;
         bool abnormal_chars = song.Location.Any(x => x > 255);
@@ -110,15 +96,7 @@ public class LibraryConfig
                 throw new InvalidOperationException("That's not supposed to be there...");
             File.Move(song.Location, location);
         }
-        var process = new Process();
-        var extension = Path.GetExtension(song.Location);
-        if (extension == ".mp3")
-            process.StartInfo = new ProcessStartInfo(MP3GainPath, $"{MP3GainArgs} \"{location}\"");
-        else if (extension == ".flac")
-            process.StartInfo = new ProcessStartInfo(MetaFlacPath, $"{MetaFlacArgs} \"{location}\"");
-        else if (extension == ".m4a")
-            process.StartInfo = new ProcessStartInfo(AACGainPath, $"{AACGainArgs} \"{location}\"");
-        process.StartInfo.UseShellExecute = false;
+        var process = new Process() { StartInfo = new ProcessStartInfo(relevant.Path, $"{relevant.Args} \"{location}\"") { UseShellExecute = false } };
         process.Start();
         process.WaitForExit();
         if (abnormal_chars)
@@ -129,3 +107,5 @@ public class LibraryConfig
         return process.ExitCode == 0;
     }
 }
+
+public record ReplayGain(string Path, string Args);
