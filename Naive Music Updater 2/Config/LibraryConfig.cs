@@ -96,7 +96,7 @@ public class LibraryConfig
                 throw new InvalidOperationException("That's not supposed to be there...");
             File.Move(song.Location, location);
         }
-        var process = new Process() { StartInfo = new ProcessStartInfo(relevant.Path, $"{relevant.Args} \"{location}\"") { UseShellExecute = false } };
+        var process = new Process() { StartInfo = new ProcessStartInfo(Environment.ExpandEnvironmentVariables(relevant.Path), $"{relevant.Args} \"{location}\"") { UseShellExecute = false } };
         process.Start();
         process.WaitForExit();
         if (abnormal_chars)
