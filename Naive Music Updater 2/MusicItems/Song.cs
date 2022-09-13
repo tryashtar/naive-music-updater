@@ -38,6 +38,12 @@ public class Song : IMusicItem
 #if !DEBUG
         bool reload_file = true;
         using var replay_file = TagLib.File.Create(Location);
+        var apetag = replay_file.GetTag(TagTypes.Ape);
+        if (apetag != null)
+        {
+            Logger.WriteLine("Removing ape tag");
+            replay_file.RemoveTags(TagTypes.Ape);
+        }
         bool needs_replaygain = !HasReplayGain(replay_file);
         if (needs_replaygain)
         {
@@ -61,7 +67,7 @@ public class Song : IMusicItem
 
 #if !DEBUG
         bool success = true;
-        if (modifier.HasChanged)
+        if (modifier.HasChanged || apetag != null)
         {
             Logger.WriteLine("Saving...", ConsoleColor.Green);
             try { file.Save(); }

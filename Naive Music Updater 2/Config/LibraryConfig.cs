@@ -30,13 +30,13 @@ public class LibraryConfig
         ReplayGains = yaml.Go("replay_gain").ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(), x => new ReplayGain(x["path"].String(), x["args"].String()));
     }
 
-    private record KeepFrameDefinition(string ID, bool DuplicatesAllowed);
+    private record KeepFrameDefinition(string ID, string[] Descriptions, bool DuplicatesAllowed);
     private KeepFrameDefinition MakeFrameDef(YamlNode node)
     {
         if (node is YamlScalarNode simple)
-            return new KeepFrameDefinition((string)simple, false);
+            return new KeepFrameDefinition((string)simple, Array.Empty<string>(), false);
         if (node is YamlMappingNode map)
-            return new KeepFrameDefinition((string)map["id"], Boolean.Parse((string)map["dupes"]));
+            return new KeepFrameDefinition((string)map["id"], map.TryGet("desc").ToStringList()?.ToArray() ?? Array.Empty<string>(), Boolean.Parse((string)map["dupes"]));
         throw new FormatException();
     }
 
@@ -59,8 +59,16 @@ public class LibraryConfig
         {
             if (!KeepFrameIDs.TryGetValue(group.Key, out var definition))
                 remove.AddRange(group);
-            else if (!definition.DuplicatesAllowed && group.Count() > 1)
-                remove.AddRange(group.Skip(1));
+            else
+            {
+                IEnumerable<Frame> allowed = group;
+                if (group.Key == "TXXX")
+                    allowed = group.OfType<UserTextInformationFrame>().Where(x => definition.Descriptions.Contains(x.Description));
+                if (allowed != group)
+                    remove.AddRange(group.Except(allowed));
+                if (!definition.DuplicatesAllowed && allowed.Count() > 1)
+                    remove.AddRange(allowed.Skip(1));
+            }
         }
         return (frame_types.SelectMany(x => x).Except(remove), remove);
     }
