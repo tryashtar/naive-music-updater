@@ -38,12 +38,6 @@ public class Song : IMusicItem
 #if !DEBUG
         bool reload_file = true;
         using var replay_file = TagLib.File.Create(Location);
-        var apetag = replay_file.GetTag(TagTypes.Ape);
-        if (apetag != null)
-        {
-            Logger.WriteLine("Removing ape tag");
-            replay_file.RemoveTags(TagTypes.Ape);
-        }
         bool needs_replaygain = !HasReplayGain(replay_file);
         if (needs_replaygain)
         {
@@ -60,14 +54,14 @@ public class Song : IMusicItem
         var path = Util.StringPathAfterRoot(this);
         var art = GlobalCache.GetArtPathFor(this);
         var modifier = new TagModifier(file, GlobalCache);
-        modifier.UpdateMetadata(metadata);
         modifier.UpdateArt(art);
+        modifier.UpdateMetadata(metadata);
         modifier.WriteLyrics(path);
         modifier.WriteChapters(path);
 
 #if !DEBUG
         bool success = true;
-        if (modifier.HasChanged || apetag != null)
+        if (modifier.HasChanged)
         {
             Logger.WriteLine("Saving...", ConsoleColor.Green);
             try { file.Save(); }

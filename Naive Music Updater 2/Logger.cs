@@ -31,6 +31,8 @@ public static class Logger
     public static void WriteLine(string? text, ConsoleColor color = ConsoleColor.White)
     {
         string tabs = new('\t', TabCount);
+        if (text != null)
+            text = text.Replace("\n", tabs + '\n');
         var prev_color = Console.ForegroundColor;
         Console.ForegroundColor = color;
         Console.WriteLine(tabs + text);

@@ -19,6 +19,7 @@ public class ApeTagInterop : AbstractInterop<TagLib.Ape.Tag>
     protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
     {
         var schema = BasicInterop.BasicWipeSchema(Tag);
+        schema.Add("pictures", SimpleWipe(() => Tag.Pictures.Length.ToString(), () => Tag.Pictures = System.Array.Empty<IPicture>()));
         return schema;
     }
 }
