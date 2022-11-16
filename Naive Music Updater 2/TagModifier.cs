@@ -1,3 +1,6 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
 namespace NaiveMusicUpdater;
 
 public class TagModifier
@@ -31,9 +34,9 @@ public class TagModifier
             return l2;
         if (l2 == null)
             return l1;
-        if (l1.Lines.Count == 0)
+        if (!l1.AllLyrics.Any())
             return l2;
-        if (l2.Lines.Count == 0)
+        if (!l2.AllLyrics.Any())
             return l1;
         return l1;
     }
@@ -54,15 +57,19 @@ public class TagModifier
     public void WriteLyrics(string location)
     {
         var lyrics_file = Path.Combine(Cache.Folder, "lyrics", location) + ".lrc";
+        var rich_file = Path.Combine(Cache.Folder, "lyrics", location) + ".lrc.json";
         var cached_text = File.Exists(lyrics_file) ? File.ReadAllLines(lyrics_file) : null;
+        var rich_text = File.Exists(rich_file) ? File.ReadAllText(rich_file) : null;
+        var rich_json = rich_text == null ? null : JObject.Parse(rich_text);
 
         var embedded = LyricsIO.FromFile(TagFile);
         var cached = cached_text == null ? null : LyricsIO.FromLrc(cached_text);
-        var best = Better(embedded, cached);
-        if (best != null && best.Lines.Count == 0)
+        var rich = rich_text == null ? null : LyricsIO.FromJson(rich_json);
+        var best = Better(embedded, Better(rich, cached));
+        if (best != null && !best.AllLyrics.Any())
             best = null; // wipe when empty
 
-        if (LyricsIO.ToFile(TagFile, best))
+        if (LyricsIO.ToFile(TagFile, best, LyricTypes.Simple | LyricTypes.Synced | LyricTypes.Rich))
         {
             Logger.WriteLine($"Rewriting embedded lyrics");
             HasChanged = true;
@@ -78,16 +85,31 @@ public class TagModifier
                 File.WriteAllLines(lyrics_file, writing);
             }
         }
+
+        if (best != rich && best != null)
+        {
+            var writing = LyricsIO.ToJson(best).ToString(Formatting.Indented);
+            if (rich_text == null || rich_text != writing)
+            {
+                Logger.WriteLine($"Rewriting cached lyrics JSON");
+                Directory.CreateDirectory(Path.GetDirectoryName(rich_file)!);
+                File.WriteAllText(rich_file, writing);
+            }
+        }
     }
 
     public void WriteChapters(string location)
     {
         var chapters_file = Path.Combine(Cache.Folder, "chapters", location) + ".chp";
+        var rich_file = Path.Combine(Cache.Folder, "chapters", location) + ".chp.json";
         var cached_text = File.Exists(chapters_file) ? File.ReadAllLines(chapters_file) : null;
+        var rich_text = File.Exists(rich_file) ? File.ReadAllText(rich_file) : null;
+        var rich_json = rich_text == null ? null : JObject.Parse(rich_text);
 
         var embedded = ChaptersIO.FromFile(TagFile);
         var cached = cached_text == null ? null : ChaptersIO.FromChp(cached_text);
-        var best = Better(embedded, cached);
+        var rich = rich_text == null ? null : ChaptersIO.FromJson(rich_json);
+        var best = Better(embedded, Better(rich, cached));
         if (best != null && best.Chapters.Count == 0)
             best = null; // wipe when empty
 
@@ -105,6 +127,17 @@ public class TagModifier
                 Logger.WriteLine($"Rewriting cached chapters");
                 Directory.CreateDirectory(Path.GetDirectoryName(chapters_file)!);
                 File.WriteAllLines(chapters_file, writing);
+            }
+        }
+
+        if (best != rich && best != null)
+        {
+            var writing = ChaptersIO.ToJson(best).ToString(Formatting.Indented);
+            if (rich_text == null || rich_text != writing)
+            {
+                Logger.WriteLine($"Rewriting cached lyrics JSON");
+                Directory.CreateDirectory(Path.GetDirectoryName(rich_file)!);
+                File.WriteAllText(rich_file, writing);
             }
         }
     }
