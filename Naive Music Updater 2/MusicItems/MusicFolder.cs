@@ -67,16 +67,16 @@ public class MusicFolder : IMusicItem
 
         //var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
 #if !DEBUG
-        var art = GlobalCache.GetArtPathFor(this);
-        string desktop_ini = Path.Combine(Location, "desktop.ini");
-        File.Delete(desktop_ini);
-        if (art != null)
-        {
-            ArtCache.LoadAndMakeIcon(art);
-            File.WriteAllText(desktop_ini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Path.GetRelativePath(Location, art), ".ico")}, 0");
-            File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
-            SHChangeNotify(0x08000000, 0x0005 | 0x2000, Location, null);
-        }
+        //var art = GlobalCache.GetArtPathFor(this);
+        //string desktop_ini = Path.Combine(Location, "desktop.ini");
+        //File.Delete(desktop_ini);
+        //if (art != null)
+        //{
+        //    ArtCache.LoadAndMakeIcon(art);
+        //    File.WriteAllText(desktop_ini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Path.GetRelativePath(Location, art), ".ico")}, 0");
+        //    File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
+        //    SHChangeNotify(0x08000000, 0x0005 | 0x2000, Location, null);
+        //}
 #endif
 
         Logger.TabIn();

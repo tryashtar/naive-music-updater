@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Naive Music Updater 2", "Na
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TaglibSharp", "taglib-sharp\src\TaglibSharp\TaglibSharp.csproj", "{E3714F34-2655-4ABD-A961-E7594AF93C4B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NaiveTests", "NaiveTests\NaiveTests.csproj", "{B3FD3DF1-3E26-4DDE-9FB9-A1A9EF9A98A7}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Utility", "utils.utility\TryashtarUtils.Utility.csproj", "{C5FCA437-9339-48D3-98AA-090D87D5C8D8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Music", "utils.music\TryashtarUtils.Music.csproj", "{A32A2B12-8767-4040-B748-B40CB24945CE}"
@@ -27,10 +25,6 @@ Global
 		{E3714F34-2655-4ABD-A961-E7594AF93C4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E3714F34-2655-4ABD-A961-E7594AF93C4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E3714F34-2655-4ABD-A961-E7594AF93C4B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B3FD3DF1-3E26-4DDE-9FB9-A1A9EF9A98A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B3FD3DF1-3E26-4DDE-9FB9-A1A9EF9A98A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B3FD3DF1-3E26-4DDE-9FB9-A1A9EF9A98A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B3FD3DF1-3E26-4DDE-9FB9-A1A9EF9A98A7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C5FCA437-9339-48D3-98AA-090D87D5C8D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C5FCA437-9339-48D3-98AA-090D87D5C8D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C5FCA437-9339-48D3-98AA-090D87D5C8D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
