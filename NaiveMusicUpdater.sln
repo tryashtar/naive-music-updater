@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Naive Music Updater 2", "Naive Music Updater 2\Naive Music Updater 2.csproj", "{8384B7E3-44A9-4B71-A62D-745163DC49EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NaiveMusicUpdater", "NaiveMusicUpdater\NaiveMusicUpdater.csproj", "{8384B7E3-44A9-4B71-A62D-745163DC49EA}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TaglibSharp", "taglib-sharp\src\TaglibSharp\TaglibSharp.csproj", "{E3714F34-2655-4ABD-A961-E7594AF93C4B}"
 EndProject
