@@ -2,10 +2,10 @@ namespace NaiveMusicUpdater;
 
 public class Song : IMusicItem
 {
-    public string Location { get; private set; }
+    public string Location { get; }
     protected readonly MusicFolder _Parent;
     public MusicFolder Parent => _Parent;
-    public IMusicItemConfig? LocalConfig => null;
+    public IMusicItemConfig[] Configs => Array.Empty<IMusicItemConfig>();
     public LibraryConfig GlobalConfig => _Parent.GlobalConfig;
 
     public Song(MusicFolder parent, string file)

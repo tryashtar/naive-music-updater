@@ -33,6 +33,7 @@ public class LibraryCache
             PendingDateCache[item] = DateTime.Now;
         }
         var serializer = new SerializerBuilder().Build();
+        Directory.CreateDirectory(Path.GetDirectoryName(DateCachePath));
         File.WriteAllText(DateCachePath, serializer.Serialize(PendingDateCache));
     }
 
@@ -60,8 +61,10 @@ public class LibraryCache
             yield return art;
         foreach (var parent in item.PathFromRoot())
         {
-            if (parent.LocalConfig != null)
-                yield return parent.LocalConfig.Location;
+            foreach (var config in parent.Configs)
+            {
+                yield return config.Location;
+            }
         }
     }
 

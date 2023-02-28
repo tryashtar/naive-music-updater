@@ -9,6 +9,7 @@ public class LibraryConfig
     private readonly Dictionary<string, KeepFrameDefinition>? KeepFrameIDs;
     private readonly List<Regex>? KeepXiphMetadata;
     private readonly List<string> SongExtensions;
+    public readonly List<string> ConfigFolders;
     public readonly string LibraryFolder;
     public readonly string? LogFolder;
     public readonly ExportConfig<LyricsType>? LyricsConfig;
@@ -24,7 +25,7 @@ public class LibraryConfig
             yaml.Go("library").String() ??
             throw new InvalidDataException("Library yaml file must specify a \"library\" folder"));
         Cache = new LibraryCache(Path.Combine(Path.GetDirectoryName(file),
-            yaml.Go("cache").String() ?? Path.Combine(LibraryFolder, ".music-cache")));
+            yaml.Go("cache").String() ?? ".music-cache"));
         LogFolder = yaml.Go("logs").String();
         if (LogFolder != null)
             LogFolder = Path.Combine(Path.GetDirectoryName(file), LogFolder);
@@ -39,6 +40,7 @@ public class LibraryConfig
         ReplayGains = yaml.Go("replay_gain")
             .ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(),
                 x => new ReplayGain(x["path"].String(), x["args"].String()));
+        ConfigFolders = yaml.Go("config_folders").ToStringList() ?? new() { LibraryFolder };
     }
 
     private record KeepFrameDefinition(string Id, string[] Descriptions, bool DuplicatesAllowed);

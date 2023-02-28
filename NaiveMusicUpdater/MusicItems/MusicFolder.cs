@@ -3,13 +3,14 @@
 public class MusicFolder : IMusicItem
 {
     private bool HasScanned = false;
-    public string Location { get; private set; }
-    public IMusicItemConfig? LocalConfig { get; protected set; }
+    public string Location { get; }
+    public IMusicItemConfig[] Configs { get; private set; }
     public virtual LibraryConfig GlobalConfig => _Parent?.GlobalConfig ?? throw new NullReferenceException();
     private readonly MusicFolder? _Parent;
     public MusicFolder? Parent => _Parent;
     private readonly List<MusicFolder> ChildFolders = new();
     private readonly List<Song> SongList = new();
+
     public IReadOnlyList<MusicFolder> SubFolders
     {
         get
@@ -19,6 +20,7 @@ public class MusicFolder : IMusicItem
             return ChildFolders.AsReadOnly();
         }
     }
+
     public IReadOnlyList<Song> Songs
     {
         get
@@ -28,17 +30,30 @@ public class MusicFolder : IMusicItem
             return SongList.AsReadOnly();
         }
     }
+
     public IEnumerable<IMusicItem> SubItems => SubFolders.Concat<IMusicItem>(Songs);
+
     protected MusicFolder(string folder) : this(null, folder)
-    { }
+    {
+    }
 
     private MusicFolder(MusicFolder? parent, string folder)
     {
         Location = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).TrimEnd('.');
         _Parent = parent;
-        string config = Path.Combine(folder, "config.yaml");
-        if (File.Exists(config))
-            LocalConfig = MusicItemConfigFactory.Create(config, this);
+    }
+
+    protected IMusicItemConfig[] LoadConfigs()
+    {
+        var configs = new List<IMusicItemConfig>();
+        var path = Util.StringPathAfterRoot(this);
+        foreach (var place in GlobalConfig.ConfigFolders)
+        {
+            string config = Path.Combine(place, path, "config.yaml");
+            if (File.Exists(config))
+                configs.Add(MusicItemConfigFactory.Create(config, this));
+        }
+        return configs.ToArray();
     }
 
     public IEnumerable<Song> GetAllSongs()
@@ -55,7 +70,7 @@ public class MusicFolder : IMusicItem
 
     public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
     public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
-    
+
     public void Update()
     {
         Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
@@ -64,16 +79,19 @@ public class MusicFolder : IMusicItem
         {
             child.Update();
         }
+
         foreach (var song in Songs)
         {
             song.Update();
         }
+
         Logger.TabOut();
     }
 
     private void ScanContents()
     {
         ChildFolders.Clear();
+        Configs = LoadConfigs();
         var info = new DirectoryInfo(Location);
         foreach (DirectoryInfo dir in info.EnumerateDirectories())
         {
@@ -83,21 +101,23 @@ public class MusicFolder : IMusicItem
             if (child.Songs.Any() || child.SubFolders.Any())
                 ChildFolders.Add(child);
         }
+
         SongList.Clear();
         foreach (var file in Directory.EnumerateFiles(Location))
         {
             if (GlobalConfig.IsSongFile(file))
                 SongList.Add(new Song(this, file));
         }
+
         HasScanned = true;
     }
 
     public CheckSelectorResults CheckSelectors()
     {
         var answer = new CheckSelectorResults();
-        if (LocalConfig != null)
+        foreach (var config in Configs)
         {
-            var results = LocalConfig.CheckSelectors();
+            var results = config.CheckSelectors();
             if (results.UnusedSelectors.Any())
             {
                 Logger.WriteLine($"{this} has unused selectors:");
@@ -106,8 +126,10 @@ public class MusicFolder : IMusicItem
                 {
                     Logger.WriteLine(unused.ToString());
                 }
+
                 Logger.TabOut();
             }
+
             if (results.UnselectedItems.Any())
             {
                 Logger.WriteLine($"{this} has unselected items:");
@@ -116,14 +138,18 @@ public class MusicFolder : IMusicItem
                 {
                     Logger.WriteLine(unselected.SimpleName);
                 }
+
                 Logger.TabOut();
             }
+
             answer.AddResults(results);
         }
+
         foreach (var item in SubFolders)
         {
             answer.AddResults(item.CheckSelectors());
         }
+
         return answer;
     }
 

@@ -7,8 +7,10 @@ public static class MusicItemUtils
         var metadata = new Metadata();
         foreach (var parent in item.PathFromRoot())
         {
-            if (parent.LocalConfig != null)
-                metadata.Merge(parent.LocalConfig.GetMetadata(item, desired));
+            foreach (var config in parent.Configs)
+            {
+                metadata.Merge(config.GetMetadata(item, desired));
+            }
         }
         return metadata;
     }

@@ -6,7 +6,7 @@ public interface IMusicItem
     string Location { get; }
     string SimpleName { get; }
     MusicFolder? Parent { get; }
-    IMusicItemConfig? LocalConfig { get; }
+    IMusicItemConfig[] Configs { get; }
     LibraryConfig GlobalConfig { get; }
     MusicLibrary RootLibrary { get; }
 }
