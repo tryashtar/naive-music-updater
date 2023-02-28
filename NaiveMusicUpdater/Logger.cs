@@ -8,6 +8,7 @@ public static class Logger
 
     public static void Open(string path)
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
         Writer = new StreamWriter(File.Create(path));
         Writer.Write(UnwrittenData);
         UnwrittenData = "";

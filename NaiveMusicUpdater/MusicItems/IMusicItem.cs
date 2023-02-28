@@ -7,6 +7,6 @@ public interface IMusicItem
     string SimpleName { get; }
     MusicFolder? Parent { get; }
     IMusicItemConfig? LocalConfig { get; }
-    LibraryCache GlobalCache { get; }
+    LibraryConfig GlobalConfig { get; }
     MusicLibrary RootLibrary { get; }
 }

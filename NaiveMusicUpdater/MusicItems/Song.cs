@@ -6,31 +6,19 @@ public class Song : IMusicItem
     protected readonly MusicFolder _Parent;
     public MusicFolder Parent => _Parent;
     public IMusicItemConfig? LocalConfig => null;
-    public LibraryCache GlobalCache => _Parent.GlobalCache;
+    public LibraryConfig GlobalConfig => _Parent.GlobalConfig;
+
     public Song(MusicFolder parent, string file)
     {
         _Parent = parent;
         Location = file;
     }
-
-#if DEBUG
-    private static readonly string? Breakpoint;
-    static Song()
-    {
-        if (File.Exists("break.txt"))
-            Breakpoint = File.ReadAllText("break.txt").ToLower().Replace("\n", "").Replace("\r", "");
-    }
-#endif
-
+    
     public void Update()
     {
         Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
 #if !DEBUG
         if (!GlobalCache.NeedsUpdate(this))
-            return;
-#endif
-#if DEBUG
-        if (Breakpoint != null && !SimpleName.ToLower().Contains(Breakpoint) && !String.Join('/', PathFromRoot().Select(x => x.SimpleName)).ToLower().Contains(Breakpoint))
             return;
 #endif
         Logger.WriteLine($"(checking)");
@@ -52,8 +40,8 @@ public class Song : IMusicItem
         using var file = TagLib.File.Create(Location);
 #endif
         var path = Util.StringPathAfterRoot(this);
-        var art = GlobalCache.GetArtPathFor(this);
-        var modifier = new TagModifier(file, GlobalCache);
+        var art = GlobalConfig.Cache.GetArtPathFor(this);
+        var modifier = new TagModifier(file, GlobalConfig);
         modifier.UpdateArt(art);
         modifier.UpdateMetadata(metadata);
         modifier.WriteLyrics(path);
@@ -90,12 +78,14 @@ public class Song : IMusicItem
             if (frames.Any())
                 return true;
         }
+
         var ape = (TagLib.Ape.Tag)file.GetTag(TagTypes.Ape);
         if (ape != null)
         {
             if (ape.HasItem(TRACK_GAIN))
                 return true;
         }
+
         var ogg = (TagLib.Ogg.XiphComment)file.GetTag(TagTypes.Xiph);
         if (ogg != null)
         {
@@ -103,6 +93,7 @@ public class Song : IMusicItem
             if (gain != null)
                 return true;
         }
+
         return false;
     }
 
@@ -114,7 +105,7 @@ public class Song : IMusicItem
     public Metadata GetEmbeddedMetadata(Predicate<MetadataField> desired)
     {
         using var file = TagLib.File.Create(Location);
-        var interop = TagInteropFactory.GetDynamicInterop(file.Tag, GlobalCache.Config);
+        var interop = TagInteropFactory.GetDynamicInterop(file.Tag, GlobalConfig);
         return interop.GetFullMetadata(desired);
     }
 }

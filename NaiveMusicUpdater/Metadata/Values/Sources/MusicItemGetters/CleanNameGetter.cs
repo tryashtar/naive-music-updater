@@ -6,6 +6,6 @@ public class CleanNameGetter : IMusicItemValueSource
 
     public IValue Get(IMusicItem item)
     {
-        return new StringValue(item.GlobalCache.Config.CleanName(item.SimpleName));
+        return new StringValue(item.GlobalConfig.CleanName(item.SimpleName));
     }
 }

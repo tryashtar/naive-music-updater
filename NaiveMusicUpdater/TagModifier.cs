@@ -7,137 +7,73 @@ public class TagModifier
 {
     public bool HasChanged { get; private set; }
     private readonly TagLib.File TagFile;
-    private readonly LibraryCache Cache;
-    public TagModifier(TagLib.File file, LibraryCache cache)
+    private readonly LibraryConfig Config;
+
+    public TagModifier(TagLib.File file, LibraryConfig config)
     {
         TagFile = file;
-        Cache = cache;
+        Config = config;
     }
 
     public void UpdateMetadata(Metadata metadata)
     {
-        var interop = TagInteropFactory.GetDynamicInterop(TagFile.Tag, Cache.Config);
+        var interop = TagInteropFactory.GetDynamicInterop(TagFile.Tag, Config);
         if (interop.Changed)
             Logger.WriteLine("Change detected from creating interop!", ConsoleColor.Red);
         foreach (var field in MetadataField.Values)
         {
             interop.Set(field, metadata.Get(field));
         }
+
         interop.WipeUselessProperties();
         if (interop.Changed)
             HasChanged = true;
     }
 
-    private static Lyrics? Better(Lyrics? l1, Lyrics? l2)
-    {
-        if (l1 == null)
-            return l2;
-        if (l2 == null)
-            return l1;
-        if (!l1.AllLyrics.Any())
-            return l2;
-        if (!l2.AllLyrics.Any())
-            return l1;
-        return l1;
-    }
-
-    private static ChapterCollection? Better(ChapterCollection? l1, ChapterCollection? l2)
-    {
-        if (l1 == null)
-            return l2;
-        if (l2 == null)
-            return l1;
-        if (l1.Chapters.Count == 0)
-            return l2;
-        if (l2.Chapters.Count == 0)
-            return l1;
-        return l1;
-    }
-
     public void WriteLyrics(string location)
     {
-        var lyrics_file = Path.Combine(Cache.Folder, "lyrics", location) + ".lrc";
-        var rich_file = Path.Combine(Cache.Folder, "lyrics", location) + ".lrc.json";
-        var cached_text = File.Exists(lyrics_file) ? File.ReadAllLines(lyrics_file) : null;
-        var rich_text = File.Exists(rich_file) ? File.ReadAllText(rich_file) : null;
-        var rich_json = rich_text == null ? null : JObject.Parse(rich_text);
+        if (Config.LyricsConfig == null)
+            return;
 
-        var embedded = LyricsIO.FromFile(TagFile);
-        var cached = cached_text == null ? null : LyricsIO.FromLrc(cached_text);
-        var rich = rich_text == null ? null : LyricsIO.FromJson(rich_json);
-        var best = Better(embedded, Better(rich, cached));
-        if (best != null && !best.AllLyrics.Any())
-            best = null; // wipe when empty
-
-        if (LyricsIO.ToFile(TagFile, best, LyricTypes.Simple | LyricTypes.Synced | LyricTypes.Rich))
+        location = Path.Combine(Config.LyricsConfig.ExternalFolder, location);
+        var best = Config.LyricsConfig.BestLyrics(TagFile, location);
+        foreach (var (type, action) in Config.LyricsConfig.Decisions)
         {
-            Logger.WriteLine($"Rewriting embedded lyrics");
-            HasChanged = true;
-        }
-
-        if (best != cached && best != null)
-        {
-            var writing = best.ToLrc();
-            if (cached_text == null || !cached_text.SequenceEqual(writing))
+            if (action == ExportOption.Ignore)
+                continue;
+            var write = action == ExportOption.Remove ? null : best;
+            var old = ExportConfigExtensions.GetLyrics(type, TagFile, location);
+            if (ExportConfigExtensions.SetLyrics(write, type, TagFile, location))
             {
-                Logger.WriteLine($"Rewriting cached lyrics");
-                Directory.CreateDirectory(Path.GetDirectoryName(lyrics_file)!);
-                File.WriteAllLines(lyrics_file, writing);
-            }
-        }
-
-        if (best != rich && best != null)
-        {
-            var writing = LyricsIO.ToJson(best).ToString(Formatting.Indented);
-            if (rich_text == null || rich_text != writing)
-            {
-                Logger.WriteLine($"Rewriting cached lyrics JSON");
-                Directory.CreateDirectory(Path.GetDirectoryName(rich_file)!);
-                File.WriteAllText(rich_file, writing);
+                Logger.WriteLine($"Replacing lyrics at {type}:");
+                Logger.TabIn();
+                Logger.WriteLine(old?.ToString()?.Replace("\n", " ") ?? "(blank)");
+                Logger.WriteLine(best?.ToString()?.Replace("\n", " ") ?? "(blank)");
+                Logger.TabOut();
             }
         }
     }
 
     public void WriteChapters(string location)
     {
-        var chapters_file = Path.Combine(Cache.Folder, "chapters", location) + ".chp";
-        var rich_file = Path.Combine(Cache.Folder, "chapters", location) + ".chp.json";
-        var cached_text = File.Exists(chapters_file) ? File.ReadAllLines(chapters_file) : null;
-        var rich_text = File.Exists(rich_file) ? File.ReadAllText(rich_file) : null;
-        var rich_json = rich_text == null ? null : JObject.Parse(rich_text);
+        if (Config.ChaptersConfig == null)
+            return;
 
-        var embedded = ChaptersIO.FromFile(TagFile);
-        var cached = cached_text == null ? null : ChaptersIO.FromChp(cached_text);
-        var rich = rich_text == null ? null : ChaptersIO.FromJson(rich_json);
-        var best = Better(embedded, Better(rich, cached));
-        if (best != null && best.Chapters.Count == 0)
-            best = null; // wipe when empty
-
-        if (ChaptersIO.ToFile(TagFile, best))
+        location = Path.Combine(Config.ChaptersConfig.ExternalFolder, location);
+        var best = Config.ChaptersConfig.BestChapters(TagFile, location);
+        foreach (var (type, action) in Config.ChaptersConfig.Decisions)
         {
-            Logger.WriteLine($"Rewriting embedded chapters");
-            HasChanged = true;
-        }
-
-        if (best != cached && best != null)
-        {
-            var writing = best.ToChp();
-            if (cached_text == null || !cached_text.SequenceEqual(writing))
+            if (action == ExportOption.Ignore)
+                continue;
+            var write = action == ExportOption.Remove ? null : best;
+            var old = ExportConfigExtensions.GetChapters(type, TagFile, location);
+            if (ExportConfigExtensions.SetChapters(write, type, TagFile, location))
             {
-                Logger.WriteLine($"Rewriting cached chapters");
-                Directory.CreateDirectory(Path.GetDirectoryName(chapters_file)!);
-                File.WriteAllLines(chapters_file, writing);
-            }
-        }
-
-        if (best != rich && best != null)
-        {
-            var writing = ChaptersIO.ToJson(best).ToString(Formatting.Indented);
-            if (rich_text == null || rich_text != writing)
-            {
-                Logger.WriteLine($"Rewriting cached lyrics JSON");
-                Directory.CreateDirectory(Path.GetDirectoryName(rich_file)!);
-                File.WriteAllText(rich_file, writing);
+                Logger.WriteLine($"Replacing chapters at {type}:");
+                Logger.TabIn();
+                Logger.WriteLine(old?.ToString()?.Replace("\n", " ") ?? "(blank)");
+                Logger.WriteLine(best?.ToString()?.Replace("\n", " ") ?? "(blank)");
+                Logger.TabOut();
             }
         }
     }
@@ -159,6 +95,7 @@ public class TagModifier
                 Logger.WriteLine($"Added art");
                 TagFile.Tag.Pictures = new IPicture[] { picture };
             }
+
             HasChanged = true;
         }
     }

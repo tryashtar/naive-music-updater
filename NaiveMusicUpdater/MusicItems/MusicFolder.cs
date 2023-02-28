@@ -1,17 +1,15 @@
-﻿using System.Runtime.InteropServices;
-
-namespace NaiveMusicUpdater;
+﻿namespace NaiveMusicUpdater;
 
 public class MusicFolder : IMusicItem
 {
     private bool HasScanned = false;
     public string Location { get; private set; }
-    public IMusicItemConfig LocalConfig { get; protected set; }
-    public virtual LibraryCache GlobalCache => _Parent?.GlobalCache ?? throw new NullReferenceException();
-    protected readonly MusicFolder? _Parent;
+    public IMusicItemConfig? LocalConfig { get; protected set; }
+    public virtual LibraryConfig GlobalConfig => _Parent?.GlobalConfig ?? throw new NullReferenceException();
+    private readonly MusicFolder? _Parent;
     public MusicFolder? Parent => _Parent;
-    protected readonly List<MusicFolder> ChildFolders = new();
-    protected readonly List<Song> SongList = new();
+    private readonly List<MusicFolder> ChildFolders = new();
+    private readonly List<Song> SongList = new();
     public IReadOnlyList<MusicFolder> SubFolders
     {
         get
@@ -31,7 +29,7 @@ public class MusicFolder : IMusicItem
         }
     }
     public IEnumerable<IMusicItem> SubItems => SubFolders.Concat<IMusicItem>(Songs);
-    public MusicFolder(string folder) : this(null, folder)
+    protected MusicFolder(string folder) : this(null, folder)
     { }
 
     private MusicFolder(MusicFolder? parent, string folder)
@@ -57,28 +55,10 @@ public class MusicFolder : IMusicItem
 
     public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
     public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
-
-    [DllImport("shell32.dll", CharSet = CharSet.Auto)]
-    static extern void SHChangeNotify(int wEventId, int uFlags, [MarshalAs(UnmanagedType.LPWStr)] string dwItem1, [MarshalAs(UnmanagedType.LPWStr)] string? dwItem2);
-
+    
     public void Update()
     {
         Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
-
-        //var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
-#if !DEBUG
-        //var art = GlobalCache.GetArtPathFor(this);
-        //string desktop_ini = Path.Combine(Location, "desktop.ini");
-        //File.Delete(desktop_ini);
-        //if (art != null)
-        //{
-        //    ArtCache.LoadAndMakeIcon(art);
-        //    File.WriteAllText(desktop_ini, $"[.ShellClassInfo]\nIconResource = {Path.ChangeExtension(Path.GetRelativePath(Location, art), ".ico")}, 0");
-        //    File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
-        //    SHChangeNotify(0x08000000, 0x0005 | 0x2000, Location, null);
-        //}
-#endif
-
         Logger.TabIn();
         foreach (var child in SubFolders)
         {
@@ -106,7 +86,7 @@ public class MusicFolder : IMusicItem
         SongList.Clear();
         foreach (var file in Directory.EnumerateFiles(Location))
         {
-            if (GlobalCache.Config.IsSongFile(file))
+            if (GlobalConfig.IsSongFile(file))
                 SongList.Add(new Song(this, file));
         }
         HasScanned = true;

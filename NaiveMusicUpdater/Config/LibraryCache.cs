@@ -5,15 +5,12 @@ namespace NaiveMusicUpdater;
 public class LibraryCache
 {
     public readonly string Folder;
-    public readonly LibraryConfig Config;
     private readonly Dictionary<string, DateTime> DateCache;
     private readonly Dictionary<string, DateTime> PendingDateCache;
     private string DateCachePath => Path.Combine(Folder, "datecache.yaml");
-    private string ConfigPath => Path.Combine(Folder, "library.yaml");
     public LibraryCache(string folder)
     {
         Folder = folder;
-        Config = new LibraryConfig(ConfigPath);
         if (File.Exists(DateCachePath))
         {
             var datecache = File.ReadAllText(DateCachePath);

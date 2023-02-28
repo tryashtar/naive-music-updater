@@ -3,12 +3,12 @@
 public class MusicItemConfig : IMusicItemConfig
 {
     public string Location { get; }
-    public readonly ISongOrder? TrackOrder;
-    public readonly ISongOrder? DiscOrder;
-    public readonly IMetadataStrategy? SongsStrategy;
-    public readonly IMetadataStrategy? FoldersStrategy;
-    public readonly List<TargetedStrategy> MetadataStrategies;
-    public readonly List<TargetedStrategy> SharedStrategies;
+    private readonly ISongOrder? TrackOrder;
+    private readonly ISongOrder? DiscOrder;
+    private readonly IMetadataStrategy? SongsStrategy;
+    private readonly IMetadataStrategy? FoldersStrategy;
+    private readonly List<TargetedStrategy> MetadataStrategies;
+    private readonly List<TargetedStrategy> SharedStrategies;
     private readonly IMusicItem ConfiguredItem;
     public MusicItemConfig(string file, IMusicItem configured_item, YamlNode yaml)
     {
@@ -49,7 +49,7 @@ public class MusicItemConfig : IMusicItemConfig
     private IMetadataStrategy LiteralOrReference(YamlNode node)
     {
         if (node is YamlScalarNode scalar && scalar.Value != null)
-            return ConfiguredItem.GlobalCache.Config.GetNamedStrategy(scalar.Value);
+            return ConfiguredItem.GlobalConfig.GetNamedStrategy(scalar.Value);
         else
         {
             if (node is YamlSequenceNode sequence)

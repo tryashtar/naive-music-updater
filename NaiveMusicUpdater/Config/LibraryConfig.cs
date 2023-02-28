@@ -2,42 +2,81 @@
 
 public class LibraryConfig
 {
+    private readonly string ConfigPath;
     private readonly Dictionary<Regex, string> FindReplace;
     private readonly Dictionary<string, IMetadataStrategy> NamedStrategies;
     private readonly Dictionary<string, ReplayGain> ReplayGains;
-    private readonly Dictionary<string, KeepFrameDefinition> KeepFrameIDs;
-    private readonly List<Regex> KeepXiphMetadata;
+    private readonly Dictionary<string, KeepFrameDefinition>? KeepFrameIDs;
+    private readonly List<Regex>? KeepXiphMetadata;
     private readonly List<string> SongExtensions;
-    public readonly int SourceAutoMaxDistance;
+    public readonly string LibraryFolder;
+    public readonly string? LogFolder;
+    public readonly ExportConfig<LyricsType>? LyricsConfig;
+    public readonly ExportConfig<ChaptersType>? ChaptersConfig;
+    public readonly LibraryCache Cache;
 
     public LibraryConfig(string file)
     {
-        YamlNode yaml;
-        if (File.Exists(file))
-            yaml = YamlHelper.ParseFile(file);
-        else
-        {
-            Logger.WriteLine($"Couldn't find config file {file}, using blank config!!!");
-            yaml = new YamlMappingNode();
-        }
+        ConfigPath = file;
+        var yaml = YamlHelper.ParseFile(file);
 
+        LibraryFolder = Path.Combine(Path.GetDirectoryName(file),
+            yaml.Go("library").String() ??
+            throw new InvalidDataException("Library yaml file must specify a \"library\" folder"));
+        Cache = new LibraryCache(Path.Combine(Path.GetDirectoryName(file),
+            yaml.Go("cache").String() ?? Path.Combine(LibraryFolder, ".music-cache")));
+        LogFolder = yaml.Go("logs").String();
+        if (LogFolder != null)
+            LogFolder = Path.Combine(Path.GetDirectoryName(file), LogFolder);
+        LyricsConfig = ParseExportConfig<LyricsType>(yaml.Go("lyrics"));
+        ChaptersConfig = ParseExportConfig<ChaptersType>(yaml.Go("chapters"));
         FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()), x => x.String()) ?? new();
         NamedStrategies = yaml.Go("named_strategies").ToDictionary(MetadataStrategyFactory.Create) ?? new();
-        KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(MakeFrameDef).ToDictionary(x => x.ID, x => x) ?? new();
-        KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x)) ?? new();
-        SongExtensions = yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
-        SourceAutoMaxDistance = yaml.Go("source_auto_max_distance").Int() ?? 0;
-        ReplayGains = yaml.Go("replay_gain").ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(), x => new ReplayGain(x["path"].String(), x["args"].String()));
+        KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(ParseFrameDefinition)?.ToDictionary(x => x.Id, x => x);
+        KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x));
+        SongExtensions =
+            yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
+        ReplayGains = yaml.Go("replay_gain")
+            .ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(),
+                x => new ReplayGain(x["path"].String(), x["args"].String()));
     }
 
-    private record KeepFrameDefinition(string ID, string[] Descriptions, bool DuplicatesAllowed);
-    private KeepFrameDefinition MakeFrameDef(YamlNode node)
+    private record KeepFrameDefinition(string Id, string[] Descriptions, bool DuplicatesAllowed);
+
+    private KeepFrameDefinition ParseFrameDefinition(YamlNode node)
     {
         if (node is YamlScalarNode simple)
             return new KeepFrameDefinition((string)simple, Array.Empty<string>(), false);
         if (node is YamlMappingNode map)
-            return new KeepFrameDefinition((string)map["id"], map.TryGet("desc").ToStringList()?.ToArray() ?? Array.Empty<string>(), Boolean.Parse((string)map["dupes"]));
+            return new KeepFrameDefinition((string)map["id"],
+                map.TryGet("desc").ToStringList()?.ToArray() ?? Array.Empty<string>(),
+                Boolean.Parse((string)map["dupes"]));
         throw new FormatException();
+    }
+
+    private ExportConfig<T>? ParseExportConfig<T>(YamlNode? node) where T : struct, Enum
+    {
+        if (node == null)
+            return null;
+        var path = node.Go("folder").String();
+        if (path != null)
+            path = Path.Combine(Path.GetDirectoryName(ConfigPath), path);
+        var priority = node.Go("priority").ToList<T>(x =>
+                               x.ToEnum<T>().Value)
+                           ?.ToArray() ??
+                       Array.Empty<T>();
+        var dict = node.Go("config")
+                       .ToDictionary<T, ExportOption>(
+                           x => x.ToEnum<T>().Value,
+                           x => x.ToEnum<ExportOption>().Value) ??
+                   new();
+        foreach (var entry in Enum.GetValues<T>())
+        {
+            if (!dict.ContainsKey(entry))
+                dict.Add(entry, ExportOption.Ignore);
+        }
+
+        return new ExportConfig<T>(path ?? LibraryFolder, priority, dict);
     }
 
     public bool IsSongFile(string file)
@@ -53,6 +92,8 @@ public class LibraryConfig
 
     public (IEnumerable<Frame> keep, IEnumerable<Frame> remove) DecideFrames(TagLib.Id3v2.Tag tag)
     {
+        if (KeepFrameIDs == null)
+            return (tag.GetFrames(), Enumerable.Empty<Frame>());
         var remove = new List<Frame>();
         var frame_types = tag.GetFrames().GroupBy(x => x.FrameId.ToString()).ToList();
         foreach (var group in frame_types)
@@ -63,19 +104,21 @@ public class LibraryConfig
             {
                 IEnumerable<Frame> allowed = group;
                 if (group.Key == "TXXX")
-                    allowed = group.OfType<UserTextInformationFrame>().Where(x => definition.Descriptions.Contains(x.Description));
+                    allowed = group.OfType<UserTextInformationFrame>()
+                        .Where(x => definition.Descriptions.Contains(x.Description));
                 if (allowed != group)
                     remove.AddRange(group.Except(allowed));
                 if (!definition.DuplicatesAllowed && allowed.Count() > 1)
                     remove.AddRange(allowed.Skip(1));
             }
         }
+
         return (frame_types.SelectMany(x => x).Except(remove), remove);
     }
 
     public bool ShouldKeepXiph(string key)
     {
-        return KeepXiphMetadata.Any(x => x.IsMatch(key));
+        return KeepXiphMetadata == null || KeepXiphMetadata.Any(x => x.IsMatch(key));
     }
 
     public string CleanName(string name)
@@ -84,6 +127,7 @@ public class LibraryConfig
         {
             name = findrepl.Key.Replace(name, findrepl.Value);
         }
+
         return name;
     }
 
@@ -104,7 +148,12 @@ public class LibraryConfig
                 throw new InvalidOperationException("That's not supposed to be there...");
             File.Move(song.Location, location);
         }
-        var process = new Process() { StartInfo = new ProcessStartInfo(Environment.ExpandEnvironmentVariables(relevant.Path), $"{relevant.Args} \"{location}\"") { UseShellExecute = false } };
+
+        var process = new Process()
+        {
+            StartInfo = new ProcessStartInfo(Environment.ExpandEnvironmentVariables(relevant.Path),
+                $"{relevant.Args} \"{location}\"") { UseShellExecute = false }
+        };
         process.Start();
         process.WaitForExit();
         if (abnormal_chars)
@@ -112,6 +161,7 @@ public class LibraryConfig
             File.Move(location, song.Location);
             File.Delete(text_file);
         }
+
         return process.ExitCode == 0;
     }
 }
