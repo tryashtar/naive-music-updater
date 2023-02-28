@@ -117,7 +117,7 @@ public static class ExportConfigExtensions
                 {
                     var json = ChaptersIO.ToJson(chapters);
                     var existing = ReadJson(path);
-                    if (existing != null && JToken.DeepEquals(json, existing))
+                    if (existing != null && (JToken.DeepEquals(json, existing) || json.ToString() == existing.ToString()))
                         return false;
                     Directory.CreateDirectory(Path.GetDirectoryName(path));
                     using var stream = File.CreateText(path);
@@ -184,7 +184,7 @@ public static class ExportConfigExtensions
                 {
                     var json = LyricsIO.ToJson(lyrics);
                     var existing = ReadJson(path);
-                    if (existing != null && JToken.DeepEquals(json, existing))
+                    if (existing != null && (JToken.DeepEquals(json, existing) || json.ToString() == existing.ToString()))
                         return false;
                     Directory.CreateDirectory(Path.GetDirectoryName(path));
                     using var stream = File.CreateText(path);
