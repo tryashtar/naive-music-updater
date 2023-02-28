@@ -1,5 +1,5 @@
 ### Field Setters
-A field setter determines how a value should be combined with existing song metadata. The simplest field setter is just a [value source](sources.md), which replaces the existing metadata. However, you can also specify additional rules.
+A field setter determines how a value should be combined with existing song metadata. The simplest field setter is just a [value source](value-sources.md), which replaces the existing metadata. However, you can also specify additional rules.
 
 Use `mode` to determine how the new metadata should be combined with previously assigned metadata. The combine mode can be one of the following:
 * `replace` (this is the default, it doesn't need to be specified)
