@@ -40,10 +40,9 @@ public class Song : IMusicItem
         using var file = TagLib.File.Create(Location);
 #endif
         var path = Util.StringPathAfterRoot(this);
-        var art = GlobalConfig.Cache.GetArtPathFor(this);
         var modifier = new TagModifier(file, GlobalConfig);
-        modifier.UpdateArt(art);
         modifier.UpdateMetadata(metadata);
+        modifier.WriteArt(path);
         modifier.WriteLyrics(path);
         modifier.WriteChapters(path);
 

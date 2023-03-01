@@ -1,5 +1,8 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Advanced;
 
 namespace NaiveMusicUpdater;
 
@@ -44,93 +47,7 @@ public static class ExportConfigExtensions
         };
     }
 
-    public static ChapterCollection? BestChapters(this ExportConfig<ChaptersType> config, TagLib.File file, string path)
-    {
-        foreach (var item in config.Priority)
-        {
-            var chap = GetChapters(item, file, path);
-            if (chap != null)
-                return chap;
-        }
-
-        return null;
-    }
-
-    public static ChapterCollection? GetChapters(ChaptersType type, TagLib.File file, string path)
-    {
-        return type switch
-        {
-            ChaptersType.SimpleEmbedded => ChaptersIO.FromFile(file, ChapterTypes.Simple),
-            ChaptersType.RichEmbedded => ChaptersIO.FromFile(file, ChapterTypes.Rich),
-            ChaptersType.SimpleFile => SimpleFileChapters(path, file.Properties.Duration),
-            ChaptersType.RichFile => RichFileChapters(path),
-            _ => null
-        };
-    }
-
-    public static bool SetChapters(ChapterCollection? chapters, ChaptersType? type, TagLib.File file, string path)
-    {
-        switch (type)
-        {
-            case ChaptersType.SimpleEmbedded:
-                return ChaptersIO.ToFile(file, chapters, ChapterTypes.Simple);
-            case ChaptersType.RichEmbedded:
-                return ChaptersIO.ToFile(file, chapters, ChapterTypes.Rich);
-            case ChaptersType.SimpleFile:
-                path += ".chp";
-                if (chapters == null)
-                {
-                    if (File.Exists(path))
-                    {
-                        File.Delete(path);
-                        return true;
-                    }
-
-                    return false;
-                }
-                else
-                {
-                    var chp = chapters.ToChp();
-                    if (File.Exists(path))
-                    {
-                        var existing = File.ReadLines(path);
-                        if (existing.SequenceEqual(chp))
-                            return false;
-                    }
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    File.WriteAllLines(path, chp);
-                    return true;
-                }
-            case ChaptersType.RichFile:
-                path += ".chp.json";
-                if (chapters == null)
-                {
-                    if (File.Exists(path))
-                    {
-                        File.Delete(path);
-                        return true;
-                    }
-
-                    return false;
-                }
-                else
-                {
-                    var json = ChaptersIO.ToJson(chapters);
-                    var existing = ReadJson(path);
-                    if (existing != null && (JToken.DeepEquals(json, existing) || json.ToString() == existing.ToString()))
-                        return false;
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    using var stream = File.CreateText(path);
-                    using var writer = new JsonTextWriter(stream) { Formatting = Formatting.Indented };
-                    json.WriteTo(writer);
-                    return true;
-                }
-        }
-
-        return false;
-    }
-
-    public static bool SetLyrics(Lyrics? lyrics, LyricsType? type, TagLib.File file, string path)
+    public static bool SetLyrics(Lyrics? lyrics, LyricsType type, TagLib.File file, string path)
     {
         switch (type)
         {
@@ -184,12 +101,10 @@ public static class ExportConfigExtensions
                 {
                     var json = LyricsIO.ToJson(lyrics);
                     var existing = ReadJson(path);
-                    if (existing != null && (JToken.DeepEquals(json, existing) || json.ToString() == existing.ToString()))
+                    if (existing != null &&
+                        (JToken.DeepEquals(json, existing) || json.ToString() == existing.ToString()))
                         return false;
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    using var stream = File.CreateText(path);
-                    using var writer = new JsonTextWriter(stream) { Formatting = Formatting.Indented };
-                    json.WriteTo(writer);
+                    WriteJson(json, path);
                     return true;
                 }
         }
@@ -214,6 +129,91 @@ public static class ExportConfigExtensions
         return LyricsIO.FromJson(json);
     }
 
+    public static ChapterCollection? BestChapters(this ExportConfig<ChaptersType> config, TagLib.File file, string path)
+    {
+        foreach (var item in config.Priority)
+        {
+            var chap = GetChapters(item, file, path);
+            if (chap != null)
+                return chap;
+        }
+
+        return null;
+    }
+
+    public static ChapterCollection? GetChapters(ChaptersType type, TagLib.File file, string path)
+    {
+        return type switch
+        {
+            ChaptersType.SimpleEmbedded => ChaptersIO.FromFile(file, ChapterTypes.Simple),
+            ChaptersType.RichEmbedded => ChaptersIO.FromFile(file, ChapterTypes.Rich),
+            ChaptersType.SimpleFile => SimpleFileChapters(path, file.Properties.Duration),
+            ChaptersType.RichFile => RichFileChapters(path),
+            _ => null
+        };
+    }
+
+    public static bool SetChapters(ChapterCollection? chapters, ChaptersType type, TagLib.File file, string path)
+    {
+        switch (type)
+        {
+            case ChaptersType.SimpleEmbedded:
+                return ChaptersIO.ToFile(file, chapters, ChapterTypes.Simple);
+            case ChaptersType.RichEmbedded:
+                return ChaptersIO.ToFile(file, chapters, ChapterTypes.Rich);
+            case ChaptersType.SimpleFile:
+                path += ".chp";
+                if (chapters == null)
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                        return true;
+                    }
+
+                    return false;
+                }
+                else
+                {
+                    var chp = chapters.ToChp();
+                    if (File.Exists(path))
+                    {
+                        var existing = File.ReadLines(path);
+                        if (existing.SequenceEqual(chp))
+                            return false;
+                    }
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    File.WriteAllLines(path, chp);
+                    return true;
+                }
+            case ChaptersType.RichFile:
+                path += ".chp.json";
+                if (chapters == null)
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                        return true;
+                    }
+
+                    return false;
+                }
+                else
+                {
+                    var json = ChaptersIO.ToJson(chapters);
+                    var existing = ReadJson(path);
+                    if (existing != null &&
+                        (JToken.DeepEquals(json, existing) || json.ToString() == existing.ToString()))
+                        return false;
+                    WriteJson(json, path);
+                    return true;
+                }
+        }
+
+        return false;
+    }
+
     private static ChapterCollection? SimpleFileChapters(string path, TimeSpan duration)
     {
         path += ".chp";
@@ -229,6 +229,87 @@ public static class ExportConfigExtensions
         if (json == null)
             return null;
         return ChaptersIO.FromJson(json);
+    }
+
+    public static IPicture? BestArt(this ExportConfig<ImageType> config, TagLib.File file, string path)
+    {
+        foreach (var item in config.Priority)
+        {
+            var art = GetArt(item, file, path);
+            if (art != null)
+                return art;
+        }
+
+        return null;
+    }
+
+    public static IPicture? GetArt(ImageType type, TagLib.File file, string path)
+    {
+        path += ".png";
+        return type switch
+        {
+            ImageType.Embedded => ArtFromFile(file),
+            ImageType.File => ArtCache.GetPicture(path),
+            _ => null
+        };
+    }
+
+    public static bool SetArt(IPicture? art, ImageType type, TagLib.File file, string path)
+    {
+        switch (type)
+        {
+            case ImageType.Embedded:
+                return ArtToFile(file, art);
+            case ImageType.File:
+                path += ".png";
+                if (art == null)
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                        return true;
+                    }
+
+                    return false;
+                }
+                else
+                {
+                    if (File.Exists(path))
+                    {
+                        var existing = ArtCache.GetPicture(path);
+                        if (existing.Data == art.Data)
+                            return false;
+                    }
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    File.WriteAllBytes(path, art.Data.Data);
+                    return true;
+                }
+        }
+
+        return false;
+    }
+
+    private static IPicture? ArtFromFile(TagLib.File file)
+    {
+        if (file.Tag.Pictures.Length == 0)
+            return null;
+        return file.Tag.Pictures[0];
+    }
+
+    private static bool ArtToFile(TagLib.File file, IPicture? art)
+    {
+        var existing = file.Tag.Pictures;
+        if (art == null)
+        {
+            file.Tag.Pictures = Array.Empty<IPicture>();
+            return existing.Length > 0;
+        }
+        else
+        {
+            file.Tag.Pictures = new[] { art };
+            return existing.Length != 1 || art.Data != existing[0].Data;
+        }
     }
 
     private static JObject? ReadJson(string path)
@@ -264,6 +345,12 @@ public enum ChaptersType
     RichEmbedded,
     SimpleFile,
     RichFile
+}
+
+public enum ImageType
+{
+    Embedded,
+    File
 }
 
 public enum ExportOption

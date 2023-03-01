@@ -14,3 +14,4 @@ global using TagLib;
 global using TagLib.Id3v2;
 global using File = System.IO.File;
 global using Tag = TagLib.Tag;
+global using Image = SixLabors.ImageSharp.Image;

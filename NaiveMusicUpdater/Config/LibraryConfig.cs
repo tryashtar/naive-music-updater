@@ -14,6 +14,7 @@ public class LibraryConfig
     public readonly string? LogFolder;
     public readonly ExportConfig<LyricsType>? LyricsConfig;
     public readonly ExportConfig<ChaptersType>? ChaptersConfig;
+    public readonly ExportConfig<ImageType>? ArtConfig;
     public readonly LibraryCache Cache;
 
     public LibraryConfig(string file)
@@ -32,6 +33,7 @@ public class LibraryConfig
             LogFolder = Path.Combine(Path.GetDirectoryName(file), LogFolder);
         LyricsConfig = ParseExportConfig<LyricsType>(yaml.Go("lyrics"));
         ChaptersConfig = ParseExportConfig<ChaptersType>(yaml.Go("chapters"));
+        ArtConfig = ParseExportConfig<ImageType>(yaml.Go("art"));
         FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()), x => x.String()) ?? new();
         NamedStrategies = yaml.Go("named_strategies").ToDictionary(MetadataStrategyFactory.Create) ?? new();
         KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(ParseFrameDefinition)?.ToDictionary(x => x.Id, x => x);
@@ -54,7 +56,7 @@ public class LibraryConfig
             return new KeepFrameDefinition(new Regex(map.Go("id").String()),
                 map.TryGet("desc").ToList(x => new Regex(x.String()))?.ToArray() ?? Array.Empty<Regex>(),
                 map.Go("dupes").Bool() ?? false);
-        throw new FormatException();
+        throw new ArgumentException($"Can't make frame definition from {node}");
     }
 
     private ExportConfig<T>? ParseExportConfig<T>(YamlNode? node) where T : struct, Enum

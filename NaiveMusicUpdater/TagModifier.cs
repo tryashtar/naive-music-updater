@@ -29,6 +29,32 @@ public class TagModifier
         if (interop.Changed)
             HasChanged = true;
     }
+    
+    public void WriteArt(string location)
+    {
+        if (Config.ArtConfig == null)
+            return;
+
+        location = Path.Combine(Config.ArtConfig.ExternalFolder, location);
+        var best = Config.ArtConfig.BestArt(TagFile, location);
+        foreach (var (type, action) in Config.ArtConfig.Decisions)
+        {
+            if (action == ExportOption.Ignore)
+                continue;
+            var write = action == ExportOption.Remove ? null : best;
+            var old = ExportConfigExtensions.GetArt(type, TagFile, location);
+            if (ExportConfigExtensions.SetArt(write, type, TagFile, location))
+            {
+                if (type is ImageType.Embedded)
+                    HasChanged = true;
+                Logger.WriteLine($"Replacing art at {type}:");
+                Logger.TabIn();
+                Logger.WriteLine(old?.ToString()?.Replace("\n", " ") ?? "(blank)");
+                Logger.WriteLine(best?.ToString()?.Replace("\n", " ") ?? "(blank)");
+                Logger.TabOut();
+            }
+        }
+    }
 
     public void WriteLyrics(string location)
     {
