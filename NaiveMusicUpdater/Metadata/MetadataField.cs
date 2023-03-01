@@ -11,7 +11,7 @@ public class MetadataField
     private static readonly Dictionary<string, MetadataField> AliasCache = new();
     private readonly string[] Aliases;
     public string Id => Aliases[0];
-    private MetadataField(string name, MetadataFieldType type, params string[] aliases)
+    public MetadataField(string name, MetadataFieldType type, params string[] aliases)
     {
         DisplayName = name;
         Type = type;

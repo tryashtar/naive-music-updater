@@ -7,6 +7,7 @@ public class MusicLibrary : MusicFolder
     public MusicLibrary(LibraryConfig config) : base(config.LibraryFolder)
     {
         LibraryConfig = config;
+        LoadConfigs();
     }
     
     public void UpdateLibrary()

@@ -18,7 +18,7 @@ public class Song : IMusicItem
     {
         Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
 #if !DEBUG
-        if (!GlobalCache.NeedsUpdate(this))
+        if (!GlobalConfig.Cache.NeedsUpdate(this))
             return;
 #endif
         Logger.WriteLine($"(checking)");
@@ -30,7 +30,7 @@ public class Song : IMusicItem
         if (needs_replaygain)
         {
             Logger.WriteLine($"Normalizing audio with ReplayGain");
-            GlobalCache.Config.NormalizeAudio(this);
+            GlobalConfig.NormalizeAudio(this);
             replay_file.Dispose();
         }
         else
@@ -56,12 +56,12 @@ public class Song : IMusicItem
             catch (IOException ex)
             {
                 Logger.WriteLine($"Save failed because {ex.Message}! Skipping...", ConsoleColor.Red);
-                GlobalCache.MarkNeedsUpdateNextTime(this);
+                GlobalConfig.Cache.MarkNeedsUpdateNextTime(this);
                 success = false;
             }
         }
         if (success)
-            GlobalCache.MarkUpdatedRecently(this);
+            GlobalConfig.Cache.MarkUpdatedRecently(this);
 #else
         if (modifier.HasChanged)
             Logger.WriteLine("Changed!");

@@ -6,7 +6,7 @@ public class LibraryConfig
     private readonly Dictionary<Regex, string> FindReplace;
     private readonly Dictionary<string, IMetadataStrategy> NamedStrategies;
     private readonly Dictionary<string, ReplayGain> ReplayGains;
-    private readonly Dictionary<string, KeepFrameDefinition>? KeepFrameIDs;
+    private readonly Dictionary<Regex, KeepFrameDefinition>? KeepFrameIDs;
     private readonly List<Regex>? KeepXiphMetadata;
     private readonly List<string> SongExtensions;
     public readonly List<string> ConfigFolders;
@@ -24,6 +24,7 @@ public class LibraryConfig
         LibraryFolder = Path.Combine(Path.GetDirectoryName(file),
             yaml.Go("library").String() ??
             throw new InvalidDataException("Library yaml file must specify a \"library\" folder"));
+        LibraryFolder = Path.GetFullPath(LibraryFolder);
         Cache = new LibraryCache(Path.Combine(Path.GetDirectoryName(file),
             yaml.Go("cache").String() ?? ".music-cache"));
         LogFolder = yaml.Go("logs").String();
@@ -43,16 +44,16 @@ public class LibraryConfig
         ConfigFolders = yaml.Go("config_folders").ToStringList() ?? new() { LibraryFolder };
     }
 
-    private record KeepFrameDefinition(string Id, string[] Descriptions, bool DuplicatesAllowed);
+    private record KeepFrameDefinition(Regex Id, Regex[] Descriptions, bool DuplicatesAllowed);
 
     private KeepFrameDefinition ParseFrameDefinition(YamlNode node)
     {
         if (node is YamlScalarNode simple)
-            return new KeepFrameDefinition((string)simple, Array.Empty<string>(), false);
+            return new KeepFrameDefinition(new Regex(simple.Value), Array.Empty<Regex>(), false);
         if (node is YamlMappingNode map)
-            return new KeepFrameDefinition((string)map["id"],
-                map.TryGet("desc").ToStringList()?.ToArray() ?? Array.Empty<string>(),
-                Boolean.Parse((string)map["dupes"]));
+            return new KeepFrameDefinition(new Regex(map.Go("id").String()),
+                map.TryGet("desc").ToList(x => new Regex(x.String()))?.ToArray() ?? Array.Empty<Regex>(),
+                map.Go("dupes").Bool() ?? false);
         throw new FormatException();
     }
 
@@ -100,14 +101,16 @@ public class LibraryConfig
         var frame_types = tag.GetFrames().GroupBy(x => x.FrameId.ToString()).ToList();
         foreach (var group in frame_types)
         {
-            if (!KeepFrameIDs.TryGetValue(group.Key, out var definition))
+            var match = KeepFrameIDs.Keys.FirstOrDefault(x => x.IsMatch(group.Key));
+            if (match == null)
                 remove.AddRange(group);
             else
             {
+                var definition = KeepFrameIDs[match];
                 IEnumerable<Frame> allowed = group;
                 if (group.Key == "TXXX")
                     allowed = group.OfType<UserTextInformationFrame>()
-                        .Where(x => definition.Descriptions.Contains(x.Description));
+                        .Where(x => definition.Descriptions.Any(y => y.IsMatch(x.Description)));
                 if (allowed != group)
                     remove.AddRange(group.Except(allowed));
                 if (!definition.DuplicatesAllowed && allowed.Count() > 1)

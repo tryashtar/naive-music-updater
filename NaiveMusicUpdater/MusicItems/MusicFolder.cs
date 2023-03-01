@@ -43,7 +43,7 @@ public class MusicFolder : IMusicItem
         _Parent = parent;
     }
 
-    protected IMusicItemConfig[] LoadConfigs()
+    protected void LoadConfigs()
     {
         var configs = new List<IMusicItemConfig>();
         var path = Util.StringPathAfterRoot(this);
@@ -53,7 +53,8 @@ public class MusicFolder : IMusicItem
             if (File.Exists(config))
                 configs.Add(MusicItemConfigFactory.Create(config, this));
         }
-        return configs.ToArray();
+
+        Configs = configs.ToArray();
     }
 
     public IEnumerable<Song> GetAllSongs()
@@ -91,13 +92,13 @@ public class MusicFolder : IMusicItem
     private void ScanContents()
     {
         ChildFolders.Clear();
-        Configs = LoadConfigs();
         var info = new DirectoryInfo(Location);
         foreach (DirectoryInfo dir in info.EnumerateDirectories())
         {
             if (dir.Attributes.HasFlag(FileAttributes.Hidden))
                 continue;
             var child = new MusicFolder(this, dir.FullName);
+            child.LoadConfigs();
             if (child.Songs.Any() || child.SubFolders.Any())
                 ChildFolders.Add(child);
         }
