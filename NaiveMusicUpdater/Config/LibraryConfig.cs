@@ -14,7 +14,7 @@ public class LibraryConfig
     public readonly string? LogFolder;
     public readonly ExportConfig<LyricsType>? LyricsConfig;
     public readonly ExportConfig<ChaptersType>? ChaptersConfig;
-    public readonly LibraryCache Cache;
+    public readonly ILibraryCache Cache;
     public readonly ArtRepo? ArtTemplates;
 
     public LibraryConfig(string file)
@@ -29,8 +29,16 @@ public class LibraryConfig
             yaml.Go("library").String() ??
             throw new InvalidDataException("Library yaml file must specify a \"library\" folder"));
         LibraryFolder = Path.GetFullPath(LibraryFolder);
-        Cache = new LibraryCache(Path.Combine(Path.GetDirectoryName(file),
-            yaml.Go("cache").String() ?? ".music-cache"));
+#if !DEBUG
+        var cachepath = yaml.Go("cache").String();
+        if (cachepath != null)
+        {
+            cachepath = Path.Combine(Path.GetDirectoryName(file), cachepath);
+            Cache = new FileLibraryCache(cachepath);
+        }
+        else
+#endif
+        Cache = new DummyLibraryCache();
         LogFolder = yaml.Go("logs").String();
         if (LogFolder != null)
             LogFolder = Path.Combine(Path.GetDirectoryName(file), LogFolder);

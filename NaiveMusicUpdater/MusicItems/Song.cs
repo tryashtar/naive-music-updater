@@ -17,10 +17,8 @@ public class Song : IMusicItem
     public void Update()
     {
         Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
-#if !DEBUG
         if (!GlobalConfig.Cache.NeedsUpdate(this))
             return;
-#endif
         Logger.WriteLine($"(checking)");
         var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
 #if !DEBUG

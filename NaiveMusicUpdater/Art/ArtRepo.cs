@@ -73,6 +73,8 @@ public class ArtRepo
     private Image<Rgba32>? LoadTemplate(string path)
     {
         var name = Path.Combine(Folder, path);
+        if (!Directory.Exists(Path.GetDirectoryName(name)))
+            return null;
         foreach (var file in Directory.EnumerateFiles(Path.GetDirectoryName(name)))
         {
             if (Path.GetFileNameWithoutExtension(file) == Path.GetFileName(name))

@@ -2,25 +2,34 @@
 
 namespace NaiveMusicUpdater;
 
-public class LibraryCache
+public interface ILibraryCache
 {
-    public readonly string Folder;
+    void Save();
+    bool NeedsUpdate(IMusicItem item);
+    void MarkUpdatedRecently(IMusicItem item);
+    void MarkNeedsUpdateNextTime(IMusicItem item);
+}
+
+public class FileLibraryCache : ILibraryCache
+{
+    public readonly string FilePath;
     private readonly Dictionary<string, DateTime> DateCache;
     private readonly Dictionary<string, DateTime> PendingDateCache;
-    private string DateCachePath => Path.Combine(Folder, "datecache.yaml");
-    public LibraryCache(string folder)
+
+    public FileLibraryCache(string file)
     {
-        Folder = folder;
-        if (File.Exists(DateCachePath))
+        FilePath = file;
+        if (File.Exists(file))
         {
-            var datecache = File.ReadAllText(DateCachePath);
+            var datecache = File.ReadAllText(file);
             var deserializer = new DeserializerBuilder().Build();
-            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache) ?? new Dictionary<string, DateTime>();
+            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache) ??
+                        new Dictionary<string, DateTime>();
             PendingDateCache = new Dictionary<string, DateTime>(DateCache);
         }
         else
         {
-            Logger.WriteLine($"Couldn't find date cache {DateCachePath}, starting fresh");
+            Logger.WriteLine($"Couldn't find date cache {file}, starting fresh");
             DateCache = new Dictionary<string, DateTime>();
             PendingDateCache = new Dictionary<string, DateTime>();
         }
@@ -29,8 +38,8 @@ public class LibraryCache
     public void Save()
     {
         var serializer = new SerializerBuilder().Build();
-        Directory.CreateDirectory(Path.GetDirectoryName(DateCachePath));
-        File.WriteAllText(DateCachePath, serializer.Serialize(PendingDateCache));
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
+        File.WriteAllText(FilePath, serializer.Serialize(PendingDateCache));
     }
 
     public bool NeedsUpdate(IMusicItem item)
@@ -46,6 +55,7 @@ public class LibraryCache
             else
                 return true;
         }
+
         return false;
     }
 
@@ -67,7 +77,7 @@ public class LibraryCache
         DateTime created = File.GetCreationTime(filepath);
         return modified > created ? modified : created;
     }
-    
+
     public void MarkUpdatedRecently(IMusicItem item)
     {
         foreach (var path in RelevantPaths(item))
@@ -79,5 +89,25 @@ public class LibraryCache
     public void MarkNeedsUpdateNextTime(IMusicItem item)
     {
         PendingDateCache.Remove(item.Location);
+    }
+}
+
+public class DummyLibraryCache : ILibraryCache
+{
+    public void Save()
+    {
+    }
+
+    public bool NeedsUpdate(IMusicItem item)
+    {
+        return true;
+    }
+
+    public void MarkUpdatedRecently(IMusicItem item)
+    {
+    }
+
+    public void MarkNeedsUpdateNextTime(IMusicItem item)
+    {
     }
 }
