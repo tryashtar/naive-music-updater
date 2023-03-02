@@ -2,7 +2,7 @@
 
 public interface IValueSource
 {
-    IValue Get(IMusicItem item);
+    IValue? Get(IMusicItem item);
 }
 
 public static class ValueSourceFactory

@@ -2,27 +2,26 @@
 
 public class MapFieldSpec : IFieldSpec
 {
-    public readonly Dictionary<MetadataField, IFieldSetter> Fields;
+    public readonly Dictionary<MetadataField, IValueSource> Fields;
 
-    public MapFieldSpec(Dictionary<MetadataField, IFieldSetter> fields)
+    public MapFieldSpec(Dictionary<MetadataField, IValueSource> fields)
     {
         Fields = fields;
     }
 
-    private Metadata ApplyLike(Predicate<MetadataField> desired, Func<IFieldSetter, MetadataProperty> get)
-    {
-        var meta = new Metadata();
-        foreach (var pair in Fields)
-        {
-            if (desired(pair.Key))
-                meta.Register(pair.Key, get(pair.Value));
-        }
-        return meta;
-    }
-
     public Metadata Apply(IMusicItem item, Predicate<MetadataField> desired)
     {
-        return ApplyLike(desired, x => x.Get(item));
+        var meta = new Metadata();
+        foreach (var (field, source) in Fields)
+        {
+            if (desired(field))
+            {
+                var value = source.Get(item);
+                if (value != null)
+                    meta.Register(field, value);
+            }
+        }
+        return meta;
     }
 
     public Metadata ApplyWithContext(IMusicItem item, IValue value, Predicate<MetadataField> desired)

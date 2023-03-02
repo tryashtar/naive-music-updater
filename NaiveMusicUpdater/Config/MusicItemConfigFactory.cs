@@ -26,10 +26,10 @@ public static class MusicItemConfigFactory
     private static YamlNode ProcessReversedConfig(MusicFolder folder, ReversalType type, string file)
     {
         var item_depth = folder.PathFromRoot().Count();
-        var sets = new Dictionary<IMusicItem, Dictionary<MetadataField, MetadataProperty>>();
+        var sets = new Dictionary<IMusicItem, Dictionary<MetadataField, IValue>>();
         var tracks = new Dictionary<IMusicItem, uint>();
-        var reverse_sets = new Dictionary<MetadataField, Dictionary<MetadataProperty, List<IMusicItem>>>();
-        var checker = new MetadataEqualityChecker();
+        var reverse_sets = new Dictionary<MetadataField, Dictionary<IValue, List<IMusicItem>>>();
+        var checker = ValueEqualityChecker.Instance;
         foreach (var field in MetadataField.Values)
         {
             reverse_sets[field] = new(checker);
@@ -45,13 +45,11 @@ public static class MusicItemConfigFactory
                 var val = current.Get(field);
                 if (type == ReversalType.Full || !checker.Equals(val, incoming.Get(field)))
                 {
-                    if (val.Mode == CombineMode.Ignore)
-                        val = new MetadataProperty(BlankValue.Instance, CombineMode.Remove);
                     if (!reverse_sets[field].ContainsKey(val))
                         reverse_sets[field][val] = new();
                     reverse_sets[field][val].Add(song);
                 }
-                if (field == MetadataField.Track && val.Value is NumberValue n)
+                if (field == MetadataField.Track && val is NumberValue n)
                     tracks[song] = n.Value;
             }
         }
@@ -158,25 +156,6 @@ public static class MusicItemConfigFactory
             final_node.Add("discs", discs_node);
         YamlHelper.SaveToFile(final_node, file);
         return final_node;
-    }
-
-    private class MetadataEqualityChecker : IEqualityComparer<MetadataProperty>
-    {
-        public bool Equals(MetadataProperty? x, MetadataProperty? y)
-        {
-            if (x.Value.IsBlank && y.Value.IsBlank)
-                return true;
-            if (x.Value.IsBlank || y.Value.IsBlank)
-                return false;
-            return x.Value.AsList().Values.SequenceEqual(y.Value.AsList().Values);
-        }
-
-        public int GetHashCode([DisallowNull] MetadataProperty obj)
-        {
-            if (obj.Value is BlankValue)
-                return 0;
-            return String.Join(';', obj.Value.AsList().Values).GetHashCode();
-        }
     }
 }
 

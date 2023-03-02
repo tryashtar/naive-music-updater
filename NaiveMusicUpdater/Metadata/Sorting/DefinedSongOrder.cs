@@ -39,8 +39,8 @@ public class DefinedSongOrder : ISongOrder
         var metadata = new Metadata();
         if (CachedResults.TryGetValue(item, out uint track))
         {
-            metadata.Register(MetadataField.Track, new MetadataProperty(new NumberValue(track), CombineMode.Replace));
-            metadata.Register(MetadataField.TrackTotal, new MetadataProperty(new NumberValue(TotalNumber), CombineMode.Replace));
+            metadata.Register(MetadataField.Track, new NumberValue(track));
+            metadata.Register(MetadataField.TrackTotal, new NumberValue(TotalNumber));
         }
         return metadata;
     }

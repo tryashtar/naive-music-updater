@@ -2,6 +2,7 @@
 
 public interface IMetadataStrategy
 {
+    CombineMode Mode { get; }
     Metadata Get(IMusicItem item, Predicate<MetadataField> desired);
 }
 
@@ -23,11 +24,13 @@ public static class MetadataStrategyFactory
                 return new DirectMetadataStrategy(apply);
             }
         }
+
         if (yaml is YamlSequenceNode list)
         {
             var substrats = list.ToList(MetadataStrategyFactory.Create);
             return new MultipleMetadataStrategy(substrats);
         }
+
         throw new ArgumentException($"Can't make metadata strategy from {yaml}");
     }
 }

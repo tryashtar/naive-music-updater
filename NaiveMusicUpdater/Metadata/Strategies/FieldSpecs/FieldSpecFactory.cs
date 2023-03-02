@@ -12,16 +12,15 @@ public static class FieldSpecFactory
     {
         if (yaml is YamlMappingNode map)
         {
-            var fields = yaml.Go("fields");
-            if (fields != null)
+            var remove = yaml.Go("remove");
+            if (remove != null)
             {
                 IEnumerable<MetadataField> set;
-                if (fields is YamlScalarNode scalar && scalar.Value == "*")
+                if (remove is YamlScalarNode { Value: "*" })
                     set = MetadataField.Values;
                 else
-                    set = fields.ToList(x => MetadataField.FromID(x.String()));
-                var setter = yaml.Go("set").Parse(x => FieldSetterFactory.Create(x, has_context));
-                return new SetAllFieldSpec(set.ToHashSet(), setter);
+                    set = remove.ToList(x => MetadataField.FromID(x.String()));
+                return new RemoveFieldSpec(set.ToHashSet());
             }
             else
             {

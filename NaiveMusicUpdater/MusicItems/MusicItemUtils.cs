@@ -9,7 +9,7 @@ public static class MusicItemUtils
         {
             foreach (var config in parent.Configs)
             {
-                metadata.Merge(config.GetMetadata(item, desired));
+                metadata.MergeWith(config.GetMetadata(item, desired));
             }
         }
         return metadata;

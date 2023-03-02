@@ -34,9 +34,9 @@ public class DefinedDiscOrder : ISongOrder
             uint? track = disc.Value.GetTrack(item);
             if (track != null)
             {
-                metadata.Merge(disc.Value.Get(item));
-                metadata.Register(MetadataField.Disc, new MetadataProperty(new NumberValue(disc.Key), CombineMode.Replace));
-                metadata.Register(MetadataField.DiscTotal, new MetadataProperty(new NumberValue(TotalDiscs), CombineMode.Replace));
+                metadata.MergeWith(disc.Value.Get(item), CombineMode.Replace);
+                metadata.Register(MetadataField.Disc, new NumberValue(disc.Key));
+                metadata.Register(MetadataField.DiscTotal, new NumberValue(TotalDiscs));
             }
         }
         return metadata;

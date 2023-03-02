@@ -2,9 +2,8 @@
 
 public interface ITagInterop
 {
-    MetadataProperty Get(MetadataField field);
-    void Set(MetadataField field, MetadataProperty value);
-    void WipeUselessProperties();
+    IValue Get(MetadataField field);
+    void Set(MetadataField field, IValue value);
     bool Changed { get; }
     sealed Metadata GetFullMetadata(Predicate<MetadataField> desired)
     {

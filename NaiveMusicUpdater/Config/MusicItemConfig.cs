@@ -67,23 +67,23 @@ public class MusicItemConfig : IMusicItemConfig
         if (item is MusicFolder)
         {
             if (FoldersStrategy != null)
-                metadata.Merge(FoldersStrategy.Get(item, desired));
+                metadata.MergeWith(FoldersStrategy.Get(item, desired), FoldersStrategy.Mode);
         }
 
         if (item is Song)
         {
             if (SongsStrategy != null)
-                metadata.Merge(SongsStrategy.Get(item, desired));
+                metadata.MergeWith(SongsStrategy.Get(item, desired), SongsStrategy.Mode);
             if (DiscOrder != null)
-                metadata.Merge(DiscOrder.Get(item));
+                metadata.MergeWith(DiscOrder.Get(item), CombineMode.Replace);
             if (TrackOrder != null)
-                metadata.Merge(TrackOrder.Get(item));
+                metadata.MergeWith(TrackOrder.Get(item), CombineMode.Replace);
         }
 
         foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
         {
-            if (strat.IsSelectedFrom(ConfiguredItem, item))
-                metadata.Merge(strat.Get(item, desired));
+            if (strat.Selector.IsSelectedFrom(ConfiguredItem, item))
+                metadata.MergeWith(strat.Strategy.Get(item, desired), strat.Strategy.Mode);
         }
 
         return metadata;
@@ -92,7 +92,7 @@ public class MusicItemConfig : IMusicItemConfig
     public CheckSelectorResults CheckSelectors()
     {
         var results = new CheckSelectorResults();
-        IEnumerable<IItemSelector> all_selectors = SharedStrategies.Concat(MetadataStrategies);
+        IEnumerable<IItemSelector> all_selectors = SharedStrategies.Concat(MetadataStrategies).Select(x => x.Selector);
         if (TrackOrder is DefinedSongOrder tracks)
         {
             all_selectors = all_selectors.Append(tracks.Order);
@@ -113,3 +113,5 @@ public class MusicItemConfig : IMusicItemConfig
         return results;
     }
 }
+
+public record TargetedStrategy(IItemSelector Selector, IMetadataStrategy Strategy);

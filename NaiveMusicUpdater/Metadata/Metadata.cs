@@ -3,41 +3,33 @@
 // an actual mutable collection of metadata
 public class Metadata
 {
-    private readonly Dictionary<MetadataField, MetadataProperty> SavedFields = new();
-    public Metadata()
-    { }
+    private readonly Dictionary<MetadataField, IValue> SavedFields = new();
 
-    public void Register(MetadataField field, MetadataProperty value)
+    public Metadata()
+    {
+    }
+
+    public void Register(MetadataField field, IValue value)
     {
         SavedFields[field] = value;
     }
 
-    public MetadataProperty Get(MetadataField field)
+    public IValue Get(MetadataField field)
     {
         if (SavedFields.TryGetValue(field, out var result))
             return result;
-        return MetadataProperty.Ignore();
+        return BlankValue.Instance;
     }
 
-    public void Merge(Metadata other)
+    public void MergeWith(Metadata other, CombineMode mode)
     {
         foreach (var pair in other.SavedFields)
         {
             if (SavedFields.TryGetValue(pair.Key, out var existing))
-                existing.CombineWith(pair.Value);
+                SavedFields[pair.Key] = ValueExtensions.Combine(existing, pair.Value, mode);
             else
                 SavedFields[pair.Key] = pair.Value;
         }
-    }
-
-    public static Metadata FromMany(IEnumerable<Metadata> many)
-    {
-        var result = new Metadata();
-        foreach (var item in many)
-        {
-            result.Merge(item);
-        }
-        return result;
     }
 
     public override string ToString()
@@ -47,6 +39,7 @@ public class Metadata
         {
             builder.AppendLine($"{item.Key.DisplayName}: {item.Value}");
         }
+
         return builder.ToString();
     }
 }
