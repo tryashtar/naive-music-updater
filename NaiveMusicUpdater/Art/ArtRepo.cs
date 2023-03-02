@@ -1,3 +1,7 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+
 namespace NaiveMusicUpdater;
 
 public class ArtRepo
@@ -17,14 +21,25 @@ public class ArtRepo
         var cached = Cache.Get(path);
         if (cached != null)
             return cached;
-        var file = FindFile(path);
-        if (file == null)
+        var template = LoadTemplate(path);
+        if (template == null)
             return null;
         var settings = GetSettings(path);
-
-        IPicture result = null;
+        var result = ProcessTemplate(template, settings);
         Cache.Put(path, result);
         return result;
+    }
+
+    private IPicture ProcessTemplate(Image<Rgba32> image, ProcessArtSettings settings)
+    {
+        image.Mutate(x =>
+        {
+            if (settings.Background != null)
+                x.BackgroundColor(settings.Background.Value);
+        });
+        using var stream = new MemoryStream();
+        image.SaveAsPng(stream);
+        return new Picture(stream.ToArray());
     }
 
     private ProcessArtSettings GetSettings(string path)
@@ -46,23 +61,22 @@ public class ArtRepo
     {
         while (path != "")
         {
-            var file = Path.Combine(Folder, path, "images.yaml");
-            if (ConfigCache.TryGetValue(file, out var existing))
+            if (ConfigCache.TryGetValue(path, out var existing))
                 yield return existing;
-            var config = new ArtConfig((YamlMappingNode)YamlHelper.ParseFile(file));
-            ConfigCache[file] = config;
+            var config = new ArtConfig(Folder, path);
+            ConfigCache[path] = config;
             yield return config;
             path = Path.GetDirectoryName(path);
         }
     }
 
-    private string? FindFile(string path)
+    private Image<Rgba32>? LoadTemplate(string path)
     {
         var name = Path.Combine(Folder, path);
         foreach (var file in Directory.EnumerateFiles(Path.GetDirectoryName(name)))
         {
             if (Path.GetFileNameWithoutExtension(file) == Path.GetFileName(name))
-                return file;
+                return Image.Load<Rgba32>(file);
         }
 
         return null;

@@ -20,6 +20,9 @@ public class LibraryConfig
     public LibraryConfig(string file)
     {
         ConfigPath = file;
+        var info = new FileInfo(file);
+        if (info.LinkTarget != null)
+            file = info.LinkTarget;
         var yaml = YamlHelper.ParseFile(file);
 
         LibraryFolder = Path.Combine(Path.GetDirectoryName(file),

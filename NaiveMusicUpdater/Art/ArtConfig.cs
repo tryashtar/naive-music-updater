@@ -2,10 +2,13 @@ namespace NaiveMusicUpdater;
 
 public class ArtConfig
 {
+    private readonly string RelativePath;
     public readonly List<(Predicate<string> pred, ProcessArtSettings settings)> Settings;
 
-    public ArtConfig(YamlMappingNode node)
+    public ArtConfig(string folder, string relative)
     {
+        RelativePath = relative;
+        var node = (YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, relative, "images.config"));
         Settings = new();
         var all = node.Go("all").NullableParse(x => new ProcessArtSettings((YamlMappingNode)x));
         if (all != null)
@@ -15,7 +18,7 @@ public class ArtConfig
         {
             foreach (var (name, settings) in set_dict)
             {
-                Settings.Add((x => x == name, settings));
+                Settings.Add((x => x == Path.Combine(relative, name), settings));
             }
         }
 
@@ -23,7 +26,7 @@ public class ArtConfig
         {
             foreach (var item in (YamlSequenceNode)set_all)
             {
-                var names = set_all.Go("names").ToStringList();
+                var names = set_all.Go("names").ToStringList().Select(x => Path.Combine(relative, x)).ToList();
                 var set = new ProcessArtSettings((YamlMappingNode)set_all["set"]);
                 Settings.Add((x => names.Contains(x), set));
             }
