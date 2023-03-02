@@ -7,15 +7,19 @@ public interface IMusicItemValueSource
 
 public static class MusicItemGetterFactory
 {
+    public static Dictionary<NameType, IMusicItemValueSource> NameGetters = new()
+    {
+        [NameType.FileName] = new FuncGetter(x => new StringValue(x.SimpleName)),
+        [NameType.CleanName] = new FuncGetter(x => new StringValue(x.GlobalConfig.CleanName(x.SimpleName))),
+        [NameType.Path] = new FuncGetter(x => new StringValue(Util.StringPathAfterRoot(x)))
+    };
+
     public static IMusicItemValueSource Create(YamlNode yaml)
     {
         if (yaml is YamlScalarNode scalar)
         {
             var name = scalar.ToEnum<NameType>();
-            if (name == NameType.CleanName)
-                return CleanNameGetter.Instance;
-            else if (name == NameType.FileName)
-                return SimpleNameGetter.Instance;
+            return NameGetters[name.Value];
         }
         else if (yaml is YamlMappingNode map)
         {
@@ -31,5 +35,6 @@ public static class MusicItemGetterFactory
 public enum NameType
 {
     CleanName,
-    FileName
+    FileName,
+    Path
 }

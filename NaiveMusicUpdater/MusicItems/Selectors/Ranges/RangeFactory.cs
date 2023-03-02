@@ -13,6 +13,13 @@ public static class RangeFactory
             int stop = node.Go("stop").Int() ?? int.MaxValue - 1;
             return new Range(start, stop >= 0 ? stop + 1 : stop);
         }
+
+        if (node is YamlSequenceNode seq)
+        {
+            int start = seq[0].Int().Value;
+            int stop = seq[1].Int().Value;
+            return new Range(start, stop >= 0 ? stop + 1 : stop);
+        }
         throw new ArgumentException($"Can't make range from {node}");
     }
 

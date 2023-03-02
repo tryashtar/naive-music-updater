@@ -42,7 +42,6 @@ public class Song : IMusicItem
         var path = Util.StringPathAfterRoot(this);
         var modifier = new TagModifier(file, GlobalConfig);
         modifier.UpdateMetadata(metadata);
-        modifier.WriteArt(path);
         modifier.WriteLyrics(path);
         modifier.WriteChapters(path);
 

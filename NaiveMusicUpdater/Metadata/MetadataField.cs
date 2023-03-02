@@ -50,6 +50,7 @@ public class MetadataField
     public static readonly MetadataField Year = new("Year", MetadataFieldType.Number, "year");
     public static readonly MetadataField Language = new("Language", MetadataFieldType.String, "lang", "language");
     public static readonly MetadataField Genres = new("Genres", MetadataFieldType.StringList, "genre", "genres");
+    public static readonly MetadataField Art = new("Art", MetadataFieldType.String, "art");
 
     public static ReadOnlyCollection<MetadataField> Values => AllFields.AsReadOnly();
 }

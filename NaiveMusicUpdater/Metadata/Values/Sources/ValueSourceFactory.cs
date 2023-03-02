@@ -16,7 +16,7 @@ public static class ValueSourceFactory
         else if (yaml is YamlMappingNode map)
         {
             var selector = map.Go("from").Parse(LocalItemSelectorFactory.Create);
-            var getter = map.Go("value").NullableParse(MusicItemGetterFactory.Create) ?? CleanNameGetter.Instance;
+            var getter = map.Go("value").NullableParse(MusicItemGetterFactory.Create) ?? MusicItemGetterFactory.NameGetters[NameType.CleanName];
             var modifier = map.Go("modify").NullableParse(ValueOperatorFactory.Create);
             return new MusicItemSource(selector, getter, modifier);
         }

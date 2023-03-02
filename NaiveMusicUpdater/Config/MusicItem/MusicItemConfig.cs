@@ -10,6 +10,7 @@ public class MusicItemConfig : IMusicItemConfig
     private readonly List<TargetedStrategy> MetadataStrategies;
     private readonly List<TargetedStrategy> SharedStrategies;
     private readonly IMusicItem ConfiguredItem;
+
     public MusicItemConfig(string file, IMusicItem configured_item, YamlNode yaml)
     {
         Location = file;
@@ -20,6 +21,7 @@ public class MusicItemConfig : IMusicItemConfig
             if (DiscOrder == null)
                 TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.Create(x, folder));
         }
+
         SongsStrategy = yaml.Go("songs").NullableParse(LiteralOrReference);
         FoldersStrategy = yaml.Go("folders").NullableParse(LiteralOrReference);
         MetadataStrategies = yaml.Go("set").ToList(ParseStrategy) ?? new();
@@ -62,19 +64,28 @@ public class MusicItemConfig : IMusicItemConfig
     public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
     {
         var metadata = new Metadata();
-        if (SongsStrategy != null && item is Song)
-            metadata.Merge(SongsStrategy.Get(item, desired));
-        if (FoldersStrategy != null && item is MusicFolder)
-            metadata.Merge(FoldersStrategy.Get(item, desired));
-        if (DiscOrder != null && item is Song)
-            metadata.Merge(DiscOrder.Get(item));
-        if (TrackOrder != null && item is Song)
-            metadata.Merge(TrackOrder.Get(item));
+        if (item is MusicFolder)
+        {
+            if (FoldersStrategy != null)
+                metadata.Merge(FoldersStrategy.Get(item, desired));
+        }
+
+        if (item is Song)
+        {
+            if (SongsStrategy != null)
+                metadata.Merge(SongsStrategy.Get(item, desired));
+            if (DiscOrder != null)
+                metadata.Merge(DiscOrder.Get(item));
+            if (TrackOrder != null)
+                metadata.Merge(TrackOrder.Get(item));
+        }
+
         foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
         {
             if (strat.IsSelectedFrom(ConfiguredItem, item))
                 metadata.Merge(strat.Get(item, desired));
         }
+
         return metadata;
     }
 
@@ -87,15 +98,18 @@ public class MusicItemConfig : IMusicItemConfig
             all_selectors = all_selectors.Append(tracks.Order);
             results.UnselectedItems.AddRange(tracks.UnselectedItems);
         }
+
         if (DiscOrder is DefinedDiscOrder discs)
         {
             all_selectors = all_selectors.Concat(discs.GetSelectors());
             results.UnselectedItems.AddRange(discs.GetUnselectedItems());
         }
+
         foreach (var selector in all_selectors)
         {
             results.UnusedSelectors.AddRange(selector.UnusedFrom(ConfiguredItem));
         }
+
         return results;
     }
 }

@@ -14,8 +14,8 @@ public class LibraryConfig
     public readonly string? LogFolder;
     public readonly ExportConfig<LyricsType>? LyricsConfig;
     public readonly ExportConfig<ChaptersType>? ChaptersConfig;
-    public readonly ExportConfig<ImageType>? ArtConfig;
     public readonly LibraryCache Cache;
+    public readonly ArtRepo? ArtTemplates;
 
     public LibraryConfig(string file)
     {
@@ -33,7 +33,17 @@ public class LibraryConfig
             LogFolder = Path.Combine(Path.GetDirectoryName(file), LogFolder);
         LyricsConfig = ParseExportConfig<LyricsType>(yaml.Go("lyrics"));
         ChaptersConfig = ParseExportConfig<ChaptersType>(yaml.Go("chapters"));
-        ArtConfig = ParseExportConfig<ImageType>(yaml.Go("art"));
+        string template_folder = yaml.Go("art", "templates").String();
+        if (template_folder != null)
+        {
+            string cache_folder = yaml.Go("art", "cache").String();
+            IArtCache cache = cache_folder != null
+                ? new DiskArtCache(Path.Combine(Path.Combine(Path.GetDirectoryName(file),
+                    cache_folder)))
+                : new MemoryArtCache();
+            ArtTemplates = new(Path.Combine(Path.GetDirectoryName(file), template_folder), cache);
+        }
+
         FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()), x => x.String()) ?? new();
         NamedStrategies = yaml.Go("named_strategies").ToDictionary(MetadataStrategyFactory.Create) ?? new();
         KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(ParseFrameDefinition)?.ToDictionary(x => x.Id, x => x);

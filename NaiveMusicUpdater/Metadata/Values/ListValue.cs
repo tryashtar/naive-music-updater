@@ -18,7 +18,7 @@ public class ListValue : IValue
     public StringValue AsString()
     {
         if (Values.Count > 1)
-            Logger.WriteLine($"WARNING: downcasting list {this}");
+            Logger.WriteLine($"WARNING: downcasting list {this}", ConsoleColor.Yellow);
         return new(Values.First());
     }
 

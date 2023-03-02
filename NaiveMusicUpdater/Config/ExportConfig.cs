@@ -231,87 +231,6 @@ public static class ExportConfigExtensions
         return ChaptersIO.FromJson(json);
     }
 
-    public static IPicture? BestArt(this ExportConfig<ImageType> config, TagLib.File file, string path)
-    {
-        foreach (var item in config.Priority)
-        {
-            var art = GetArt(item, file, path);
-            if (art != null)
-                return art;
-        }
-
-        return null;
-    }
-
-    public static IPicture? GetArt(ImageType type, TagLib.File file, string path)
-    {
-        path += ".png";
-        return type switch
-        {
-            ImageType.Embedded => ArtFromFile(file),
-            ImageType.File => ArtCache.GetPicture(path),
-            _ => null
-        };
-    }
-
-    public static bool SetArt(IPicture? art, ImageType type, TagLib.File file, string path)
-    {
-        switch (type)
-        {
-            case ImageType.Embedded:
-                return ArtToFile(file, art);
-            case ImageType.File:
-                path += ".png";
-                if (art == null)
-                {
-                    if (File.Exists(path))
-                    {
-                        File.Delete(path);
-                        return true;
-                    }
-
-                    return false;
-                }
-                else
-                {
-                    if (File.Exists(path))
-                    {
-                        var existing = ArtCache.GetPicture(path);
-                        if (existing.Data == art.Data)
-                            return false;
-                    }
-
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    File.WriteAllBytes(path, art.Data.Data);
-                    return true;
-                }
-        }
-
-        return false;
-    }
-
-    private static IPicture? ArtFromFile(TagLib.File file)
-    {
-        if (file.Tag.Pictures.Length == 0)
-            return null;
-        return file.Tag.Pictures[0];
-    }
-
-    private static bool ArtToFile(TagLib.File file, IPicture? art)
-    {
-        var existing = file.Tag.Pictures;
-        if (art == null)
-        {
-            file.Tag.Pictures = Array.Empty<IPicture>();
-            return existing.Length > 0;
-        }
-        else
-        {
-            file.Tag.Pictures = new[] { art };
-            return existing.Length != 1 || art.Data != existing[0].Data;
-        }
-    }
-
     private static JObject? ReadJson(string path)
     {
         if (!File.Exists(path))
@@ -345,12 +264,6 @@ public enum ChaptersType
     RichEmbedded,
     SimpleFile,
     RichFile
-}
-
-public enum ImageType
-{
-    Embedded,
-    File
 }
 
 public enum ExportOption

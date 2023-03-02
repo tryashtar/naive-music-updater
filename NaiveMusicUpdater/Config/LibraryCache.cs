@@ -28,10 +28,6 @@ public class LibraryCache
 
     public void Save()
     {
-        foreach (var item in ArtCache.Cached.Keys)
-        {
-            PendingDateCache[item] = DateTime.Now;
-        }
         var serializer = new SerializerBuilder().Build();
         Directory.CreateDirectory(Path.GetDirectoryName(DateCachePath));
         File.WriteAllText(DateCachePath, serializer.Serialize(PendingDateCache));
@@ -56,9 +52,6 @@ public class LibraryCache
     private IEnumerable<string> RelevantPaths(IMusicItem item)
     {
         yield return item.Location;
-        var art = GetArtPathFor(item);
-        if (art != null)
-            yield return art;
         foreach (var parent in item.PathFromRoot())
         {
             foreach (var config in parent.Configs)
@@ -74,30 +67,7 @@ public class LibraryCache
         DateTime created = File.GetCreationTime(filepath);
         return modified > created ? modified : created;
     }
-
-    private static readonly Regex NonAscii = new(@"[^\u0000-\u007F]+");
-    public string? GetArtPathFor(IMusicItem? item)
-    {
-        while (item != null)
-        {
-            var partial = Util.StringPathAfterRoot(item);
-            partial = NonAscii.Replace(partial, "_");
-            var path = Path.Combine(Folder, "art", partial + ".png");
-            if (File.Exists(path))
-                return path;
-            if (item is Song)
-            {
-                string parent = Path.GetDirectoryName(partial)!;
-                string contents = Path.Combine(parent, "__contents__");
-                var contents_path = Path.Combine(Folder, "art", contents + ".png");
-                if (File.Exists(contents_path))
-                    return contents_path;
-            }
-            item = item.Parent;
-        }
-        return null;
-    }
-
+    
     public void MarkUpdatedRecently(IMusicItem item)
     {
         foreach (var path in RelevantPaths(item))
