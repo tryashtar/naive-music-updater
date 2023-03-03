@@ -65,9 +65,13 @@ public class ArtRepo
         {
             if (ConfigCache.TryGetValue(path, out var existing))
                 yield return existing;
-            var config = new ArtConfig(Folder, path);
-            ConfigCache[path] = config;
-            yield return config;
+            if (File.Exists(Path.Combine(Folder, path, "images.config")))
+            {
+                var config = new ArtConfig(Folder, path);
+                ConfigCache[path] = config;
+                yield return config;
+            }
+
             path = Path.GetDirectoryName(path);
         }
     }

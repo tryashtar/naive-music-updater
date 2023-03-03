@@ -9,7 +9,7 @@ public class MultipleInterop : ITagInterop
         Interops = tag.Tags.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();
     }
 
-    public IValue Get(MetadataField field)
+    public virtual IValue Get(MetadataField field)
     {
         foreach (var interop in Interops)
         {
@@ -20,7 +20,7 @@ public class MultipleInterop : ITagInterop
         return BlankValue.Instance;
     }
 
-    public void Set(MetadataField field, IValue value)
+    public virtual void Set(MetadataField field, IValue value)
     {
         foreach (var interop in Interops)
         {
@@ -28,7 +28,7 @@ public class MultipleInterop : ITagInterop
         }
     }
 
-    public void Clean()
+    public virtual void Clean()
     {
         foreach (var interop in Interops)
         {

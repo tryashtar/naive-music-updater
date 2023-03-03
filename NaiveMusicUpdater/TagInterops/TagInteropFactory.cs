@@ -35,4 +35,5 @@ public static class TagInteropFactory
     private static ITagInterop GetInterop(TagLib.Riff.DivXTag tag, LibraryConfig config) => new DivTagInterop(tag, config);
     private static ITagInterop GetInterop(CombinedTag tag, LibraryConfig config) => new MultipleInterop(tag, config);
     private static ITagInterop GetInterop(TagLib.Ogg.GroupedComment tag, LibraryConfig config) => new MultipleXiphInterop(tag, config);
+    private static ITagInterop GetInterop(TagLib.Flac.Metadata tag, LibraryConfig config) => new FlacTagInterop(tag, config);
 }
