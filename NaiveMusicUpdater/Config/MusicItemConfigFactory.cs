@@ -5,7 +5,7 @@ namespace NaiveMusicUpdater;
 public interface IMusicItemConfig
 {
     string Location { get; }
-    Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired);
+    void Apply(Metadata meta, IMusicItem item, Predicate<MetadataField> desired);
     CheckSelectorResults CheckSelectors();
 }
 

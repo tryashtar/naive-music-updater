@@ -63,34 +63,31 @@ public class MusicItemConfig : IMusicItemConfig
         }
     }
 
-    public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
+    public void Apply(Metadata meta, IMusicItem item, Predicate<MetadataField> desired)
     {
-        var metadata = new Metadata();
         if (item == ConfiguredItem && ThisStrategy != null)
-            ThisStrategy.Apply(metadata, item, desired);
+            ThisStrategy.Apply(meta, item, desired);
         if (item is MusicFolder)
         {
             if (FoldersStrategy != null)
-                FoldersStrategy.Apply(metadata, item, desired);
+                FoldersStrategy.Apply(meta, item, desired);
         }
 
         if (item is Song)
         {
             if (SongsStrategy != null)
-                SongsStrategy.Apply(metadata, item, desired);
+                SongsStrategy.Apply(meta, item, desired);
             if (DiscOrder != null)
-                DiscOrder.Apply(metadata, item);
+                DiscOrder.Apply(meta, item);
             if (TrackOrder != null)
-                TrackOrder.Apply(metadata, item);
+                TrackOrder.Apply(meta, item);
         }
 
         foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
         {
             if (strat.Selector.IsSelectedFrom(ConfiguredItem, item))
-                strat.Strategy.Apply(metadata, item, desired);
+                strat.Strategy.Apply(meta, item, desired);
         }
-
-        return metadata;
     }
 
     public CheckSelectorResults CheckSelectors()

@@ -111,3 +111,32 @@ public class DummyLibraryCache : ILibraryCache
     {
     }
 }
+
+#if DEBUG
+public class DebugLibraryCache : ILibraryCache
+{
+    public readonly List<string> Check;
+
+    public DebugLibraryCache(List<string> check)
+    {
+        Check = check;
+    }
+
+    public void Save()
+    {
+    }
+
+    public bool NeedsUpdate(IMusicItem item)
+    {
+        return Check.Any(x => item.Location.Contains(x, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void MarkUpdatedRecently(IMusicItem item)
+    {
+    }
+
+    public void MarkNeedsUpdateNextTime(IMusicItem item)
+    {
+    }
+}
+#endif

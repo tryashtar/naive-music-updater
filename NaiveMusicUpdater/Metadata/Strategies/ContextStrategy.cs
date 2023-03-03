@@ -13,7 +13,6 @@ public class ContextStrategy : IMetadataStrategy
 
     public void Apply(Metadata start, IMusicItem item, Predicate<MetadataField> desired)
     {
-        var meta = new Metadata();
         var value = Context.Get(item);
         if (value == null)
             return;
@@ -23,10 +22,8 @@ public class ContextStrategy : IMetadataStrategy
             {
                 var modified = source.Apply(item, value);
                 if (modified != null)
-                    meta.Register(field, modified);
+                    start.Register(field, modified);
             }
         }
-
-        start.MergeWith(meta, CombineMode.Replace);
     }
 }

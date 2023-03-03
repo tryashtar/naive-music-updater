@@ -29,13 +29,17 @@ public class LibraryConfig
         LibraryFolder = ParsePath(yaml.Go("library")) ??
                         throw new InvalidDataException("Library yaml file must specify a \"library\" folder");
         LibraryFolder = Path.GetFullPath(LibraryFolder);
-#if !DEBUG
+#if DEBUG
+        Cache = new DebugLibraryCache(File.Exists("debug_check.txt")
+            ? File.ReadLines("debug_check.txt").ToList()
+            : new());
+#else
         var cachepath = ParsePath(yaml.Go("cache"));
         if (cachepath != null)
             Cache = new FileLibraryCache(cachepath);
         else
+            Cache = new DummyLibraryCache();
 #endif
-        Cache = new DummyLibraryCache();
         LogFolder = ParsePath(yaml.Go("logs"));
         LyricsConfig = ParseExportConfig<LyricsType>(yaml.Go("lyrics"));
         ChaptersConfig = ParseExportConfig<ChaptersType>(yaml.Go("chapters"));
