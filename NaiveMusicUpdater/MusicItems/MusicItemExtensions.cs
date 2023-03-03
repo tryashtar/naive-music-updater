@@ -1,6 +1,6 @@
 ﻿namespace NaiveMusicUpdater;
 
-public static class MusicItemUtils
+public static class MusicItemExtensions
 {
     public static Metadata GetMetadata(this IMusicItem item, Predicate<MetadataField> desired)
     {
@@ -25,5 +25,10 @@ public static class MusicItemUtils
         }
         list.Reverse();
         return list;
+    }
+    
+    public static string StringPathAfterRoot(this IMusicItem item)
+    {
+        return String.Join(Path.DirectorySeparatorChar.ToString(), item.PathFromRoot().Skip(1).Select(x => x.SimpleName));
     }
 }

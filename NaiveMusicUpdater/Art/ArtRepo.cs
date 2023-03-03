@@ -8,12 +8,14 @@ public class ArtRepo
 {
     public readonly string Folder;
     private IArtCache Cache;
+    private string? IcoFolder;
     private Dictionary<string, ArtConfig> ConfigCache = new();
 
-    public ArtRepo(string folder, IArtCache cache)
+    public ArtRepo(string folder, IArtCache cache, string? ico_folder)
     {
         Folder = folder;
         Cache = cache;
+        IcoFolder = ico_folder;
     }
 
     public IPicture? GetProcessed(string path)
@@ -44,7 +46,7 @@ public class ArtRepo
 
     private ProcessArtSettings GetSettings(string path)
     {
-        ProcessArtSettings settings = new ProcessArtSettings();
+        var settings = new ProcessArtSettings();
         foreach (var config in GetConfigs(path))
         {
             foreach (var (check, apply) in config.Settings)

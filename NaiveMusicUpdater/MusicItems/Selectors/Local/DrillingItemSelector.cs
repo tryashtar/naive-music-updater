@@ -34,13 +34,15 @@ public class DrillingItemSelector : ILocalItemSelector
 
     private bool CheckMustBe(IMusicItem item)
     {
-        if (MustBe == null)
-            return true;
-        if (MustBe == MusicItemType.File && item is Song)
-            return true;
-        if (MustBe == MusicItemType.Folder && item is MusicFolder)
-            return true;
-        return false;
+        switch (MustBe)
+        {
+            case null:
+            case MusicItemType.File when item is Song:
+            case MusicItemType.Folder when item is MusicFolder:
+                return true;
+            default:
+                return false;
+        }
     }
 }
 

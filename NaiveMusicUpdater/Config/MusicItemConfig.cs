@@ -53,7 +53,7 @@ public class MusicItemConfig : IMusicItemConfig
     private IMetadataStrategy LiteralOrReference(YamlNode node)
     {
         if (node is YamlScalarNode scalar && scalar.Value != null)
-            return ConfiguredItem.GlobalConfig.GetNamedStrategy(scalar.Value);
+            return ConfiguredItem.RootLibrary.LibraryConfig.GetNamedStrategy(scalar.Value);
         else
         {
             if (node is YamlSequenceNode sequence)

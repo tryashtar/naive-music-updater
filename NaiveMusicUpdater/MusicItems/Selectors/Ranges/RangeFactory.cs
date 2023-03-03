@@ -7,20 +7,23 @@ public static class RangeFactory
         int? single = node.Int();
         if (single != null)
             return new Range(single.Value, single.Value + 1);
-        if (node is YamlMappingNode)
+        switch (node)
         {
-            int start = node.Go("start").Int() ?? 0;
-            int stop = node.Go("stop").Int() ?? int.MaxValue - 1;
-            return new Range(start, stop >= 0 ? stop + 1 : stop);
+            case YamlMappingNode:
+            {
+                int start = node.Go("start").Int() ?? 0;
+                int stop = node.Go("stop").Int() ?? int.MaxValue - 1;
+                return new Range(start, stop >= 0 ? stop + 1 : stop);
+            }
+            case YamlSequenceNode seq:
+            {
+                int start = seq[0].Int().Value;
+                int stop = seq[1].Int().Value;
+                return new Range(start, stop >= 0 ? stop + 1 : stop);
+            }
+            default:
+                throw new ArgumentException($"Can't make range from {node}");
         }
-
-        if (node is YamlSequenceNode seq)
-        {
-            int start = seq[0].Int().Value;
-            int stop = seq[1].Int().Value;
-            return new Range(start, stop >= 0 ? stop + 1 : stop);
-        }
-        throw new ArgumentException($"Can't make range from {node}");
     }
 
 }

@@ -9,13 +9,17 @@ public static class ItemPredicateFactory
 {
     public static IItemPredicate Create(YamlNode node)
     {
-        if (node is YamlScalarNode scalar && scalar.Value != null)
-            return new ExactItemPredicate(scalar.Value);
-        if (node is YamlMappingNode map)
+        switch (node)
         {
-            var regex = map.Go("regex").Parse(x => new Regex(x.String(), RegexOptions.IgnoreCase));
-            return new RegexItemPredicate(regex);
+            case YamlScalarNode { Value: { } } scalar:
+                return new ExactItemPredicate(scalar.Value);
+            case YamlMappingNode map:
+            {
+                var regex = map.Go("regex").Parse(x => new Regex(x.String(), RegexOptions.IgnoreCase));
+                return new RegexItemPredicate(regex);
+            }
+            default:
+                throw new ArgumentException($"Can't make item predicate from {node}");
         }
-        throw new ArgumentException($"Can't make item predicate from {node}");
     }
 }

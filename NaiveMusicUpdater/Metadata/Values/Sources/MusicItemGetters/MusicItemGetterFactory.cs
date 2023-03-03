@@ -10,7 +10,7 @@ public static class MusicItemGetterFactory
     public static readonly Dictionary<NameType, IMusicItemValueSource> NameGetters = new()
     {
         [NameType.FileName] = new FuncGetter(x => new StringValue(x.SimpleName)),
-        [NameType.CleanName] = new FuncGetter(x => new StringValue(x.GlobalConfig.CleanName(x.SimpleName))),
+        [NameType.CleanName] = new FuncGetter(x => new StringValue(x.RootLibrary.LibraryConfig.CleanName(x.SimpleName))),
         [NameType.Path] = new FuncGetter(x => new StringValue(x.StringPathAfterRoot()))
     };
 

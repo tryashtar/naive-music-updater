@@ -26,34 +26,28 @@ public class LibraryConfig
             file = info.LinkTarget;
         var yaml = YamlHelper.ParseFile(file);
 
-        LibraryFolder = Path.Combine(Path.GetDirectoryName(file),
-            yaml.Go("library").String() ??
-            throw new InvalidDataException("Library yaml file must specify a \"library\" folder"));
+        LibraryFolder = ParsePath(yaml.Go("library")) ??
+                        throw new InvalidDataException("Library yaml file must specify a \"library\" folder");
         LibraryFolder = Path.GetFullPath(LibraryFolder);
 #if !DEBUG
-        var cachepath = yaml.Go("cache").String();
+        var cachepath = ParsePath(yaml.Go("cache"));
         if (cachepath != null)
-        {
-            cachepath = Path.Combine(Path.GetDirectoryName(file), cachepath);
             Cache = new FileLibraryCache(cachepath);
-        }
         else
 #endif
         Cache = new DummyLibraryCache();
-        LogFolder = yaml.Go("logs").String();
-        if (LogFolder != null)
-            LogFolder = Path.Combine(Path.GetDirectoryName(file), LogFolder);
+        LogFolder = ParsePath(yaml.Go("logs"));
         LyricsConfig = ParseExportConfig<LyricsType>(yaml.Go("lyrics"));
         ChaptersConfig = ParseExportConfig<ChaptersType>(yaml.Go("chapters"));
-        string template_folder = yaml.Go("art", "templates").String();
+        string? template_folder = ParsePath(yaml.Go("art", "templates"));
         if (template_folder != null)
         {
-            string cache_folder = yaml.Go("art", "cache").String();
+            string? cache_folder = ParsePath(yaml.Go("art", "cache"));
             IArtCache cache = cache_folder != null
-                ? new DiskArtCache(Path.Combine(Path.Combine(Path.GetDirectoryName(file),
-                    cache_folder)))
+                ? new DiskArtCache(cache_folder)
                 : new MemoryArtCache();
-            ArtTemplates = new(Path.Combine(Path.GetDirectoryName(file), template_folder), cache);
+            string? ico_folder = ParsePath(yaml.Go("art", "icons"));
+            ArtTemplates = new(template_folder, cache, ico_folder);
         }
 
         FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()), x => x.String()) ?? new();
@@ -67,6 +61,11 @@ public class LibraryConfig
             .ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(),
                 x => new ReplayGain(x["path"].String(), x["args"].String()));
         ConfigFolders = yaml.Go("config_folders").ToStringList() ?? new() { LibraryFolder };
+    }
+
+    private string? ParsePath(YamlNode? node)
+    {
+        return node?.NullableParse(x => Path.Combine(Path.GetDirectoryName(ConfigPath), x.String()));
     }
 
     private record KeepFrameDefinition(Regex Id, Regex[] Descriptions, bool DuplicatesAllowed);
@@ -87,9 +86,7 @@ public class LibraryConfig
     {
         if (node == null)
             return null;
-        var path = node.Go("folder").String();
-        if (path != null)
-            path = Path.Combine(Path.GetDirectoryName(ConfigPath), path);
+        var path = ParsePath(node.Go("folder"));
         var priority = node.Go("priority").ToList<T>(x =>
                                x.ToEnum<T>().Value)
                            ?.ToArray() ??
@@ -151,7 +148,7 @@ public class LibraryConfig
     {
         return KeepXiphMetadata == null || KeepXiphMetadata.Any(x => x.IsMatch(key));
     }
-    
+
     public bool ShouldKeepApe(string key)
     {
         return KeepApeMetadata == null || KeepApeMetadata.Any(x => x.IsMatch(key));

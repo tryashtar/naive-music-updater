@@ -5,7 +5,6 @@ public class MusicFolder : IMusicItem
     private bool HasScanned = false;
     public string Location { get; }
     public IMusicItemConfig[] Configs { get; private set; }
-    public virtual LibraryConfig GlobalConfig => _Parent?.GlobalConfig ?? throw new NullReferenceException();
     private readonly MusicFolder? _Parent;
     public MusicFolder? Parent => _Parent;
     private readonly List<MusicFolder> ChildFolders = new();
@@ -46,8 +45,8 @@ public class MusicFolder : IMusicItem
     protected void LoadConfigs()
     {
         var configs = new List<IMusicItemConfig>();
-        var path = ((IMusicItem)this).StringPathAfterRoot();
-        foreach (var place in GlobalConfig.ConfigFolders)
+        var path = this.StringPathAfterRoot();
+        foreach (var place in RootLibrary.LibraryConfig.ConfigFolders)
         {
             string config = Path.Combine(place, path, "config.yaml");
             if (File.Exists(config))
@@ -69,8 +68,7 @@ public class MusicFolder : IMusicItem
 
     public string SimpleName => Path.GetFileName(Location);
 
-    public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
-    public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
+    public MusicLibrary RootLibrary => (MusicLibrary)this.PathFromRoot().First();
 
     public void Update()
     {
@@ -106,7 +104,7 @@ public class MusicFolder : IMusicItem
         SongList.Clear();
         foreach (var file in Directory.EnumerateFiles(Location))
         {
-            if (GlobalConfig.IsSongFile(file))
+            if (RootLibrary.LibraryConfig.IsSongFile(file))
                 SongList.Add(new Song(this, file));
         }
 
@@ -156,6 +154,6 @@ public class MusicFolder : IMusicItem
 
     public override string ToString()
     {
-        return String.Join("/", MusicItemUtils.PathFromRoot(this).Select(x => x.SimpleName));
+        return String.Join("/", this.PathFromRoot().Select(x => x.SimpleName));
     }
 }

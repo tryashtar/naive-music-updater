@@ -2,8 +2,7 @@
 
 public class MusicLibrary : MusicFolder
 {
-    protected readonly LibraryConfig LibraryConfig;
-    public override LibraryConfig GlobalConfig => LibraryConfig;
+    public readonly LibraryConfig LibraryConfig;
     public MusicLibrary(LibraryConfig config) : base(config.LibraryFolder)
     {
         LibraryConfig = config;

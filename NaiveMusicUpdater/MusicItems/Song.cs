@@ -6,7 +6,6 @@ public class Song : IMusicItem
     protected readonly MusicFolder _Parent;
     public MusicFolder Parent => _Parent;
     public IMusicItemConfig[] Configs => Array.Empty<IMusicItemConfig>();
-    public LibraryConfig GlobalConfig => _Parent.GlobalConfig;
 
     public Song(MusicFolder parent, string file)
     {
@@ -17,10 +16,10 @@ public class Song : IMusicItem
     public void Update()
     {
         Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
-        if (!GlobalConfig.Cache.NeedsUpdate(this))
+        if (!RootLibrary.LibraryConfig.Cache.NeedsUpdate(this))
             return;
         Logger.WriteLine($"(checking)");
-        var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
+        var metadata = this.GetMetadata(MetadataField.All);
 #if !DEBUG
         bool reload_file = true;
         using var replay_file = TagLib.File.Create(Location);
@@ -28,7 +27,7 @@ public class Song : IMusicItem
         if (needs_replaygain)
         {
             Logger.WriteLine($"Normalizing audio with ReplayGain");
-            GlobalConfig.NormalizeAudio(this);
+            RootLibrary.LibraryConfig.NormalizeAudio(this);
             replay_file.Dispose();
         }
         else
@@ -37,8 +36,8 @@ public class Song : IMusicItem
 #else
         using var file = TagLib.File.Create(Location);
 #endif
-        var path = ((IMusicItem)this).StringPathAfterRoot();
-        var modifier = new TagModifier(file, GlobalConfig);
+        var path = this.StringPathAfterRoot();
+        var modifier = new TagModifier(file, RootLibrary.LibraryConfig);
         modifier.UpdateMetadata(metadata);
         modifier.WriteLyrics(path);
         modifier.WriteChapters(path);
@@ -52,12 +51,12 @@ public class Song : IMusicItem
             catch (IOException ex)
             {
                 Logger.WriteLine($"Save failed because {ex.Message}! Skipping...", ConsoleColor.Red);
-                GlobalConfig.Cache.MarkNeedsUpdateNextTime(this);
+                RootLibrary.LibraryConfig.Cache.MarkNeedsUpdateNextTime(this);
                 success = false;
             }
         }
         if (success)
-            GlobalConfig.Cache.MarkUpdatedRecently(this);
+            RootLibrary.LibraryConfig.Cache.MarkUpdatedRecently(this);
 #else
         if (modifier.HasChanged)
             Logger.WriteLine("Changed!");
@@ -95,13 +94,12 @@ public class Song : IMusicItem
 
     public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);
 
-    public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
-    public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
+    public MusicLibrary RootLibrary => (MusicLibrary)this.PathFromRoot().First();
 
     public Metadata GetEmbeddedMetadata(Predicate<MetadataField> desired)
     {
         using var file = TagLib.File.Create(Location);
-        var interop = TagInteropFactory.GetDynamicInterop(file.Tag, GlobalConfig);
+        var interop = TagInteropFactory.GetDynamicInterop(file.Tag, RootLibrary.LibraryConfig);
         return interop.GetFullMetadata(desired);
     }
 }
