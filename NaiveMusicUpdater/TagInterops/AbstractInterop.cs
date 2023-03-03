@@ -7,10 +7,7 @@ public abstract class AbstractInterop<T> : ITagInterop where T : Tag
     private readonly TagTypes TagType;
     private readonly ByteVector OriginalVector;
 
-    public bool Changed
-    {
-        get { return OriginalVector != RenderTag(); }
-    }
+    public bool Changed => OriginalVector != RenderTag();
 
     public AbstractInterop(T tag, LibraryConfig config)
     {

@@ -6,6 +6,11 @@ public interface IValue
 {
     StringValue AsString();
     ListValue AsList();
+
+    NumberValue AsNumber()
+    {
+        return new NumberValue(uint.Parse(AsString().Value));
+    }
     bool IsBlank { get; }
 }
 
