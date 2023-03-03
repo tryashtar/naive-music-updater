@@ -19,4 +19,9 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
     {
         return Tag.Render();
     }
+
+    public override void Set(MetadataField field, IValue value)
+    {
+        
+    }
 }

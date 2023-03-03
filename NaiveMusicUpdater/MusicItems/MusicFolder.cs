@@ -46,7 +46,7 @@ public class MusicFolder : IMusicItem
     protected void LoadConfigs()
     {
         var configs = new List<IMusicItemConfig>();
-        var path = Util.StringPathAfterRoot(this);
+        var path = ((IMusicItem)this).StringPathAfterRoot();
         foreach (var place in GlobalConfig.ConfigFolders)
         {
             string config = Path.Combine(place, path, "config.yaml");

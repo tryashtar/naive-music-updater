@@ -37,7 +37,7 @@ public class Song : IMusicItem
 #else
         using var file = TagLib.File.Create(Location);
 #endif
-        var path = Util.StringPathAfterRoot(this);
+        var path = ((IMusicItem)this).StringPathAfterRoot();
         var modifier = new TagModifier(file, GlobalConfig);
         modifier.UpdateMetadata(metadata);
         modifier.WriteLyrics(path);

@@ -4,6 +4,7 @@ public interface ITagInterop
 {
     IValue Get(MetadataField field);
     void Set(MetadataField field, IValue value);
+    void Clean();
     bool Changed { get; }
     sealed Metadata GetFullMetadata(Predicate<MetadataField> desired)
     {

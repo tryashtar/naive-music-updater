@@ -1,4 +1,4 @@
-﻿namespace NaiveMusicUpdater;
+namespace NaiveMusicUpdater;
 
 public class LibraryConfig
 {
@@ -8,6 +8,7 @@ public class LibraryConfig
     private readonly Dictionary<string, ReplayGain> ReplayGains;
     private readonly Dictionary<Regex, KeepFrameDefinition>? KeepFrameIDs;
     private readonly List<Regex>? KeepXiphMetadata;
+    private readonly List<Regex>? KeepApeMetadata;
     private readonly List<string> SongExtensions;
     public readonly List<string> ConfigFolders;
     public readonly string LibraryFolder;
@@ -59,6 +60,7 @@ public class LibraryConfig
         NamedStrategies = yaml.Go("named_strategies").ToDictionary(MetadataStrategyFactory.Create) ?? new();
         KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(ParseFrameDefinition)?.ToDictionary(x => x.Id, x => x);
         KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x));
+        KeepApeMetadata = yaml.Go("keep", "ape").ToListFromStrings(x => new Regex(x));
         SongExtensions =
             yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
         ReplayGains = yaml.Go("replay_gain")
@@ -148,6 +150,11 @@ public class LibraryConfig
     public bool ShouldKeepXiph(string key)
     {
         return KeepXiphMetadata == null || KeepXiphMetadata.Any(x => x.IsMatch(key));
+    }
+    
+    public bool ShouldKeepApe(string key)
+    {
+        return KeepApeMetadata == null || KeepApeMetadata.Any(x => x.IsMatch(key));
     }
 
     public string CleanName(string name)

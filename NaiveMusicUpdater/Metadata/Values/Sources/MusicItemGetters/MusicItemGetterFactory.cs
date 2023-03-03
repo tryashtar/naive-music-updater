@@ -11,7 +11,7 @@ public static class MusicItemGetterFactory
     {
         [NameType.FileName] = new FuncGetter(x => new StringValue(x.SimpleName)),
         [NameType.CleanName] = new FuncGetter(x => new StringValue(x.GlobalConfig.CleanName(x.SimpleName))),
-        [NameType.Path] = new FuncGetter(x => new StringValue(Util.StringPathAfterRoot(x)))
+        [NameType.Path] = new FuncGetter(x => new StringValue(x.StringPathAfterRoot()))
     };
 
     public static IMusicItemValueSource Create(YamlNode yaml)

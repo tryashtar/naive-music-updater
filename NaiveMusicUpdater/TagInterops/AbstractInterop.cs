@@ -23,6 +23,11 @@ public abstract class AbstractInterop<T> : ITagInterop where T : Tag
     }
 
     protected abstract ByteVector RenderTag();
+
+    public virtual void Clean()
+    {
+    }
+
     public abstract IValue Get(MetadataField field);
     public abstract void Set(MetadataField field, IValue value);
 }

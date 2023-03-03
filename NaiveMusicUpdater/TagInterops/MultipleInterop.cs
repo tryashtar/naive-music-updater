@@ -27,6 +27,14 @@ public class MultipleInterop : ITagInterop
             interop.Set(field, value);
         }
     }
+
+    public void Clean()
+    {
+        foreach (var interop in Interops)
+        {
+            interop.Clean();
+        }
+    }
 }
 
 public class MultipleXiphInterop : ITagInterop
@@ -54,6 +62,14 @@ public class MultipleXiphInterop : ITagInterop
         foreach (var interop in Interops)
         {
             interop.Set(field, value);
+        }
+    }
+    
+    public void Clean()
+    {
+        foreach (var interop in Interops)
+        {
+            interop.Clean();
         }
     }
 }
