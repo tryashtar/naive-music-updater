@@ -22,6 +22,6 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
 
     public override void Set(MetadataField field, IValue value)
     {
-        
+        base.Set(field, value);
     }
 }

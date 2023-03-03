@@ -18,6 +18,7 @@ public class Song : IMusicItem
         Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
         if (!RootLibrary.LibraryConfig.Cache.NeedsUpdate(this))
             return;
+        Logger.TabIn();
         Logger.WriteLine($"(checking)");
         var metadata = this.GetMetadata(MetadataField.All);
 #if !DEBUG
@@ -61,6 +62,7 @@ public class Song : IMusicItem
         if (modifier.HasChanged)
             Logger.WriteLine("Changed!");
 #endif
+        Logger.TabOut();
     }
 
     private bool HasReplayGain(TagLib.File file)

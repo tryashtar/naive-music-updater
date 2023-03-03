@@ -21,10 +21,10 @@ public class LibraryConfig
     public LibraryConfig(string file)
     {
         ConfigPath = file;
-        var info = new FileInfo(file);
+        var info = new FileInfo(ConfigPath);
         if (info.LinkTarget != null)
-            file = info.LinkTarget;
-        var yaml = YamlHelper.ParseFile(file);
+            ConfigPath = info.LinkTarget;
+        var yaml = YamlHelper.ParseFile(ConfigPath);
 
         LibraryFolder = ParsePath(yaml.Go("library")) ??
                         throw new InvalidDataException("Library yaml file must specify a \"library\" folder");

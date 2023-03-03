@@ -23,9 +23,14 @@ public static class MetadataStrategyFactory
                     return new ContextStrategy(source, apply);
                 }
 
-                var remove = map.Go("remove").ToListFromStrings(MetadataField.FromID);
+                var remove = map.Go("remove");
                 if (remove != null)
-                    return new RemoveStrategy(remove.ToHashSet());
+                {
+                    return remove.String() == "*"
+                        ? new RemoveStrategy(MetadataField.Values.ToHashSet())
+                        : new RemoveStrategy(remove.ToListFromStrings(MetadataField.FromID).ToHashSet());
+                }
+
                 Dictionary<MetadataField, IValueSource> direct;
                 var mode = map.Go("mode").ToEnum<CombineMode>();
                 if (mode != null)

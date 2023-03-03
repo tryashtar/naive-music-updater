@@ -40,30 +40,133 @@ public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
     public override void Set(MetadataField field, IValue value)
     {
         if (field == MetadataField.Album)
-            Tag.Album = value.IsBlank ? null : value.AsString().Value;
+        {
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (Tag.Album != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Album = val;
+            }
+        }
+
         if (field == MetadataField.AlbumArtists)
-            Tag.AlbumArtists = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+        {
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!Tag.AlbumArtists.SequenceEqual(val))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.AlbumArtists = val;
+            }
+        }
+
         if (field == MetadataField.Arranger)
-            Tag.RemixedBy = value.IsBlank ? null : value.AsString().Value;
+        {
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (Tag.RemixedBy != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.RemixedBy = val;
+            }
+        }
+
         if (field == MetadataField.Comment)
-            Tag.Comment = value.IsBlank ? null : value.AsString().Value;
+        {
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (Tag.Comment != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Comment = val;
+            }
+        }
+
         if (field == MetadataField.Composers)
-            Tag.Composers = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+        {
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!Tag.Composers.SequenceEqual(val))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Composers = val;
+            }
+        }
+
         if (field == MetadataField.Genres)
-            Tag.Genres = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+        {
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!Tag.Genres.SequenceEqual(val))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Genres = val;
+            }
+        }
+
         if (field == MetadataField.Performers)
-            Tag.Performers = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+        {
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!Tag.Performers.SequenceEqual(val))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Performers = val;
+            }
+        }
+
         if (field == MetadataField.Title)
-            Tag.Title = value.IsBlank ? null : value.AsString().Value;
+        {
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (Tag.Title != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Title = val;
+            }
+        }
+
         if (field == MetadataField.Track)
-            Tag.Track = value.IsBlank ? 0 : value.AsNumber().Value;
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.Track != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Track = val;
+            }
+        }
+
         if (field == MetadataField.TrackTotal)
-            Tag.TrackCount = value.IsBlank ? 0 : value.AsNumber().Value;
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.TrackCount != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.TrackCount = val;
+            }
+        }
+
         if (field == MetadataField.Disc)
-            Tag.Disc = value.IsBlank ? 0 : value.AsNumber().Value;
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.Disc != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Disc = val;
+            }
+        }
+
         if (field == MetadataField.DiscTotal)
-            Tag.DiscCount = value.IsBlank ? 0 : value.AsNumber().Value;
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.DiscCount != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.DiscCount = val;
+            }
+        }
+
         if (field == MetadataField.Year)
-            Tag.Year = value.IsBlank ? 0 : value.AsNumber().Value;
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.Year != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Year = val;
+            }
+        }
     }
 }
