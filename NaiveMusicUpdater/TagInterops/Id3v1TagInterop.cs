@@ -2,7 +2,9 @@
 
 public class Id3v1TagInterop : BacicInterop<TagLib.Id3v1.Tag>
 {
-    public Id3v1TagInterop(TagLib.Id3v1.Tag tag, LibraryConfig config) : base(tag, config) { }
+    public Id3v1TagInterop(TagLib.Id3v1.Tag tag, LibraryConfig config) : base(tag, config)
+    {
+    }
 
     protected override ByteVector RenderTag()
     {
@@ -41,7 +43,7 @@ public class Id3v1TagInterop : BacicInterop<TagLib.Id3v1.Tag>
         else if (field == MetadataField.Performers)
         {
             var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
-            if (!Tag.Performers.SequenceEqual(val))
+            if (Trim(String.Join(';', Tag.Performers), 30) != Trim(String.Join(';', val), 30))
             {
                 Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
                 Tag.Performers = val;
@@ -51,6 +53,7 @@ public class Id3v1TagInterop : BacicInterop<TagLib.Id3v1.Tag>
 
     private static string Trim(string value, int length)
     {
-        return TagLib.Id3v1.Tag.DefaultStringHandler.Render(value).Resize(length).ToString().Trim().TrimEnd('\0');
+        return TagLib.Id3v1.Tag.DefaultStringHandler
+            .Parse(TagLib.Id3v1.Tag.DefaultStringHandler.Render(value).Resize(length)).Trim().TrimEnd('\0');
     }
 }
