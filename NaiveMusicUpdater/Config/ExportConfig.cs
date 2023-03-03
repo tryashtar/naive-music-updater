@@ -24,14 +24,7 @@ public static class ExportConfigExtensions
 {
     public static Lyrics? BestLyrics(this ExportConfig<LyricsType> config, TagLib.File file, string path)
     {
-        foreach (var item in config.Priority)
-        {
-            var lyrics = GetLyrics(item, file, path);
-            if (lyrics != null)
-                return lyrics;
-        }
-
-        return null;
+        return config.Priority.Select(item => GetLyrics(item, file, path)).FirstOrDefault(x => x != null);
     }
 
     public static Lyrics? GetLyrics(LyricsType type, TagLib.File file, string path)
@@ -107,38 +100,27 @@ public static class ExportConfigExtensions
                     WriteJson(json, path);
                     return true;
                 }
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type));
         }
-
-        return false;
     }
 
     private static Lyrics? SyncedFileLyrics(string path, TimeSpan duration)
     {
         path += ".lrc";
-        if (File.Exists(path))
-            return LyricsIO.FromLrc(File.ReadLines(path), duration);
-        return null;
+        return File.Exists(path) ? LyricsIO.FromLrc(File.ReadLines(path), duration) : null;
     }
 
     private static Lyrics? RichFileLyrics(string path)
     {
         path += ".lrc.json";
         var json = ReadJson(path);
-        if (json == null)
-            return null;
-        return LyricsIO.FromJson(json);
+        return json == null ? null : LyricsIO.FromJson(json);
     }
 
     public static ChapterCollection? BestChapters(this ExportConfig<ChaptersType> config, TagLib.File file, string path)
     {
-        foreach (var item in config.Priority)
-        {
-            var chap = GetChapters(item, file, path);
-            if (chap != null)
-                return chap;
-        }
-
-        return null;
+        return config.Priority.Select(item => GetChapters(item, file, path)).FirstOrDefault(x => x != null);
     }
 
     public static ChapterCollection? GetChapters(ChaptersType type, TagLib.File file, string path)
@@ -209,26 +191,22 @@ public static class ExportConfigExtensions
                     WriteJson(json, path);
                     return true;
                 }
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type));
         }
-
-        return false;
     }
 
     private static ChapterCollection? SimpleFileChapters(string path, TimeSpan duration)
     {
         path += ".chp";
-        if (File.Exists(path))
-            return ChaptersIO.FromChp(File.ReadLines(path), duration);
-        return null;
+        return File.Exists(path) ? ChaptersIO.FromChp(File.ReadLines(path), duration) : null;
     }
 
     private static ChapterCollection? RichFileChapters(string path)
     {
         path += ".chp.json";
         var json = ReadJson(path);
-        if (json == null)
-            return null;
-        return ChaptersIO.FromJson(json);
+        return json == null ? null : ChaptersIO.FromJson(json);
     }
 
     private static JObject? ReadJson(string path)

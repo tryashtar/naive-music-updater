@@ -20,9 +20,9 @@ public class TagModifier
         var interop = TagInteropFactory.GetDynamicInterop(TagFile.Tag, Config);
         if (interop.Changed)
             Logger.WriteLine("Change detected from creating interop!", ConsoleColor.Red);
-        foreach (var field in MetadataField.Values)
+        foreach (var (field, value) in metadata.SavedFields)
         {
-            interop.Set(field, metadata.Get(field));
+            interop.Set(field, value);
         }
 
         if (interop.Changed)

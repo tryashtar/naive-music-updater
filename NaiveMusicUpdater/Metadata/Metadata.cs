@@ -3,7 +3,7 @@
 // an actual mutable collection of metadata
 public class Metadata
 {
-    private readonly Dictionary<MetadataField, IValue> SavedFields = new();
+    public readonly Dictionary<MetadataField, IValue> SavedFields = new();
 
     public Metadata()
     {

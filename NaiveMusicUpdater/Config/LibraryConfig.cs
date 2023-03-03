@@ -71,13 +71,14 @@ public class LibraryConfig
 
     private KeepFrameDefinition ParseFrameDefinition(YamlNode node)
     {
-        if (node is YamlScalarNode simple)
-            return new KeepFrameDefinition(new Regex(simple.Value), Array.Empty<Regex>(), false);
-        if (node is YamlMappingNode map)
-            return new KeepFrameDefinition(new Regex(map.Go("id").String()),
+        return node switch
+        {
+            YamlScalarNode simple => new KeepFrameDefinition(new Regex(simple.Value), Array.Empty<Regex>(), false),
+            YamlMappingNode map => new KeepFrameDefinition(new Regex(map.Go("id").String()),
                 map.TryGet("desc").ToList(x => new Regex(x.String()))?.ToArray() ?? Array.Empty<Regex>(),
-                map.Go("dupes").Bool() ?? false);
-        throw new ArgumentException($"Can't make frame definition from {node}");
+                map.Go("dupes").Bool() ?? false),
+            _ => throw new ArgumentException($"Can't make frame definition from {node}")
+        };
     }
 
     private ExportConfig<T>? ParseExportConfig<T>(YamlNode? node) where T : struct, Enum
@@ -151,9 +152,9 @@ public class LibraryConfig
 
     public string CleanName(string name)
     {
-        foreach (var findrepl in FindReplace)
+        foreach (var (find, repl) in FindReplace)
         {
-            name = findrepl.Key.Replace(name, findrepl.Value);
+            name = find.Replace(name, repl);
         }
 
         return name;
@@ -169,7 +170,7 @@ public class LibraryConfig
         string text_file = Path.Combine(Path.GetDirectoryName(song.Location)!, "temp-song-original.txt");
         if (abnormal_chars)
         {
-            Logger.WriteLine("Weird characters detected, doing weird rename thingy");
+            Logger.WriteLine("Weird characters detected, doing weird rename thingy", ConsoleColor.Yellow);
             File.WriteAllText(text_file, song.Location + "\n" + temp_file);
             location = temp_file;
             if (File.Exists(location))

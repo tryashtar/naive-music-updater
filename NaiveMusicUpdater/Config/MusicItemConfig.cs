@@ -5,6 +5,7 @@ public class MusicItemConfig : IMusicItemConfig
     public string Location { get; }
     private readonly ISongOrder? TrackOrder;
     private readonly ISongOrder? DiscOrder;
+    private readonly IMetadataStrategy? ThisStrategy;
     private readonly IMetadataStrategy? SongsStrategy;
     private readonly IMetadataStrategy? FoldersStrategy;
     private readonly List<TargetedStrategy> MetadataStrategies;
@@ -22,6 +23,7 @@ public class MusicItemConfig : IMusicItemConfig
                 TrackOrder = yaml.Go("order").NullableParse(x => SongOrderFactory.Create(x, folder));
         }
 
+        ThisStrategy = yaml.Go("this").NullableParse(LiteralOrReference);
         SongsStrategy = yaml.Go("songs").NullableParse(LiteralOrReference);
         FoldersStrategy = yaml.Go("folders").NullableParse(LiteralOrReference);
         MetadataStrategies = yaml.Go("set").ToList(ParseStrategy) ?? new();
@@ -64,6 +66,8 @@ public class MusicItemConfig : IMusicItemConfig
     public Metadata GetMetadata(IMusicItem item, Predicate<MetadataField> desired)
     {
         var metadata = new Metadata();
+        if (item == ConfiguredItem && ThisStrategy != null)
+            metadata.MergeWith(ThisStrategy.Get(item, desired), ThisStrategy.Mode);
         if (item is MusicFolder)
         {
             if (FoldersStrategy != null)

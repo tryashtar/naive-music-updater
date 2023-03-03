@@ -7,7 +7,7 @@ public interface IMusicItemValueSource
 
 public static class MusicItemGetterFactory
 {
-    public static Dictionary<NameType, IMusicItemValueSource> NameGetters = new()
+    public static readonly Dictionary<NameType, IMusicItemValueSource> NameGetters = new()
     {
         [NameType.FileName] = new FuncGetter(x => new StringValue(x.SimpleName)),
         [NameType.CleanName] = new FuncGetter(x => new StringValue(x.GlobalConfig.CleanName(x.SimpleName))),
@@ -16,16 +16,20 @@ public static class MusicItemGetterFactory
 
     public static IMusicItemValueSource Create(YamlNode yaml)
     {
-        if (yaml is YamlScalarNode scalar)
+        switch (yaml)
         {
-            var name = scalar.ToEnum<NameType>();
-            return NameGetters[name.Value];
-        }
-        else if (yaml is YamlMappingNode map)
-        {
-            var copy = yaml.Go("copy").NullableParse(x => MetadataField.FromID(x.String()));
-            if (copy != null)
-                return new CopyMetadataGetter(copy);
+            case YamlScalarNode scalar:
+            {
+                var name = scalar.ToEnum<NameType>();
+                return NameGetters[name.Value];
+            }
+            case YamlMappingNode map:
+            {
+                var copy = yaml.Go("copy").NullableParse(x => MetadataField.FromID(x.String()));
+                if (copy != null)
+                    return new CopyMetadataGetter(copy);
+                break;
+            }
         }
 
         throw new ArgumentException($"Can't make metadata selector from {yaml}");
