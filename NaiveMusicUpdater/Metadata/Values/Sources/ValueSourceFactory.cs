@@ -10,9 +10,9 @@ public static class ValueSourceFactory
     public static IValueSource Create(YamlNode yaml)
     {
         if (yaml is YamlScalarNode scalar && scalar.Value != null)
-            return new LiteralStringSource(scalar.Value);
+            return new LiteralValueSource(new StringValue(scalar.Value));
         else if (yaml is YamlSequenceNode sequence)
-            return new LiteralListSource(sequence.ToStringList());
+            return new LiteralValueSource(new ListValue(sequence.ToStringList()));
         else if (yaml is YamlMappingNode map)
         {
             var selector = map.Go("from").Parse(LocalItemSelectorFactory.Create);

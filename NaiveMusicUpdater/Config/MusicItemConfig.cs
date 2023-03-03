@@ -55,7 +55,7 @@ public class MusicItemConfig : IMusicItemConfig
         else
         {
             if (node is YamlSequenceNode sequence)
-                return new MultipleMetadataStrategy(sequence.Select(LiteralOrReference));
+                return new MultipleStrategy(sequence.Select(LiteralOrReference));
             else
                 return MetadataStrategyFactory.Create(node);
         }

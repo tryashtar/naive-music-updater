@@ -6,11 +6,13 @@ public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
     {
     }
 
-    public virtual IValue Get(MetadataField field)
+    public override IValue Get(MetadataField field)
     {
+        
     }
 
-    public virtual void Set(MetadataField field, IValue value)
+    public override void Set(MetadataField field, IValue value)
     {
+        
     }
 }

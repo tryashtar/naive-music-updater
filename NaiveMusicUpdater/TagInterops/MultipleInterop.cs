@@ -9,30 +9,22 @@ public class MultipleInterop : ITagInterop
         Interops = tag.Tags.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();
     }
 
-    public MetadataProperty Get(MetadataField field)
+    public IValue Get(MetadataField field)
     {
         foreach (var interop in Interops)
         {
             var result = interop.Get(field);
-            if (!result.Value.IsBlank)
+            if (!result.IsBlank)
                 return result;
         }
-        return MetadataProperty.Ignore();
+        return BlankValue.Instance;
     }
 
-    public void Set(MetadataField field, MetadataProperty value)
+    public void Set(MetadataField field, IValue value)
     {
         foreach (var interop in Interops)
         {
             interop.Set(field, value);
-        }
-    }
-
-    public void WipeUselessProperties()
-    {
-        foreach (var interop in Interops)
-        {
-            interop.WipeUselessProperties();
         }
     }
 }
@@ -46,30 +38,22 @@ public class MultipleXiphInterop : ITagInterop
         Interops = tag.Comments.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();
     }
 
-    public MetadataProperty Get(MetadataField field)
+    public IValue Get(MetadataField field)
     {
         foreach (var interop in Interops)
         {
             var result = interop.Get(field);
-            if (!result.Value.IsBlank)
+            if (!result.IsBlank)
                 return result;
         }
-        return MetadataProperty.Ignore();
+        return BlankValue.Instance;
     }
 
-    public void Set(MetadataField field, MetadataProperty value)
+    public void Set(MetadataField field, IValue value)
     {
         foreach (var interop in Interops)
         {
             interop.Set(field, value);
-        }
-    }
-
-    public void WipeUselessProperties()
-    {
-        foreach (var interop in Interops)
-        {
-            interop.WipeUselessProperties();
         }
     }
 }

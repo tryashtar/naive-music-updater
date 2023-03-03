@@ -15,20 +15,32 @@ public static class MetadataStrategyFactory
             var source = map.Go("source").NullableParse(ValueSourceFactory.Create);
             if (source != null)
             {
-                var apply = map.Go("apply").Parse(x => FieldSpecFactory.Create(x, true));
-                return new RedirectingMetadataStrategy(source, apply);
+                var apply = map.Go("apply").ToDictionary(
+                    x => MetadataField.FromID(x.String()),
+                    ValueOperatorFactory.Create);
+                return new ContextStrategy(source, apply);
             }
+
+            var remove = map.Go("remove").ToListFromStrings(MetadataField.FromID);
+            if (remove != null)
+                return new RemoveStrategy(remove.ToHashSet());
+            Dictionary<MetadataField, IValueSource> direct;
+            var mode = map.Go("mode").ToEnum<CombineMode>();
+            if (mode != null)
+                direct = map.Go("apply").ToDictionary(
+                    x => MetadataField.FromID(x.String()),
+                    ValueSourceFactory.Create);
             else
-            {
-                var apply = map.Parse(x => FieldSpecFactory.Create(x, false));
-                return new DirectMetadataStrategy(apply);
-            }
+                direct = map.ToDictionary(
+                    x => MetadataField.FromID(x.String()),
+                    ValueSourceFactory.Create);
+            return new MapStrategy(direct, mode ?? CombineMode.Replace);
         }
 
         if (yaml is YamlSequenceNode list)
         {
             var substrats = list.ToList(MetadataStrategyFactory.Create);
-            return new MultipleMetadataStrategy(substrats);
+            return new MultipleStrategy(substrats);
         }
 
         throw new ArgumentException($"Can't make metadata strategy from {yaml}");

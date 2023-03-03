@@ -8,5 +8,5 @@ public class BlankValue : IValue
     public StringValue AsString() => throw new InvalidOperationException();
     public bool IsBlank => true;
 
-    public override string ToString() => "";
+    public override string ToString() => "(blank)";
 }

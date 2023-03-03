@@ -25,7 +25,6 @@ public class TagModifier
             interop.Set(field, metadata.Get(field));
         }
 
-        interop.WipeUselessProperties();
         if (interop.Changed)
             HasChanged = true;
     }
