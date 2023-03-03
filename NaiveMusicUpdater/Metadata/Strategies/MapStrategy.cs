@@ -11,7 +11,7 @@ public class MapStrategy : IMetadataStrategy
         Mode = mode;
     }
 
-    public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
+    public void Apply(Metadata start, IMusicItem item, Predicate<MetadataField> desired)
     {
         var meta = new Metadata();
         foreach (var (field, source) in Fields)
@@ -23,7 +23,7 @@ public class MapStrategy : IMetadataStrategy
                     meta.Register(field, value);
             }
         }
-
-        return meta;
+        
+        start.MergeWith(meta, Mode);
     }
 }

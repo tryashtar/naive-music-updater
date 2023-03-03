@@ -26,7 +26,7 @@ public class DefinedDiscOrder : ISongOrder
         return unselected;
     }
 
-    public Metadata Get(IMusicItem item)
+    public void Apply(Metadata start, IMusicItem item)
     {
         var metadata = new Metadata();
         foreach (var disc in Discs)
@@ -34,11 +34,10 @@ public class DefinedDiscOrder : ISongOrder
             uint? track = disc.Value.GetTrack(item);
             if (track != null)
             {
-                metadata.MergeWith(disc.Value.Get(item), CombineMode.Replace);
-                metadata.Register(MetadataField.Disc, new NumberValue(disc.Key));
-                metadata.Register(MetadataField.DiscTotal, new NumberValue(TotalDiscs));
+                disc.Value.Apply(start, item);
+                start.Register(MetadataField.Disc, new NumberValue(disc.Key));
+                start.Register(MetadataField.DiscTotal, new NumberValue(TotalDiscs));
             }
         }
-        return metadata;
     }
 }

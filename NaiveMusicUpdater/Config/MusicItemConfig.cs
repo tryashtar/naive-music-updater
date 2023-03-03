@@ -67,27 +67,27 @@ public class MusicItemConfig : IMusicItemConfig
     {
         var metadata = new Metadata();
         if (item == ConfiguredItem && ThisStrategy != null)
-            metadata.MergeWith(ThisStrategy.Get(item, desired), ThisStrategy.Mode);
+            ThisStrategy.Apply(metadata, item, desired);
         if (item is MusicFolder)
         {
             if (FoldersStrategy != null)
-                metadata.MergeWith(FoldersStrategy.Get(item, desired), FoldersStrategy.Mode);
+                FoldersStrategy.Apply(metadata, item, desired);
         }
 
         if (item is Song)
         {
             if (SongsStrategy != null)
-                metadata.MergeWith(SongsStrategy.Get(item, desired), SongsStrategy.Mode);
+                SongsStrategy.Apply(metadata, item, desired);
             if (DiscOrder != null)
-                metadata.MergeWith(DiscOrder.Get(item), CombineMode.Replace);
+                DiscOrder.Apply(metadata, item);
             if (TrackOrder != null)
-                metadata.MergeWith(TrackOrder.Get(item), CombineMode.Replace);
+                TrackOrder.Apply(metadata, item);
         }
 
         foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
         {
             if (strat.Selector.IsSelectedFrom(ConfiguredItem, item))
-                metadata.MergeWith(strat.Strategy.Get(item, desired), strat.Strategy.Mode);
+                strat.Strategy.Apply(metadata, item, desired);
         }
 
         return metadata;

@@ -2,8 +2,7 @@
 
 public interface IMetadataStrategy
 {
-    CombineMode Mode { get; }
-    Metadata Get(IMusicItem item, Predicate<MetadataField> desired);
+    void Apply(Metadata start, IMusicItem item, Predicate<MetadataField> desired);
 }
 
 public static class MetadataStrategyFactory

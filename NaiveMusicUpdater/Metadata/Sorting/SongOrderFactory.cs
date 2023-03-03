@@ -2,7 +2,7 @@
 
 public interface ISongOrder
 {
-    Metadata Get(IMusicItem item);
+    void Apply(Metadata start, IMusicItem item);
 }
 
 public static class SongOrderFactory

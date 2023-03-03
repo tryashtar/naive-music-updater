@@ -34,14 +34,12 @@ public class DefinedSongOrder : ISongOrder
         return null;
     }
 
-    public Metadata Get(IMusicItem item)
+    public void Apply(Metadata start, IMusicItem item)
     {
-        var metadata = new Metadata();
         if (CachedResults.TryGetValue(item, out uint track))
         {
-            metadata.Register(MetadataField.Track, new NumberValue(track));
-            metadata.Register(MetadataField.TrackTotal, new NumberValue(TotalNumber));
+            start.Register(MetadataField.Track, new NumberValue(track));
+            start.Register(MetadataField.TrackTotal, new NumberValue(TotalNumber));
         }
-        return metadata;
     }
 }

@@ -4,7 +4,6 @@ public class ContextStrategy : IMetadataStrategy
 {
     private readonly IValueSource Context;
     private readonly Dictionary<MetadataField, IValueOperator> Fields;
-    public CombineMode Mode => CombineMode.Replace;
 
     public ContextStrategy(IValueSource context, Dictionary<MetadataField, IValueOperator> fields)
     {
@@ -12,12 +11,12 @@ public class ContextStrategy : IMetadataStrategy
         Fields = fields;
     }
 
-    public Metadata Get(IMusicItem item, Predicate<MetadataField> desired)
+    public void Apply(Metadata start, IMusicItem item, Predicate<MetadataField> desired)
     {
         var meta = new Metadata();
         var value = Context.Get(item);
         if (value == null)
-            return meta;
+            return;
         foreach (var (field, source) in Fields)
         {
             if (desired(field))
@@ -28,6 +27,6 @@ public class ContextStrategy : IMetadataStrategy
             }
         }
 
-        return meta;
+        start.MergeWith(meta, CombineMode.Replace);
     }
 }
