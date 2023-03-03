@@ -39,6 +39,30 @@ public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
             }
         }
         else
+        {
+            if (field == MetadataField.Title && !Config.ShouldKeepXiph("TITLE"))
+                return;
+            if (field == MetadataField.Album && !Config.ShouldKeepXiph("ALBUM"))
+                return;
+            if (field == MetadataField.AlbumArtists && !Config.ShouldKeepXiph("ALBUMARTIST"))
+                return;
+            if (field == MetadataField.Performers && !Config.ShouldKeepXiph("ARTIST"))
+                return;
+            if (field == MetadataField.Arranger && !Config.ShouldKeepXiph("REMIXEDBY"))
+                return;
+            if (field == MetadataField.Composers && !Config.ShouldKeepXiph("COMPOSER"))
+                return;
+            if (field == MetadataField.Track && !Config.ShouldKeepXiph("TRACKNUMBER"))
+                return;
+            if (field == MetadataField.TrackTotal && !Config.ShouldKeepXiph("TRACKTOTAL"))
+                return;
+            if (field == MetadataField.Comment && !Config.ShouldKeepXiph("COMMENT"))
+                return;
+            if (field == MetadataField.Disc && !Config.ShouldKeepXiph("DISCNUMBER"))
+                return;
+            if (field == MetadataField.DiscTotal && !Config.ShouldKeepXiph("DISCTOTAL"))
+                return;
             base.Set(field, value);
+        }
     }
 }

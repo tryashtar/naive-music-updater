@@ -48,8 +48,8 @@ public class TagModifier
                     HasChanged = true;
                 Logger.WriteLine($"Replacing lyrics at {type}:");
                 Logger.TabIn();
-                Logger.WriteLine(old?.ToString()?.Replace("\n", " ") ?? "(blank)");
-                Logger.WriteLine(best?.ToString()?.Replace("\n", " ") ?? "(blank)");
+                Logger.WriteLine(old?.ToString() ?? "(blank)");
+                Logger.WriteLine(best?.ToString() ?? "(blank)");
                 Logger.TabOut();
             }
         }
@@ -74,8 +74,8 @@ public class TagModifier
                     HasChanged = true;
                 Logger.WriteLine($"Replacing chapters at {type}:");
                 Logger.TabIn();
-                Logger.WriteLine(old?.ToString()?.Replace("\n", " ") ?? "(blank)");
-                Logger.WriteLine(best?.ToString()?.Replace("\n", " ") ?? "(blank)");
+                Logger.WriteLine(old?.ToString() ?? "(blank)");
+                Logger.WriteLine(best?.ToString() ?? "(blank)");
                 Logger.TabOut();
             }
         }

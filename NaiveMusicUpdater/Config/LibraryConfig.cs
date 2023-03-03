@@ -144,6 +144,11 @@ public class LibraryConfig
         return (frame_types.SelectMany(x => x).Except(remove), remove);
     }
 
+    public bool ShouldKeepFrame(string id)
+    {
+        return KeepFrameIDs == null || KeepFrameIDs.Keys.Any(x => x.IsMatch(id));
+    }
+
     public bool ShouldKeepXiph(string key)
     {
         return KeepXiphMetadata == null || KeepXiphMetadata.Any(x => x.IsMatch(key));

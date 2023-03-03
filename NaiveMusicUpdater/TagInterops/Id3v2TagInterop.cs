@@ -22,6 +22,30 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
 
     public override void Set(MetadataField field, IValue value)
     {
+        if (field == MetadataField.Title && !Config.ShouldKeepFrame("TIT2"))
+            return;
+        if (field == MetadataField.Album && !Config.ShouldKeepFrame("TALB"))
+            return;
+        if (field == MetadataField.AlbumArtists && !Config.ShouldKeepFrame("TPE1"))
+            return;
+        if (field == MetadataField.Performers && !Config.ShouldKeepFrame("TPE2"))
+            return;
+        if (field == MetadataField.Arranger && !Config.ShouldKeepFrame("TPE4"))
+            return;
+        if (field == MetadataField.Composers && !Config.ShouldKeepFrame("TCOM"))
+            return;
+        if ((field == MetadataField.Track || field == MetadataField.TrackTotal) && !Config.ShouldKeepFrame("TRCK"))
+            return;
+        if (field == MetadataField.Language && !Config.ShouldKeepFrame("TLAN"))
+            return;
+        if (field == MetadataField.Year && !Config.ShouldKeepFrame("TDRC"))
+            return;
+        if (field == MetadataField.Genres && !Config.ShouldKeepFrame("TCON"))
+            return;
+        if (field == MetadataField.Comment && !Config.ShouldKeepFrame("COMM"))
+            return;
+        if ((field == MetadataField.Disc || field == MetadataField.DiscTotal) && !Config.ShouldKeepFrame("TPOS"))
+            return;
         base.Set(field, value);
     }
 }
