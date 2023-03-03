@@ -65,4 +65,16 @@ public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
             base.Set(field, value);
         }
     }
+    
+    public override void Clean()
+    {
+        foreach (var key in Tag.ToList())
+        {
+            if (!Config.ShouldKeepXiph(key))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {key} removed: {new ListValue(Tag.GetField(key))}");
+                Tag.RemoveField(key);
+            }
+        }
+    }
 }

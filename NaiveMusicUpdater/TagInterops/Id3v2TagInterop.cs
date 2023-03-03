@@ -48,4 +48,14 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
             return;
         base.Set(field, value);
     }
+
+    public override void Clean()
+    {
+        var remove = Config.DecideFrames(Tag).remove.ToList();
+        foreach (var frame in remove)
+        {
+            Logger.WriteLine($"{Tag.TagTypes} frame removed: {FrameViewer.ToString(frame)}");
+            Tag.RemoveFrame(frame);
+        }
+    }
 }

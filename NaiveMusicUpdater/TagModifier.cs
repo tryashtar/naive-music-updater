@@ -25,6 +25,8 @@ public class TagModifier
             interop.Set(field, value);
         }
 
+        interop.Clean();
+
         if (interop.Changed)
             HasChanged = true;
     }
