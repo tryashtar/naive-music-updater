@@ -25,7 +25,6 @@ public static class RangeFactory
                 throw new ArgumentException($"Can't make range from {node}");
         }
     }
-
 }
 
 public record Range(int Start, int End)

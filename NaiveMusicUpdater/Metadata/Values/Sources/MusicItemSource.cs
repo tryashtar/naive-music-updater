@@ -18,20 +18,14 @@ public class MusicItemSource : IValueSource
         var items = Selector.AllMatchesFrom(item);
         if (!items.Any())
             return null;
-        var values = items.Select(GetAndModify).Where(x => x != null).ToArray();
-        return values.Length switch
+        var values = items.Select(Getter.Get).Where(x => x != null).ToArray();
+        if (values.Length == 0)
+            return null;
+        var result = values.Length switch
         {
-            0 => null,
             1 => values[0],
             _ => new ListValue(values.Select(x => x.AsString().Value))
         };
-    }
-
-    private IValue? GetAndModify(IMusicItem item)
-    {
-        var value = Getter.Get(item);
-        if (Modifier != null)
-            value = Modifier.Apply(item, value);
-        return value;
+        return Modifier == null ? result : Modifier.Apply(item, result);
     }
 }
