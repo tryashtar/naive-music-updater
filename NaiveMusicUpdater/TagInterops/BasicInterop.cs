@@ -34,7 +34,7 @@ public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
             return Tag.DiscCount == 0 ? BlankValue.Instance : new NumberValue(Tag.DiscCount);
         if (field == MetadataField.Year)
             return Tag.Year == 0 ? BlankValue.Instance : new NumberValue(Tag.Year);
-        throw new ArgumentException(nameof(field));
+        return BlankValue.Instance;
     }
 
     public override void Set(MetadataField field, IValue value)
@@ -166,6 +166,32 @@ public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
             {
                 Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
                 Tag.Year = val;
+            }
+        }
+
+        if (field == MetadataField.Art)
+        {
+            IPicture? pic = null;
+            if (!value.IsBlank && Config.ArtTemplates != null)
+            {
+                foreach (var path in value.AsList().Values)
+                {
+                    pic = Config.ArtTemplates.GetProcessed(path);
+                    if (pic != null)
+                        break;
+                }
+            }
+
+            if (pic == null && Tag.Pictures.Length > 0)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Tag.Pictures[0].Description} -> {BlankValue.Instance}");
+                Tag.Pictures = Array.Empty<IPicture>();
+            }
+            else if (pic != null && (Tag.Pictures.Length == 0 || Tag.Pictures[0].Data != pic.Data))
+            {
+                var prev = Tag.Pictures.Length == 0 ? BlankValue.Instance.ToString() : Tag.Pictures[0].Description;
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {prev} -> {pic.Description}");
+                Tag.Pictures = new[] { pic };
             }
         }
     }

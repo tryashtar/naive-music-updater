@@ -33,6 +33,8 @@ public class ApeTagInterop : BacicInterop<TagLib.Ape.Tag>
             return;
         if (field == MetadataField.Composers && !Config.ShouldKeepApe("Composer"))
             return;
+        if (field == MetadataField.Art && !Config.ShouldKeepApe("Cover Art (front)"))
+            return;
         base.Set(field, value);
     }
 

@@ -24,6 +24,8 @@ public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
 
     public override void Set(MetadataField field, IValue value)
     {
+        if (field == MetadataField.Art)
+            return;
         if (field == MetadataField.Year)
         {
             var raw = Get(field);

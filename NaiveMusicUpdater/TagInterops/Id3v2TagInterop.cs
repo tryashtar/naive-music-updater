@@ -46,6 +46,8 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
             return;
         if ((field == MetadataField.Disc || field == MetadataField.DiscTotal) && !Config.ShouldKeepFrame("TPOS"))
             return;
+        if (field == MetadataField.Art && !Config.ShouldKeepFrame("APIC"))
+            return;
         base.Set(field, value);
     }
 

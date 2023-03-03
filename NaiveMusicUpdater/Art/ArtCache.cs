@@ -9,7 +9,7 @@ public interface IArtCache
 public class DiskArtCache : IArtCache
 {
     public readonly string Folder;
-    private MemoryArtCache MemoryCache;
+    private readonly MemoryArtCache MemoryCache = new();
 
     public DiskArtCache(string folder)
     {
