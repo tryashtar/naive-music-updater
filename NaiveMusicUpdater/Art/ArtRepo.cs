@@ -47,7 +47,7 @@ public class ArtRepo
     private ProcessArtSettings GetSettings(string path)
     {
         var settings = new ProcessArtSettings();
-        foreach (var config in GetConfigs(path))
+        foreach (var config in GetConfigs(path).Reverse())
         {
             foreach (var (check, apply) in config.Settings)
             {
@@ -61,17 +61,19 @@ public class ArtRepo
 
     private IEnumerable<ArtConfig> GetConfigs(string path)
     {
-        while (path != "")
+        while (true)
         {
             if (ConfigCache.TryGetValue(path, out var existing))
                 yield return existing;
-            if (File.Exists(Path.Combine(Folder, path, "images.config")))
+            if (File.Exists(Path.Combine(Folder, path, "images.yaml")))
             {
                 var config = new ArtConfig(Folder, path);
                 ConfigCache[path] = config;
                 yield return config;
             }
 
+            if (path == "")
+                break;
             path = Path.GetDirectoryName(path);
         }
     }

@@ -8,7 +8,7 @@ public class ArtConfig
     public ArtConfig(string folder, string relative)
     {
         RelativePath = relative;
-        var node = (YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, relative, "images.config"));
+        var node = (YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, relative, "images.yaml"));
         Settings = new();
         var all = node.Go("all").NullableParse(x => new ProcessArtSettings((YamlMappingNode)x));
         if (all != null)
