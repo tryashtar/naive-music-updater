@@ -9,9 +9,8 @@ public class RegexGroupOperator : IValueOperator
         Group = group;
     }
 
-    public IValue Apply(IMusicItem item, IValue original)
+    public IValue? Apply(IMusicItem item, IValue original)
     {
-        var text = (RegexMatchValue)original;
-        return new StringValue(text.GetGroup(Group));
+        return original is not RegexMatchValue text ? null : new StringValue(text.GetGroup(Group));
     }
 }

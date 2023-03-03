@@ -3,10 +3,10 @@
 public class ContextStrategy : IMetadataStrategy
 {
     private readonly IValueSource Context;
-    private readonly Dictionary<MetadataField,IValueOperator> Fields;
+    private readonly Dictionary<MetadataField, IValueOperator> Fields;
     public CombineMode Mode => CombineMode.Replace;
 
-    public ContextStrategy(IValueSource context, Dictionary<MetadataField,IValueOperator> fields)
+    public ContextStrategy(IValueSource context, Dictionary<MetadataField, IValueOperator> fields)
     {
         Context = context;
         Fields = fields;
@@ -16,15 +16,18 @@ public class ContextStrategy : IMetadataStrategy
     {
         var meta = new Metadata();
         var value = Context.Get(item);
+        if (value == null)
+            return meta;
         foreach (var (field, source) in Fields)
         {
             if (desired(field))
             {
                 var modified = source.Apply(item, value);
-                if (value != null)
-                    meta.Register(field, value);
+                if (modified != null)
+                    meta.Register(field, modified);
             }
         }
+
         return meta;
     }
 }

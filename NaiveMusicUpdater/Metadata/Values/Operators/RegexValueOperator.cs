@@ -11,16 +11,13 @@ public class RegexValueOperator : IValueOperator
         MatchFail = decision;
     }
 
-    public IValue Apply(IMusicItem item, IValue original)
+    public IValue? Apply(IMusicItem item, IValue original)
     {
-        if (original.IsBlank)
-            return BlankValue.Instance;
-
         var text = original.AsString();
 
         var match = RegexItem.Match(text.Value);
         if (!match.Success)
-            return MatchFail == MatchFailDecision.TakeWhole ? original : BlankValue.Instance;
+            return MatchFail == MatchFailDecision.TakeWhole ? original : null;
 
         return new RegexMatchValue(match);
     }

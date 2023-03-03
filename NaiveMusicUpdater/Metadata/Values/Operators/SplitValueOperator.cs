@@ -11,16 +11,13 @@ public class SplitValueOperator : IValueOperator
         NoSeparator = decision;
     }
 
-    public IValue Apply(IMusicItem item, IValue original)
+    public IValue? Apply(IMusicItem item, IValue original)
     {
-        if (original.IsBlank)
-            return BlankValue.Instance;
-
         var text = original.AsString();
 
         string[] parts = text.Value.Split(new[] { Separator }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 1 && NoSeparator == NoSeparatorDecision.Exit)
-            return BlankValue.Instance;
+            return null;
 
         return new ListValue(parts);
     }

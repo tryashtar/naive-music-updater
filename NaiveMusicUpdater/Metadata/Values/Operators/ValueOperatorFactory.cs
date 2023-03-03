@@ -2,7 +2,7 @@
 
 public interface IValueOperator
 {
-    IValue Apply(IMusicItem item, IValue original);
+    IValue? Apply(IMusicItem item, IValue original);
 }
 
 public static class ValueOperatorFactory
