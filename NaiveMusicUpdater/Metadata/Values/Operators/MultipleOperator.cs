@@ -1,10 +1,10 @@
 ﻿namespace NaiveMusicUpdater;
 
-public class MultipleValueOperator : IValueOperator
+public class MultipleOperator : IValueOperator
 {
     private readonly List<IValueOperator> Operators;
 
-    public MultipleValueOperator(IEnumerable<IValueOperator> operators)
+    public MultipleOperator(IEnumerable<IValueOperator> operators)
     {
         Operators = operators.ToList();
     }

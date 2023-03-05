@@ -12,11 +12,13 @@ public static class ValueOperatorFactory
         switch (yaml)
         {
             case YamlScalarNode { Value: "first" }:
-                return new IndexValueOperator(0, OutofBoundsDecision.Exit);
+                return new IndexOperator(0, OutofBoundsDecision.Exit);
             case YamlScalarNode { Value: "last" }:
-                return new IndexValueOperator(-1, OutofBoundsDecision.Exit);
+                return new IndexOperator(-1, OutofBoundsDecision.Exit);
             case YamlScalarNode scalar when int.TryParse(scalar.Value, out int index):
-                return new IndexValueOperator(index, OutofBoundsDecision.Exit);
+                return new IndexOperator(index, OutofBoundsDecision.Exit);
+            case YamlScalarNode { Value: "reverse" }:
+                return ReverseOperator.Instance;
             case YamlMappingNode map:
             {
                 var index = map.Go("index").Int();
@@ -24,14 +26,14 @@ public static class ValueOperatorFactory
                 {
                     var oob = map.Go("out_of_bounds").ToEnum(def: OutofBoundsDecision.Exit);
                     var min_length = map.Go("min_length").Int();
-                    return new IndexValueOperator(index.Value, oob, min_length);
+                    return new IndexOperator(index.Value, oob, min_length);
                 }
 
                 var split = map.Go("split").String();
                 if (split != null)
                 {
                     var decision = map.Go("when_none").ToEnum(def: NoSeparatorDecision.Ignore);
-                    return new SplitValueOperator(split, decision);
+                    return new SplitOperator(split, decision);
                 }
 
                 var group = map.Go("group").String();
@@ -42,16 +44,16 @@ public static class ValueOperatorFactory
                 if (regex != null)
                 {
                     var decision = yaml.Go("fail").ToEnum(def: MatchFailDecision.Exit);
-                    return new RegexValueOperator(regex, decision);
+                    return new RegexOperator(regex, decision);
                 }
 
                 var prepend = map.Go("prepend").NullableParse(ValueSourceFactory.Create);
                 if (prepend != null)
-                    return new AppendValueOperator(prepend, AppendMode.Prepend);
+                    return new AppendOperator(prepend, AppendMode.Prepend);
 
                 var append = map.Go("append").NullableParse(ValueSourceFactory.Create);
                 if (append != null)
-                    return new AppendValueOperator(append, AppendMode.Append);
+                    return new AppendOperator(append, AppendMode.Append);
 
                 var join = map.Go("join").NullableParse(ValueSourceFactory.Create);
                 if (join != null)
@@ -59,7 +61,7 @@ public static class ValueOperatorFactory
                 break;
             }
             case YamlSequenceNode sequence:
-                return new MultipleValueOperator(sequence.ToList(ValueOperatorFactory.Create));
+                return new MultipleOperator(sequence.ToList(ValueOperatorFactory.Create));
         }
 
         throw new ArgumentException($"Can't make value operator from {yaml}");

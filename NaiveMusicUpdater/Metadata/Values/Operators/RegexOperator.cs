@@ -1,11 +1,11 @@
 ﻿namespace NaiveMusicUpdater;
 
-public class RegexValueOperator : IValueOperator
+public class RegexOperator : IValueOperator
 {
     public readonly Regex RegexItem;
     public readonly MatchFailDecision MatchFail;
 
-    public RegexValueOperator(Regex regex, MatchFailDecision decision)
+    public RegexOperator(Regex regex, MatchFailDecision decision)
     {
         RegexItem = regex;
         MatchFail = decision;

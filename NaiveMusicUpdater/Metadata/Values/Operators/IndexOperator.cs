@@ -1,12 +1,12 @@
 ﻿namespace NaiveMusicUpdater;
 
-public class IndexValueOperator : IValueOperator
+public class IndexOperator : IValueOperator
 {
     public readonly int Index;
     public readonly OutofBoundsDecision OutOfBounds;
     public readonly int? MinLength;
 
-    public IndexValueOperator(int index, OutofBoundsDecision oob, int? min_length = null)
+    public IndexOperator(int index, OutofBoundsDecision oob, int? min_length = null)
     {
         Index = index;
         OutOfBounds = oob;

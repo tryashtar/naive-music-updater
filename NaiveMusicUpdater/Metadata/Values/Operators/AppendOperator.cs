@@ -1,11 +1,11 @@
 ﻿namespace NaiveMusicUpdater;
 
-public class AppendValueOperator : IValueOperator
+public class AppendOperator : IValueOperator
 {
     public readonly IValueSource Value;
     public readonly AppendMode Mode;
 
-    public AppendValueOperator(IValueSource text, AppendMode mode)
+    public AppendOperator(IValueSource text, AppendMode mode)
     {
         Value = text;
         Mode = mode;

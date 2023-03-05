@@ -8,15 +8,15 @@
         <nullable>enable</nullable>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="SixLabors.ImageSharp" Version="3.0.0"/>
-        <PackageReference Include="YamlDotNet" Version="12.0.2"/>
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.0.0" />
+        <PackageReference Include="YamlDotNet" Version="12.0.2" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\taglib-sharp\src\TaglibSharp\TaglibSharp.csproj"/>
-        <ProjectReference Include="..\utils.music\TryashtarUtils.Music.csproj"/>
-        <ProjectReference Include="..\utils.utility\TryashtarUtils.Utility.csproj"/>
+        <ProjectReference Include="..\taglib-sharp\src\TaglibSharp\TaglibSharp.csproj" />
+        <ProjectReference Include="..\utils.music\TryashtarUtils.Music.csproj" />
+        <ProjectReference Include="..\utils.utility\TryashtarUtils.Utility.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <Folder Include="Properties\"/>
+        <Folder Include="Properties\" />
     </ItemGroup>
 </Project>

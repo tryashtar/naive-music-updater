@@ -1,11 +1,11 @@
 ﻿namespace NaiveMusicUpdater;
 
-public class SplitValueOperator : IValueOperator
+public class SplitOperator : IValueOperator
 {
     public readonly string Separator;
     public readonly NoSeparatorDecision NoSeparator;
 
-    public SplitValueOperator(string separator, NoSeparatorDecision decision)
+    public SplitOperator(string separator, NoSeparatorDecision decision)
     {
         Separator = separator;
         NoSeparator = decision;
