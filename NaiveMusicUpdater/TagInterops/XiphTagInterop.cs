@@ -67,7 +67,7 @@ public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
             base.Set(field, value);
         }
     }
-    
+
     public override void Clean()
     {
         foreach (var key in Tag.ToList())

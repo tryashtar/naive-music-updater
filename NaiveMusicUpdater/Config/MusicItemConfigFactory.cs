@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-namespace NaiveMusicUpdater;
+﻿namespace NaiveMusicUpdater;
 
 public interface IMusicItemConfig
 {
@@ -126,7 +124,7 @@ public static class MusicItemConfigFactory
                     set_all_node.Add(new YamlMappingNode
                     {
                         { "names", new YamlSequenceNode(val.Value.Select(ItemToPath)) },
-                        { "set", new YamlMappingNode { { prop.Key.Id, ValueToNode(val.Key) } } },
+                        { "set", new YamlMappingNode { { prop.Key.Id, ValueToNode(val.Key) } } }
                     });
                 }
 

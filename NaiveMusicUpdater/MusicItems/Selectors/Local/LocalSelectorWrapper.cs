@@ -3,6 +3,7 @@
 public class LocalSelectorWrapper : ILocalItemSelector
 {
     public readonly IItemSelector Wrapped;
+
     public LocalSelectorWrapper(IItemSelector wrapped)
     {
         Wrapped = wrapped;

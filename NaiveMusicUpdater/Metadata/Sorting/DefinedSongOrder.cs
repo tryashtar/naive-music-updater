@@ -7,6 +7,7 @@ public class DefinedSongOrder : ISongOrder
     public readonly IItemSelector Order;
     public readonly uint TotalNumber;
     public ReadOnlyCollection<IMusicItem> UnselectedItems => Unselected.AsReadOnly();
+
     public DefinedSongOrder(IItemSelector order, MusicFolder folder)
     {
         Order = order;
@@ -19,6 +20,7 @@ public class DefinedSongOrder : ISongOrder
             CachedResults[item] = index;
             used_folders.Add(item.Parent);
         }
+
         TotalNumber = index;
         Unselected = new List<IMusicItem>();
         foreach (var used in used_folders)

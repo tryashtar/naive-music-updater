@@ -3,6 +3,7 @@
 public class StringValue : IValue
 {
     public readonly string Value;
+
     public StringValue(string value)
     {
         Value = value ?? throw new ArgumentNullException(nameof(value));

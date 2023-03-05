@@ -10,7 +10,8 @@ public static class MusicItemGetterFactory
     public static readonly Dictionary<NameType, IMusicItemValueSource> NameGetters = new()
     {
         [NameType.FileName] = new FuncGetter(x => new StringValue(x.SimpleName)),
-        [NameType.CleanName] = new FuncGetter(x => new StringValue(x.RootLibrary.LibraryConfig.CleanName(x.SimpleName))),
+        [NameType.CleanName] =
+            new FuncGetter(x => new StringValue(x.RootLibrary.LibraryConfig.CleanName(x.SimpleName))),
         [NameType.Path] = new FuncGetter(x => new StringValue(x.StringPathAfterRoot()))
     };
 
@@ -25,7 +26,7 @@ public static class MusicItemGetterFactory
             }
             case YamlMappingNode map:
             {
-                var copy = yaml.Go("copy").NullableParse(x => MetadataField.FromID(x.String()));
+                var copy = map.Go("copy").NullableParse(x => MetadataField.FromID(x.String()));
                 if (copy != null)
                     return new CopyMetadataGetter(copy);
                 break;

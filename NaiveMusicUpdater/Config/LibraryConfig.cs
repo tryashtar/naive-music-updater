@@ -76,7 +76,7 @@ public class LibraryConfig
 
     private record KeepFrameDefinition(Regex Id, Regex[] Descriptions, bool DuplicatesAllowed);
 
-    private KeepFrameDefinition ParseFrameDefinition(YamlNode node)
+    private static KeepFrameDefinition ParseFrameDefinition(YamlNode node)
     {
         return node switch
         {

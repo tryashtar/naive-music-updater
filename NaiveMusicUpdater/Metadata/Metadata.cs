@@ -5,10 +5,6 @@ public class Metadata
 {
     public readonly Dictionary<MetadataField, IValue> SavedFields = new();
 
-    public Metadata()
-    {
-    }
-
     public void Register(MetadataField field, IValue value)
     {
         SavedFields[field] = value;
@@ -16,9 +12,7 @@ public class Metadata
 
     public IValue Get(MetadataField field)
     {
-        if (SavedFields.TryGetValue(field, out var result))
-            return result;
-        return BlankValue.Instance;
+        return SavedFields.TryGetValue(field, out var result) ? result : BlankValue.Instance;
     }
 
     public void MergeWith(Metadata other, CombineMode mode)

@@ -14,7 +14,7 @@ public static class FileDateCacheExtensions
 {
     public static bool NeedsUpdate(this IFileDateCache cache, IMusicItem item)
     {
-        return RelevantPaths(item).Any(x => cache.NeedsUpdate(x));
+        return RelevantPaths(item).Any(cache.NeedsUpdate);
     }
 
     public static void MarkUpdatedRecently(this IFileDateCache cache, IMusicItem item)
@@ -54,9 +54,8 @@ public class FileDateCache : IFileDateCache
         FilePath = file;
         if (File.Exists(file))
         {
-            var datecache = File.ReadAllText(file);
             var deserializer = new DeserializerBuilder().Build();
-            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache) ??
+            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(file) ??
                         new Dictionary<string, DateTime>();
             PendingDateCache = new Dictionary<string, DateTime>(DateCache);
         }
@@ -85,8 +84,8 @@ public class FileDateCache : IFileDateCache
 
     private static DateTime TouchedTime(string filepath)
     {
-        DateTime modified = File.GetLastWriteTime(filepath);
-        DateTime created = File.GetCreationTime(filepath);
+        var modified = File.GetLastWriteTime(filepath);
+        var created = File.GetCreationTime(filepath);
         return modified > created ? modified : created;
     }
 

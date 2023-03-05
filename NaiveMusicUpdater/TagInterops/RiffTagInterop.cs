@@ -2,7 +2,9 @@
 
 public class RiffTagInterop : BacicInterop<TagLib.Riff.InfoTag>
 {
-    public RiffTagInterop(TagLib.Riff.InfoTag tag, LibraryConfig config) : base(tag, config) { }
+    public RiffTagInterop(TagLib.Riff.InfoTag tag, LibraryConfig config) : base(tag, config)
+    {
+    }
 
     protected override ByteVector RenderTag()
     {
@@ -12,7 +14,9 @@ public class RiffTagInterop : BacicInterop<TagLib.Riff.InfoTag>
 
 public class MovieTagInterop : BacicInterop<TagLib.Riff.MovieIdTag>
 {
-    public MovieTagInterop(TagLib.Riff.MovieIdTag tag, LibraryConfig config) : base(tag, config) { }
+    public MovieTagInterop(TagLib.Riff.MovieIdTag tag, LibraryConfig config) : base(tag, config)
+    {
+    }
 
     protected override ByteVector RenderTag()
     {
@@ -22,7 +26,9 @@ public class MovieTagInterop : BacicInterop<TagLib.Riff.MovieIdTag>
 
 public class DivTagInterop : BacicInterop<TagLib.Riff.DivXTag>
 {
-    public DivTagInterop(TagLib.Riff.DivXTag tag, LibraryConfig config) : base(tag, config) { }
+    public DivTagInterop(TagLib.Riff.DivXTag tag, LibraryConfig config) : base(tag, config)
+    {
+    }
 
     protected override ByteVector RenderTag()
     {

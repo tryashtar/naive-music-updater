@@ -12,7 +12,7 @@ public class Song : IMusicItem
         _Parent = parent;
         Location = file;
     }
-    
+
     public void Update()
     {
         Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);

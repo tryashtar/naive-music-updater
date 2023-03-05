@@ -1,7 +1,8 @@
 ﻿namespace NaiveMusicUpdater;
 
 public interface ILocalItemSelector : IItemSelector
-{ }
+{
+}
 
 public static class LocalItemSelectorFactory
 {

@@ -3,6 +3,7 @@
 public class CopyMetadataGetter : IMusicItemValueSource
 {
     public readonly MetadataField Desired;
+
     public CopyMetadataGetter(MetadataField desired)
     {
         Desired = desired;

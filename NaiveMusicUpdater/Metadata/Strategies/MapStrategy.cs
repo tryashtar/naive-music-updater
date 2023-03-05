@@ -23,7 +23,7 @@ public class MapStrategy : IMetadataStrategy
                     meta.Register(field, value);
             }
         }
-        
+
         start.MergeWith(meta, Mode);
     }
 }

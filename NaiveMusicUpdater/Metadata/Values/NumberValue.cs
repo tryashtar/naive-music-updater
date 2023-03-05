@@ -3,6 +3,7 @@
 public class NumberValue : IValue
 {
     public readonly uint Value;
+
     public NumberValue(uint value)
     {
         Value = value;

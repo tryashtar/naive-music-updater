@@ -14,7 +14,10 @@ public class MultiItemSelector : IItemSelector
         foreach (var item in Subselectors)
         {
             var submatches = item.AllMatchesFrom(start);
-            foreach (var sub in submatches) { yield return sub; }
+            foreach (var sub in submatches)
+            {
+                yield return sub;
+            }
         }
     }
 

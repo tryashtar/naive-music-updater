@@ -1,22 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <OutputType>Exe</OutputType>
-    <AssemblyName>NaiveMusicUpdater</AssemblyName>
-    <RootNamespace>NaiveMusicUpdater</RootNamespace>
-    <LangVersion>10.0</LangVersion>
-    <nullable>enable</nullable>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.0.0" />
-    <PackageReference Include="YamlDotNet" Version="12.0.2" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\taglib-sharp\src\TaglibSharp\TaglibSharp.csproj" />
-    <ProjectReference Include="..\utils.music\TryashtarUtils.Music.csproj" />
-    <ProjectReference Include="..\utils.utility\TryashtarUtils.Utility.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <AssemblyName>NaiveMusicUpdater</AssemblyName>
+        <RootNamespace>NaiveMusicUpdater</RootNamespace>
+        <LangVersion>10.0</LangVersion>
+        <nullable>enable</nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.0.0"/>
+        <PackageReference Include="YamlDotNet" Version="12.0.2"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\taglib-sharp\src\TaglibSharp\TaglibSharp.csproj"/>
+        <ProjectReference Include="..\utils.music\TryashtarUtils.Music.csproj"/>
+        <ProjectReference Include="..\utils.utility\TryashtarUtils.Utility.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Folder Include="Properties\"/>
+    </ItemGroup>
 </Project>

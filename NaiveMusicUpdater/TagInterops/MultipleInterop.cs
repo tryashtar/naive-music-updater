@@ -4,6 +4,7 @@ public class MultipleInterop : ITagInterop
 {
     private readonly List<ITagInterop> Interops;
     public virtual bool Changed => Interops.Any(x => x.Changed);
+
     public MultipleInterop(CombinedTag tag, LibraryConfig config)
     {
         Interops = tag.Tags.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();
@@ -17,6 +18,7 @@ public class MultipleInterop : ITagInterop
             if (!result.IsBlank)
                 return result;
         }
+
         return BlankValue.Instance;
     }
 
@@ -41,6 +43,7 @@ public class MultipleXiphInterop : ITagInterop
 {
     private readonly List<ITagInterop> Interops;
     public bool Changed => Interops.Any(x => x.Changed);
+
     public MultipleXiphInterop(TagLib.Ogg.GroupedComment tag, LibraryConfig config)
     {
         Interops = tag.Comments.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();
@@ -54,6 +57,7 @@ public class MultipleXiphInterop : ITagInterop
             if (!result.IsBlank)
                 return result;
         }
+
         return BlankValue.Instance;
     }
 
@@ -64,7 +68,7 @@ public class MultipleXiphInterop : ITagInterop
             interop.Set(field, value);
         }
     }
-    
+
     public void Clean()
     {
         foreach (var interop in Interops)

@@ -1,6 +1,3 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
 namespace NaiveMusicUpdater;
 
 public class TagModifier
@@ -46,7 +43,7 @@ public class TagModifier
             var old = ExportConfigExtensions.GetLyrics(type, TagFile, location);
             if (ExportConfigExtensions.SetLyrics(write, type, TagFile, location))
             {
-                if (type is (LyricsType.RichEmbedded or LyricsType.SyncedEmbedded or LyricsType.SimpleEmbedded))
+                if (type is LyricsType.RichEmbedded or LyricsType.SyncedEmbedded or LyricsType.SimpleEmbedded)
                     HasChanged = true;
                 Logger.WriteLine($"Replacing lyrics at {type}:");
                 Logger.TabIn();
@@ -72,7 +69,7 @@ public class TagModifier
             var old = ExportConfigExtensions.GetChapters(type, TagFile, location);
             if (ExportConfigExtensions.SetChapters(write, type, TagFile, location))
             {
-                if (type is (ChaptersType.RichEmbedded or ChaptersType.SimpleEmbedded))
+                if (type is ChaptersType.RichEmbedded or ChaptersType.SimpleEmbedded)
                     HasChanged = true;
                 Logger.WriteLine($"Replacing chapters at {type}:");
                 Logger.TabIn();

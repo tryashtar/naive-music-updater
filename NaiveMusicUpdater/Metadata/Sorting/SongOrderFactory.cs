@@ -26,8 +26,10 @@ public static class DiscOrderFactory
                 if (uint.TryParse((string)item.Key, out uint n))
                     dict[n] = ItemSelectorFactory.Create(item.Value);
             }
+
             return new DefinedDiscOrder(dict, folder);
         }
+
         throw new ArgumentException($"Can't make disc order from {yaml}");
     }
 }

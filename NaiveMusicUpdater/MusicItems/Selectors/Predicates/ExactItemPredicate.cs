@@ -3,6 +3,7 @@
 public class ExactItemPredicate : IItemPredicate
 {
     public readonly string Matcher;
+
     public ExactItemPredicate(string str)
     {
         Matcher = str;

@@ -76,8 +76,6 @@ public static class ExportConfigExtensions
                     File.WriteAllLines(path, lrc);
                     return true;
                 }
-
-                break;
             case LyricsType.RichFile:
                 path += ".lrc.json";
                 if (lyrics == null)
@@ -218,7 +216,7 @@ public static class ExportConfigExtensions
         return JObject.Load(reader);
     }
 
-    private static void WriteJson(JObject json, string path)
+    private static void WriteJson(JToken json, string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path));
         using var stream = File.CreateText(path);

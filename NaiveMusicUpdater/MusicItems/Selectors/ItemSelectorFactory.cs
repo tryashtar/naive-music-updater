@@ -28,6 +28,7 @@ public static class ItemSelectorFactory
                     var predicates = path.ToList(ItemPredicateFactory.Create).ToArray();
                     return new PathItemSelector(predicates);
                 }
+
                 var subpath = node.Go("subpath").NullableParse(ItemSelectorFactory.Create);
                 if (subpath != null)
                 {

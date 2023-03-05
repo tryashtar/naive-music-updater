@@ -4,6 +4,7 @@ public class SubPathItemSelector : IItemSelector
 {
     private readonly IItemSelector SubPath;
     private readonly IItemSelector Selector;
+
     public SubPathItemSelector(IItemSelector subpath, IItemSelector selector)
     {
         SubPath = subpath;
@@ -16,7 +17,10 @@ public class SubPathItemSelector : IItemSelector
         foreach (var sub in subbed)
         {
             var match = Selector.AllMatchesFrom(sub);
-            foreach (var result in match) { yield return result; }
+            foreach (var result in match)
+            {
+                yield return result;
+            }
         }
     }
 
@@ -28,11 +32,18 @@ public class SubPathItemSelector : IItemSelector
 
     public IEnumerable<IItemSelector> UnusedFrom(IMusicItem item)
     {
-        foreach (var unused in SubPath.UnusedFrom(item)) { yield return unused; }
+        foreach (var unused in SubPath.UnusedFrom(item))
+        {
+            yield return unused;
+        }
+
         var subbed = SubPath.AllMatchesFrom(item);
         foreach (var sub in subbed)
         {
-            foreach (var unused in Selector.UnusedFrom(sub)) { yield return unused; }
+            foreach (var unused in Selector.UnusedFrom(sub))
+            {
+                yield return unused;
+            }
         }
     }
 }

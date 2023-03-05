@@ -30,12 +30,6 @@ public class MusicItemConfig : IMusicItemConfig
         SharedStrategies = yaml.Go("set all").ToList(x => ParseMultiple(x.Go("names"), x.Go("set"))) ?? new();
     }
 
-    public YamlNode Serialize()
-    {
-        var node = new YamlMappingNode();
-        return node;
-    }
-
     private TargetedStrategy ParseStrategy(YamlNode key, YamlNode value)
     {
         var selector = ItemSelectorFactory.Create(key);
@@ -52,35 +46,33 @@ public class MusicItemConfig : IMusicItemConfig
 
     private IMetadataStrategy LiteralOrReference(YamlNode node)
     {
-        if (node is YamlScalarNode scalar && scalar.Value != null)
-            return ConfiguredItem.RootLibrary.LibraryConfig.GetNamedStrategy(scalar.Value);
-        else
+        return node switch
         {
-            if (node is YamlSequenceNode sequence)
-                return new MultipleStrategy(sequence.Select(LiteralOrReference));
-            else
-                return MetadataStrategyFactory.Create(node);
-        }
+            YamlScalarNode { Value: { } } scalar => ConfiguredItem.RootLibrary.LibraryConfig.GetNamedStrategy(
+                scalar.Value),
+            YamlSequenceNode sequence => new MultipleStrategy(sequence.Select(LiteralOrReference)),
+            _ => MetadataStrategyFactory.Create(node)
+        };
     }
 
     public void Apply(Metadata meta, IMusicItem item, Predicate<MetadataField> desired)
     {
         if (item == ConfiguredItem && ThisStrategy != null)
             ThisStrategy.Apply(meta, item, desired);
-        if (item is MusicFolder)
+        switch (item)
         {
-            if (FoldersStrategy != null)
-                FoldersStrategy.Apply(meta, item, desired);
-        }
-
-        if (item is Song)
-        {
-            if (SongsStrategy != null)
-                SongsStrategy.Apply(meta, item, desired);
-            if (DiscOrder != null)
-                DiscOrder.Apply(meta, item);
-            if (TrackOrder != null)
-                TrackOrder.Apply(meta, item);
+            case MusicFolder:
+            {
+                FoldersStrategy?.Apply(meta, item, desired);
+                break;
+            }
+            case Song:
+            {
+                SongsStrategy?.Apply(meta, item, desired);
+                DiscOrder?.Apply(meta, item);
+                TrackOrder?.Apply(meta, item);
+                break;
+            }
         }
 
         foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
@@ -93,7 +85,7 @@ public class MusicItemConfig : IMusicItemConfig
     public CheckSelectorResults CheckSelectors()
     {
         var results = new CheckSelectorResults();
-        IEnumerable<IItemSelector> all_selectors = SharedStrategies.Concat(MetadataStrategies).Select(x => x.Selector);
+        var all_selectors = SharedStrategies.Concat(MetadataStrategies).Select(x => x.Selector);
         if (TrackOrder is DefinedSongOrder tracks)
         {
             all_selectors = all_selectors.Append(tracks.Order);

@@ -12,7 +12,7 @@ public class ArtConfig
         Settings = new();
         var all = node.Go("all").NullableParse(LiteralOrReference);
         if (all != null)
-            Settings.Add((x => true, all));
+            Settings.Add((_ => true, all));
         var set_dict = node.Go("set").ToDictionary(x => x.String(), LiteralOrReference);
         if (set_dict != null)
         {
@@ -37,7 +37,6 @@ public class ArtConfig
     {
         if (node is YamlScalarNode { Value: { } } scalar)
             return Owner.NamedSettings[scalar.Value];
-        else
-            return new ProcessArtSettings((YamlMappingNode)node);
+        return new ProcessArtSettings((YamlMappingNode)node);
     }
 }

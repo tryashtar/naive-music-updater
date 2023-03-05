@@ -22,7 +22,7 @@ public static class Program
         {
             Logger.WriteLine($"File {library_yaml} not found.", ConsoleColor.Red);
             if (args.Length == 0)
-                Logger.WriteLine($"Specify the path to one as the first argument.", ConsoleColor.Red);
+                Logger.WriteLine("Specify the path to one as the first argument.", ConsoleColor.Red);
         }
         else
             WrapException(() => CreateAndUpdateLibrary(library_yaml));
@@ -71,6 +71,7 @@ public static class Program
             }
             else
                 Logger.WriteLine($"Not found: {item}", ConsoleColor.Red);
+
             Logger.WriteLine();
         }
     }
@@ -87,7 +88,7 @@ public static class Program
                 Logger.WriteLine(FrameViewer.ToString(frame));
             }
         }
-        
+
         if (tag is TagLib.Id3v1.Tag id3v1)
         {
             Logger.WriteLine(id3v1.Render().ToString());
@@ -118,7 +119,7 @@ public static class Program
                 Logger.WriteLine($"{key}: {String.Join("\n", value)}");
             }
         }
-        
+
         if (tag is TagLib.CombinedTag combined)
         {
             foreach (var sub in combined.Tags)

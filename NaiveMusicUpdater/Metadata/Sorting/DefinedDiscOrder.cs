@@ -4,6 +4,7 @@ public class DefinedDiscOrder : ISongOrder
 {
     public readonly uint TotalDiscs;
     private readonly IReadOnlyDictionary<uint, DefinedSongOrder> Discs;
+
     public DefinedDiscOrder(IReadOnlyDictionary<uint, IItemSelector> discs, MusicFolder folder)
     {
         Discs = discs.ToDictionary(x => x.Key, x => new DefinedSongOrder(x.Value, folder));
@@ -23,6 +24,7 @@ public class DefinedDiscOrder : ISongOrder
         {
             unselected.IntersectWith(order[i].UnselectedItems);
         }
+
         return unselected;
     }
 

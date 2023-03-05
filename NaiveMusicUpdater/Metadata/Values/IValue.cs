@@ -11,6 +11,7 @@ public interface IValue
     {
         return new NumberValue(uint.Parse(AsString().Value));
     }
+
     bool IsBlank { get; }
 }
 

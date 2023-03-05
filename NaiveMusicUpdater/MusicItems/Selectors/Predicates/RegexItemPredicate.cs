@@ -3,6 +3,7 @@
 public class RegexItemPredicate : IItemPredicate
 {
     public readonly Regex Matcher;
+
     public RegexItemPredicate(Regex regex)
     {
         Matcher = regex;

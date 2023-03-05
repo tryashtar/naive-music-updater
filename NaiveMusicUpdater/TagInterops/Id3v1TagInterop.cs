@@ -53,6 +53,7 @@ public class Id3v1TagInterop : BacicInterop<TagLib.Id3v1.Tag>
 
     private static string Trim(string value, int length)
     {
-        return TagLib.Id3v1.Tag.DefaultStringHandler.Render(value).Resize(length).ToString(StringType.Latin1).TrimEnd('\0').Trim();
+        return TagLib.Id3v1.Tag.DefaultStringHandler.Render(value).Resize(length).ToString(StringType.Latin1)
+            .TrimEnd('\0').Trim();
     }
 }
