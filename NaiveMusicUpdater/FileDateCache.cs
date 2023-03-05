@@ -101,28 +101,32 @@ public class FileDateCache : IFileDateCache
     }
 }
 
-public class DummyFileDateCache : IFileDateCache
+public class MemoryFileDateCache : IFileDateCache
 {
+    public HashSet<string> Updated = new();
+
     public void Save()
     {
     }
 
-    public bool NeedsUpdate(string path)
+    public virtual bool NeedsUpdate(string path)
     {
-        return true;
+        return !Updated.Contains(path);
     }
 
     public void MarkUpdatedRecently(string path)
     {
+        Updated.Add(path);
     }
 
     public void MarkNeedsUpdateNextTime(string path)
     {
+        Updated.Remove(path);
     }
 }
 
 #if DEBUG
-public class DebugFileDateCache : IFileDateCache
+public class DebugFileDateCache : MemoryFileDateCache
 {
     public readonly List<string> Check;
 
@@ -131,21 +135,11 @@ public class DebugFileDateCache : IFileDateCache
         Check = check;
     }
 
-    public void Save()
+    public override bool NeedsUpdate(string path)
     {
-    }
-
-    public bool NeedsUpdate(string path)
-    {
-        return Check.Any(x => path.Contains(x, StringComparison.OrdinalIgnoreCase));
-    }
-
-    public void MarkUpdatedRecently(string path)
-    {
-    }
-
-    public void MarkNeedsUpdateNextTime(string path)
-    {
+        if (Path.GetExtension(path) == ".png")
+            return false;
+        return Check.Any(x => path.Contains(x, StringComparison.OrdinalIgnoreCase)) || base.NeedsUpdate(path);
     }
 }
 #endif
