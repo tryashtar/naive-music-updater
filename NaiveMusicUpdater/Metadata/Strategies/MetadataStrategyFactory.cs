@@ -13,15 +13,15 @@ public static class MetadataStrategyFactory
         {
             case YamlMappingNode map:
             {
-                var source = map.Go("source").NullableParse(ValueSourceFactory.Create);
-                if (source != null)
+                var modify = map.Go("modify").ToDictionary(
+                    x => MetadataField.FromID(x.String()),
+                    ValueOperatorFactory.Create);
+                if (modify != null)
                 {
-                    var apply = map.Go("apply").ToDictionary(
-                        x => MetadataField.FromID(x.String()),
-                        ValueOperatorFactory.Create);
-                    return new ContextStrategy(source, apply);
+                    var source = map.Go("source").NullableParse(ValueSourceFactory.Create);
+                    return source == null ? new ModifyStrategy(modify) : new ContextStrategy(source, modify);
                 }
-
+                
                 var remove = map.Go("remove");
                 if (remove != null)
                 {
@@ -33,7 +33,7 @@ public static class MetadataStrategyFactory
                 Dictionary<MetadataField, IValueSource> direct;
                 var mode = map.Go("mode").ToEnum<CombineMode>();
                 if (mode != null)
-                    direct = map.Go("apply").ToDictionary(
+                    direct = map.Go("values").ToDictionary(
                         x => MetadataField.FromID(x.String()),
                         ValueSourceFactory.Create);
                 else
