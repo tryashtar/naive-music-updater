@@ -75,21 +75,12 @@ public class MusicFolder : IMusicItem
         if (OperatingSystem.IsWindows())
         {
             string desktop_ini = Path.Combine(Location, "desktop.ini");
-            if (File.Exists(desktop_ini))
-            {
-                var lines = File.ReadAllLines(desktop_ini).Where(x => !x.StartsWith("IconResource"));
-                File.WriteAllLines(desktop_ini, lines);
-                File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
-            }
+            File.Delete(desktop_ini);
         }
         else if (OperatingSystem.IsLinux())
         {
             string directory = Path.Combine(Location, ".directory");
-            if (File.Exists(directory))
-            {
-                var lines = File.ReadAllLines(directory).Where(x => !x.StartsWith("Icon"));
-                File.WriteAllLines(directory, lines);
-            }
+            File.Delete(directory);
         }
     }
 
@@ -121,7 +112,7 @@ public class MusicFolder : IMusicItem
         var image = this.GetMetadata(MetadataField.Art.Only).Get(MetadataField.Art);
         if (!image.IsBlank && RootLibrary.LibraryConfig.ArtTemplates != null)
         {
-            var path= RootLibrary.LibraryConfig.ArtTemplates.FirstArt(image.AsList().Values).path;
+            var path = RootLibrary.LibraryConfig.ArtTemplates.FirstArt(image.AsList().Values).path;
             if (path == null)
                 RemoveIcon();
             else

@@ -26,8 +26,8 @@ public class ArtConfig
         {
             foreach (var item in (YamlSequenceNode)set_all)
             {
-                var names = set_all.Go("names").ToStringList().Select(x => Path.Combine(relative, x)).ToList();
-                var set = LiteralOrReference(set_all["set"]);
+                var names = item.Go("names").ToStringList().Select(x => Path.Combine(relative, x)).ToList();
+                var set = LiteralOrReference(item["set"]);
                 Settings.Add((x => names.Contains(x), set));
             }
         }
