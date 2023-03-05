@@ -177,10 +177,12 @@ public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
 
             if (pic == null && Tag.Pictures.Length > 0)
             {
-                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Tag.Pictures[0].Description} -> {BlankValue.Instance}");
+                Logger.WriteLine(
+                    $"{Tag.TagTypes} {field.DisplayName}: {Tag.Pictures[0].Description} -> {BlankValue.Instance}");
                 Tag.Pictures = Array.Empty<IPicture>();
             }
-            else if (pic != null && (Tag.Pictures.Length == 0 || Tag.Pictures[0].Data != pic.Data))
+            else if (pic != null && (Tag.Pictures.Length == 0 || Tag.Pictures[0].Data.Count != pic.Data.Count ||
+                                     Tag.Pictures[0].Data != pic.Data))
             {
                 var prev = Tag.Pictures.Length == 0 ? BlankValue.Instance.ToString() : Tag.Pictures[0].Description;
                 Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {prev} -> {pic.Description}");

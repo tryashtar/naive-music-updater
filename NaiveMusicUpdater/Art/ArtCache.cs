@@ -29,7 +29,7 @@ public class DiskArtCache : IArtCache
         return pic;
     }
 
-    private static readonly Regex NonAscii = new(@"[^\u0000-\u007F]+");
+    public static readonly Regex NonAscii = new(@"[^\u0000-\u007F]+");
 
     private string ExpandPath(string path)
     {

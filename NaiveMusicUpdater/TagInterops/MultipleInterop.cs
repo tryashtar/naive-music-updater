@@ -3,7 +3,7 @@
 public class MultipleInterop : ITagInterop
 {
     private readonly List<ITagInterop> Interops;
-    public bool Changed => Interops.Any(x => x.Changed);
+    public virtual bool Changed => Interops.Any(x => x.Changed);
     public MultipleInterop(CombinedTag tag, LibraryConfig config)
     {
         Interops = tag.Tags.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();

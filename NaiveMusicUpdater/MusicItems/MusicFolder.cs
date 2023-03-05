@@ -70,7 +70,7 @@ public class MusicFolder : IMusicItem
 
     public MusicLibrary RootLibrary => (MusicLibrary)this.PathFromRoot().First();
 
-    private void RemoveIcon()
+    protected virtual void RemoveIcon()
     {
         if (OperatingSystem.IsWindows())
         {
@@ -84,7 +84,7 @@ public class MusicFolder : IMusicItem
         }
     }
 
-    private void SetIcon(string path)
+    protected virtual void SetIcon(string path)
     {
         if (OperatingSystem.IsWindows())
         {
@@ -106,9 +106,8 @@ public class MusicFolder : IMusicItem
         }
     }
 
-    public void Update()
+    private void HandleIcon()
     {
-        Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
         var image = this.GetMetadata(MetadataField.Art.Only).Get(MetadataField.Art);
         if (!image.IsBlank && RootLibrary.LibraryConfig.ArtTemplates != null)
         {
@@ -124,6 +123,14 @@ public class MusicFolder : IMusicItem
                     SetIcon(Path.GetFullPath(icon));
             }
         }
+    }
+
+    public void Update()
+    {
+        Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
+#if !DEBUG
+        HandleIcon();
+#endif
 
         Logger.TabIn();
         foreach (var child in SubFolders)

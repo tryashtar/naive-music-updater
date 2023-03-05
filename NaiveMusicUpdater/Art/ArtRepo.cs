@@ -10,27 +10,48 @@ public class ArtRepo
 {
     public readonly Dictionary<string, ProcessArtSettings> NamedSettings;
     public readonly string Folder;
-    private IArtCache Cache;
-    private string? IcoFolder;
-    private Dictionary<string, ArtConfig> ConfigCache = new();
+    private readonly IArtCache Cache;
+    private readonly IFileDateCache DateCache;
+    private readonly string? IcoFolder;
+    private readonly Dictionary<string, ArtConfig> ConfigCache = new();
 
-    public ArtRepo(string folder, IArtCache cache, string? ico_folder,
+    public ArtRepo(string folder, IArtCache cache, IFileDateCache datecache, string? ico_folder,
         Dictionary<string, ProcessArtSettings> named_settings)
     {
         Folder = folder;
         Cache = cache;
+        DateCache = datecache;
         IcoFolder = ico_folder;
         NamedSettings = named_settings;
     }
 
-    public string? GetIcon(string path)
+    private static void SaveIcon(Image<Rgba32> image, Stream stream)
     {
-        if (IcoFolder == null)
-            return null;
-        var pic = GetProcessed(path);
-        if (pic == null)
-            return null;
-        return Path.Combine(IcoFolder, path + ".png");
+        image.Mutate(x =>
+        {
+            x.Resize(new ResizeOptions()
+            {
+                Size = new(256, 256),
+                Mode = ResizeMode.Pad
+            });
+        });
+        using var data_stream = new MemoryStream();
+        image.SaveAsPng(data_stream);
+        using var writer = new BinaryWriter(stream);
+        writer.Write((byte)0);
+        writer.Write((byte)0);
+        writer.Write((short)1);
+        writer.Write((short)1);
+        writer.Write((byte)image.Width);
+        writer.Write((byte)image.Height);
+        writer.Write((byte)0);
+        writer.Write((byte)0);
+        writer.Write((short)0);
+        writer.Write((short)32);
+        writer.Write((int)data_stream.Length);
+        writer.Write((int)(6 + 16));
+        data_stream.WriteTo(stream);
+        writer.Flush();
     }
 
     public (IPicture? picture, string? path) FirstArt(IEnumerable<string> paths)
@@ -45,21 +66,54 @@ public class ArtRepo
         return (null, null);
     }
 
+    public string? GetIcon(string path)
+    {
+        if (IcoFolder == null)
+            return null;
+        var template_path = GetTemplatePath(path);
+        if (template_path == null)
+            return null;
+        var ico_path = Path.Combine(IcoFolder, DiskArtCache.NonAscii.Replace(path, "_")) + ".ico";
+        if (!DateCache.NeedsUpdate(template_path) && File.Exists(ico_path))
+            return ico_path;
+        var template = Image.Load<Rgba32>(template_path);
+        var settings = GetSettings(path);
+        ProcessTemplate(template, settings);
+        using var stream = File.Create(ico_path);
+        SaveIcon(template, stream);
+        DateCache.MarkUpdatedRecently(template_path);
+        return ico_path;
+    }
+
     public IPicture? GetProcessed(string path)
     {
-        var cached = Cache.Get(path);
-        if (cached != null)
-            return cached;
-        var template = LoadTemplate(path);
-        if (template == null)
+        var template_path = GetTemplatePath(path);
+        if (template_path == null)
             return null;
+        if (!DateCache.NeedsUpdate(template_path))
+        {
+            var cached = Cache.Get(path);
+            if (cached != null)
+                return cached;
+        }
+
+        var template = Image.Load<Rgba32>(template_path);
         var settings = GetSettings(path);
-        var result = ProcessTemplate(template, settings, Path.GetFileName(path + ".png"));
+        ProcessTemplate(template, settings);
+        using var stream = new MemoryStream();
+        template.SaveAsPng(stream);
+        string name = Path.GetFileName(path + ".png");
+        var result = new Picture(stream.ToArray())
+        {
+            Filename = name,
+            Description = name
+        };
         Cache.Put(path, result);
+        DateCache.MarkUpdatedRecently(template_path);
         return result;
     }
 
-    private IPicture ProcessTemplate(Image<Rgba32> image, ProcessArtSettings settings, string name)
+    private void ProcessTemplate(Image<Rgba32> image, ProcessArtSettings settings)
     {
         image.Mutate(x =>
         {
@@ -126,13 +180,6 @@ public class ArtRepo
             if (settings.Background != null)
                 x.BackgroundColor(settings.Background.Value);
         });
-        using var stream = new MemoryStream();
-        image.SaveAsPng(stream);
-        return new Picture(stream.ToArray())
-        {
-            Filename = name,
-            Description = name
-        };
     }
 
     private static Rectangle GetBoundingRectangle(IImageProcessingContext image)
@@ -192,7 +239,7 @@ public class ArtRepo
         }
     }
 
-    private Image<Rgba32>? LoadTemplate(string path)
+    private string? GetTemplatePath(string path)
     {
         var name = Path.Combine(Folder, path);
         if (!Directory.Exists(Path.GetDirectoryName(name)))
@@ -200,7 +247,7 @@ public class ArtRepo
         foreach (var file in Directory.EnumerateFiles(Path.GetDirectoryName(name)))
         {
             if (Path.GetFileNameWithoutExtension(file) == Path.GetFileName(name))
-                return Image.Load<Rgba32>(file);
+                return file;
         }
 
         return null;

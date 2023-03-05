@@ -15,7 +15,7 @@ public class LibraryConfig
     public readonly string? LogFolder;
     public readonly ExportConfig<LyricsType>? LyricsConfig;
     public readonly ExportConfig<ChaptersType>? ChaptersConfig;
-    public readonly ILibraryCache Cache;
+    public readonly IFileDateCache Cache;
     public readonly ArtRepo? ArtTemplates;
 
     public LibraryConfig(string file)
@@ -30,15 +30,15 @@ public class LibraryConfig
                         throw new InvalidDataException("Library yaml file must specify a \"library\" folder");
         LibraryFolder = Path.GetFullPath(LibraryFolder);
 #if DEBUG
-        Cache = new DebugLibraryCache(File.Exists("debug_check.txt")
+        Cache = new DebugFileDateCache(File.Exists("debug_check.txt")
             ? File.ReadLines("debug_check.txt").ToList()
             : new());
 #else
         var cachepath = ParsePath(yaml.Go("cache"));
         if (cachepath != null)
-            Cache = new FileLibraryCache(cachepath);
+            Cache = new FileDateCache(cachepath);
         else
-            Cache = new DummyLibraryCache();
+            Cache = new DummyFileDateCache();
 #endif
         LogFolder = ParsePath(yaml.Go("logs"));
         LyricsConfig = ParseExportConfig<LyricsType>(yaml.Go("lyrics"));
@@ -53,7 +53,7 @@ public class LibraryConfig
             string? ico_folder = ParsePath(yaml.Go("art", "icons"));
             var named =
                 yaml.Go("art", "named_settings").ToDictionary(x => new ProcessArtSettings((YamlMappingNode)x)) ?? new();
-            ArtTemplates = new(template_folder, cache, ico_folder, named);
+            ArtTemplates = new(template_folder, cache, Cache, ico_folder, named);
         }
 
         FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()), x => x.String()) ?? new();

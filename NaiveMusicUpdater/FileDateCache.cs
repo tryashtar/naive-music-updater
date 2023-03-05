@@ -1,0 +1,151 @@
+﻿using YamlDotNet.Serialization;
+
+namespace NaiveMusicUpdater;
+
+public interface IFileDateCache
+{
+    void Save();
+    bool NeedsUpdate(string path);
+    void MarkUpdatedRecently(string path);
+    void MarkNeedsUpdateNextTime(string path);
+}
+
+public static class FileDateCacheExtensions
+{
+    public static bool NeedsUpdate(this IFileDateCache cache, IMusicItem item)
+    {
+        return RelevantPaths(item).Any(x => cache.NeedsUpdate(x));
+    }
+
+    public static void MarkUpdatedRecently(this IFileDateCache cache, IMusicItem item)
+    {
+        foreach (var path in RelevantPaths(item))
+        {
+            cache.MarkUpdatedRecently(path);
+        }
+    }
+
+    public static void MarkNeedsUpdateNextTime(this IFileDateCache cache, IMusicItem item)
+    {
+        cache.MarkNeedsUpdateNextTime(item.Location);
+    }
+
+    private static IEnumerable<string> RelevantPaths(IMusicItem item)
+    {
+        yield return item.Location;
+        foreach (var parent in item.PathFromRoot())
+        {
+            foreach (var config in parent.Configs)
+            {
+                yield return config.Location;
+            }
+        }
+    }
+}
+
+public class FileDateCache : IFileDateCache
+{
+    public readonly string FilePath;
+    private readonly Dictionary<string, DateTime> DateCache;
+    private readonly Dictionary<string, DateTime> PendingDateCache;
+
+    public FileDateCache(string file)
+    {
+        FilePath = file;
+        if (File.Exists(file))
+        {
+            var datecache = File.ReadAllText(file);
+            var deserializer = new DeserializerBuilder().Build();
+            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(datecache) ??
+                        new Dictionary<string, DateTime>();
+            PendingDateCache = new Dictionary<string, DateTime>(DateCache);
+        }
+        else
+        {
+            Logger.WriteLine($"Couldn't find date cache {file}, starting fresh", ConsoleColor.Yellow);
+            DateCache = new Dictionary<string, DateTime>();
+            PendingDateCache = new Dictionary<string, DateTime>();
+        }
+    }
+
+    public void Save()
+    {
+        var serializer = new SerializerBuilder().Build();
+        Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
+        File.WriteAllText(FilePath, serializer.Serialize(PendingDateCache));
+    }
+
+    public bool NeedsUpdate(string path)
+    {
+        var date = TouchedTime(path);
+        if (DateCache.TryGetValue(path, out var cached))
+            return date - TimeSpan.FromSeconds(5) > cached;
+        return true;
+    }
+
+    private static DateTime TouchedTime(string filepath)
+    {
+        DateTime modified = File.GetLastWriteTime(filepath);
+        DateTime created = File.GetCreationTime(filepath);
+        return modified > created ? modified : created;
+    }
+
+    public void MarkUpdatedRecently(string path)
+    {
+        PendingDateCache[path] = DateTime.Now;
+    }
+
+    public void MarkNeedsUpdateNextTime(string path)
+    {
+        PendingDateCache.Remove(path);
+    }
+}
+
+public class DummyFileDateCache : IFileDateCache
+{
+    public void Save()
+    {
+    }
+
+    public bool NeedsUpdate(string path)
+    {
+        return true;
+    }
+
+    public void MarkUpdatedRecently(string path)
+    {
+    }
+
+    public void MarkNeedsUpdateNextTime(string path)
+    {
+    }
+}
+
+#if DEBUG
+public class DebugFileDateCache : IFileDateCache
+{
+    public readonly List<string> Check;
+
+    public DebugFileDateCache(List<string> check)
+    {
+        Check = check;
+    }
+
+    public void Save()
+    {
+    }
+
+    public bool NeedsUpdate(string path)
+    {
+        return Check.Any(x => path.Contains(x, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public void MarkUpdatedRecently(string path)
+    {
+    }
+
+    public void MarkNeedsUpdateNextTime(string path)
+    {
+    }
+}
+#endif
