@@ -49,11 +49,13 @@ public static class ValueOperatorFactory
 
                 var prepend = map.Go("prepend").NullableParse(ValueSourceFactory.Create);
                 if (prepend != null)
-                    return new AppendOperator(prepend, AppendMode.Prepend);
+                    return new AppendOperator(prepend, AppendMode.Prepend,
+                        map.Go("range").NullableParse(RangeFactory.Create));
 
                 var append = map.Go("append").NullableParse(ValueSourceFactory.Create);
                 if (append != null)
-                    return new AppendOperator(append, AppendMode.Append);
+                    return new AppendOperator(append, AppendMode.Append,
+                        map.Go("range").NullableParse(RangeFactory.Create));
 
                 var join = map.Go("join").NullableParse(ValueSourceFactory.Create);
                 if (join != null)
