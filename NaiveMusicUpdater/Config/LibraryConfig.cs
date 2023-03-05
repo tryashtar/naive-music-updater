@@ -35,10 +35,7 @@ public class LibraryConfig
             : new());
 #else
         var cachepath = ParsePath(yaml.Go("cache"));
-        if (cachepath != null)
-            Cache = new FileDateCache(cachepath);
-        else
-            Cache = new DummyFileDateCache();
+        Cache = cachepath != null ? new FileDateCache(cachepath) : new MemoryFileDateCache();
 #endif
         LogFolder = ParsePath(yaml.Go("logs"));
         LyricsConfig = ParseExportConfig<LyricsType>(yaml.Go("lyrics"));

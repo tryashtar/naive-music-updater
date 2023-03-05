@@ -51,9 +51,7 @@ public class MemoryArtCache : IArtCache
 
     public IPicture? Get(string path)
     {
-        if (MemoryCache.TryGetValue(path, out var result))
-            return result;
-        return null;
+        return MemoryCache.TryGetValue(path, out var result) ? result : null;
     }
 
     public void Put(string path, IPicture picture)

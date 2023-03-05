@@ -47,7 +47,6 @@ public class FileDateCache : IFileDateCache
 {
     public readonly string FilePath;
     private readonly Dictionary<string, DateTime> DateCache;
-    private readonly Dictionary<string, DateTime> PendingDateCache;
 
     public FileDateCache(string file)
     {
@@ -55,15 +54,13 @@ public class FileDateCache : IFileDateCache
         if (File.Exists(file))
         {
             var deserializer = new DeserializerBuilder().Build();
-            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(file) ??
+            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(File.OpenText(file)) ??
                         new Dictionary<string, DateTime>();
-            PendingDateCache = new Dictionary<string, DateTime>(DateCache);
         }
         else
         {
             Logger.WriteLine($"Couldn't find date cache {file}, starting fresh", ConsoleColor.Yellow);
             DateCache = new Dictionary<string, DateTime>();
-            PendingDateCache = new Dictionary<string, DateTime>();
         }
     }
 
@@ -71,7 +68,7 @@ public class FileDateCache : IFileDateCache
     {
         var serializer = new SerializerBuilder().Build();
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
-        File.WriteAllText(FilePath, serializer.Serialize(PendingDateCache));
+        File.WriteAllText(FilePath, serializer.Serialize(DateCache));
     }
 
     public bool NeedsUpdate(string path)
@@ -91,12 +88,12 @@ public class FileDateCache : IFileDateCache
 
     public void MarkUpdatedRecently(string path)
     {
-        PendingDateCache[path] = DateTime.Now;
+        DateCache[path] = DateTime.Now;
     }
 
     public void MarkNeedsUpdateNextTime(string path)
     {
-        PendingDateCache.Remove(path);
+        DateCache.Remove(path);
     }
 }
 
