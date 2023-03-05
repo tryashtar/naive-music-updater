@@ -16,14 +16,7 @@ public class FlacTagInterop : MultipleInterop
         {
             IPicture? pic = null;
             if (!value.IsBlank && Config.ArtTemplates != null)
-            {
-                foreach (var path in value.AsList().Values)
-                {
-                    pic = Config.ArtTemplates.GetProcessed(path);
-                    if (pic != null)
-                        break;
-                }
-            }
+                pic = Config.ArtTemplates.FirstArt(value.AsList().Values).picture;
 
             if (pic == null && Tag.Pictures.Length > 0)
             {

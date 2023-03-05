@@ -35,7 +35,7 @@ public class ArtConfig
 
     private ProcessArtSettings LiteralOrReference(YamlNode node)
     {
-        if (node is YamlScalarNode scalar && scalar.Value != null)
+        if (node is YamlScalarNode { Value: { } } scalar)
             return Owner.NamedSettings[scalar.Value];
         else
             return new ProcessArtSettings((YamlMappingNode)node);

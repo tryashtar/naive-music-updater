@@ -14,12 +14,35 @@ public class ArtRepo
     private string? IcoFolder;
     private Dictionary<string, ArtConfig> ConfigCache = new();
 
-    public ArtRepo(string folder, IArtCache cache, string? ico_folder, Dictionary<string, ProcessArtSettings> named_settings)
+    public ArtRepo(string folder, IArtCache cache, string? ico_folder,
+        Dictionary<string, ProcessArtSettings> named_settings)
     {
         Folder = folder;
         Cache = cache;
         IcoFolder = ico_folder;
         NamedSettings = named_settings;
+    }
+
+    public string? GetIcon(string path)
+    {
+        if (IcoFolder == null)
+            return null;
+        var pic = GetProcessed(path);
+        if (pic == null)
+            return null;
+        return Path.Combine(IcoFolder, path + ".png");
+    }
+
+    public (IPicture? picture, string? path) FirstArt(IEnumerable<string> paths)
+    {
+        foreach (var path in paths)
+        {
+            var pic = GetProcessed(path);
+            if (pic != null)
+                return (pic, path);
+        }
+
+        return (null, null);
     }
 
     public IPicture? GetProcessed(string path)
@@ -31,12 +54,12 @@ public class ArtRepo
         if (template == null)
             return null;
         var settings = GetSettings(path);
-        var result = ProcessTemplate(template, settings);
+        var result = ProcessTemplate(template, settings, Path.GetFileName(path + ".png"));
         Cache.Put(path, result);
         return result;
     }
 
-    private IPicture ProcessTemplate(Image<Rgba32> image, ProcessArtSettings settings)
+    private IPicture ProcessTemplate(Image<Rgba32> image, ProcessArtSettings settings, string name)
     {
         image.Mutate(x =>
         {
@@ -87,7 +110,7 @@ public class ArtRepo
                 if (settings.Background != null)
                     resize.PadColor = settings.Background.Value;
                 x.Resize(resize);
-                
+
                 var resize2 = new ResizeOptions()
                 {
                     Mode = ResizeMode.BoxPad,
@@ -105,7 +128,11 @@ public class ArtRepo
         });
         using var stream = new MemoryStream();
         image.SaveAsPng(stream);
-        return new Picture(stream.ToArray());
+        return new Picture(stream.ToArray())
+        {
+            Filename = name,
+            Description = name
+        };
     }
 
     private static Rectangle GetBoundingRectangle(IImageProcessingContext image)

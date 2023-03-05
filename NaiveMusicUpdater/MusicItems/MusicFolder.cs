@@ -70,9 +70,70 @@ public class MusicFolder : IMusicItem
 
     public MusicLibrary RootLibrary => (MusicLibrary)this.PathFromRoot().First();
 
+    private void RemoveIcon()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            string desktop_ini = Path.Combine(Location, "desktop.ini");
+            if (File.Exists(desktop_ini))
+            {
+                var lines = File.ReadAllLines(desktop_ini).Where(x => !x.StartsWith("IconResource"));
+                File.WriteAllLines(desktop_ini, lines);
+                File.SetAttributes(desktop_ini, FileAttributes.System | FileAttributes.Hidden);
+            }
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            string directory = Path.Combine(Location, ".directory");
+            if (File.Exists(directory))
+            {
+                var lines = File.ReadAllLines(directory).Where(x => !x.StartsWith("Icon"));
+                File.WriteAllLines(directory, lines);
+            }
+        }
+    }
+
+    private void SetIcon(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            string desktop_ini = Path.Combine(Location, "desktop.ini");
+            File.WriteAllLines(desktop_ini, new[]
+            {
+                "[.ShellClassInfo]",
+                $"IconResource = {path}, 0"
+            });
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            string directory = Path.Combine(Location, ".directory");
+            File.WriteAllLines(directory, new[]
+            {
+                "[Desktop Entry]",
+                $"Icon = {path}"
+            });
+        }
+    }
+
     public void Update()
     {
         Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
+        var image = this.GetMetadata(MetadataField.Art.Only).Get(MetadataField.Art);
+        if (!image.IsBlank && RootLibrary.LibraryConfig.ArtTemplates != null)
+        {
+            var path= RootLibrary.LibraryConfig.ArtTemplates.FirstArt(image.AsList().Values).path;
+            if (path == null)
+                RemoveIcon();
+            else
+            {
+                var icon = RootLibrary.LibraryConfig.ArtTemplates.GetIcon(path);
+                if (icon == null)
+                    RemoveIcon();
+                else
+                    SetIcon(Path.GetFullPath(icon));
+            }
+        }
+
         Logger.TabIn();
         foreach (var child in SubFolders)
         {
