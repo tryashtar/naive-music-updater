@@ -1,21 +1,25 @@
+using System.Numerics;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace NaiveMusicUpdater;
 
 public class ArtRepo
 {
+    public readonly Dictionary<string, ProcessArtSettings> NamedSettings;
     public readonly string Folder;
     private IArtCache Cache;
     private string? IcoFolder;
     private Dictionary<string, ArtConfig> ConfigCache = new();
 
-    public ArtRepo(string folder, IArtCache cache, string? ico_folder)
+    public ArtRepo(string folder, IArtCache cache, string? ico_folder, Dictionary<string, ProcessArtSettings> named_settings)
     {
         Folder = folder;
         Cache = cache;
         IcoFolder = ico_folder;
+        NamedSettings = named_settings;
     }
 
     public IPicture? GetProcessed(string path)
@@ -36,6 +40,66 @@ public class ArtRepo
     {
         image.Mutate(x =>
         {
+            if (settings.HasBuffer ?? false)
+            {
+                var bounding = GetBoundingRectangle(x);
+                x.Crop(bounding);
+            }
+
+            if (settings.Width != null || settings.Height != null)
+            {
+                int width = settings.Width ?? 0;
+                int height = settings.Height ?? 0;
+                if (settings.IntegerScale ?? false)
+                {
+                    if (width > 0)
+                        width = width / image.Width * image.Width;
+                    if (height > 0)
+                        height = height / image.Height * image.Height;
+                }
+
+                if (settings.HasBuffer ?? false)
+                {
+                    width -= settings.Buffer[0] + settings.Buffer[2];
+                    height -= settings.Buffer[1] + settings.Buffer[3];
+                }
+
+                var resize = new ResizeOptions()
+                {
+                    Mode = settings.Scale ?? ResizeMode.BoxPad,
+                    Sampler = settings.Interpolation ?? KnownResamplers.Bicubic,
+                    Size = new(width, height)
+                };
+                if (settings.Background != null)
+                    resize.PadColor = settings.Background.Value;
+                x.Resize(resize);
+            }
+
+            if (settings.HasBuffer ?? false)
+            {
+                var resize = new ResizeOptions()
+                {
+                    Mode = ResizeMode.BoxPad,
+                    Size = new(x.GetCurrentSize().Width + settings.Buffer[2],
+                        x.GetCurrentSize().Height + settings.Buffer[3]),
+                    Position = AnchorPositionMode.TopLeft
+                };
+                if (settings.Background != null)
+                    resize.PadColor = settings.Background.Value;
+                x.Resize(resize);
+                
+                var resize2 = new ResizeOptions()
+                {
+                    Mode = ResizeMode.BoxPad,
+                    Size = new(x.GetCurrentSize().Width + settings.Buffer[0],
+                        x.GetCurrentSize().Height + settings.Buffer[1]),
+                    Position = AnchorPositionMode.BottomRight
+                };
+                if (settings.Background != null)
+                    resize2.PadColor = settings.Background.Value;
+                x.Resize(resize2);
+            }
+
             if (settings.Background != null)
                 x.BackgroundColor(settings.Background.Value);
         });
@@ -44,10 +108,33 @@ public class ArtRepo
         return new Picture(stream.ToArray());
     }
 
+    private static Rectangle GetBoundingRectangle(IImageProcessingContext image)
+    {
+        int left = image.GetCurrentSize().Width;
+        int top = image.GetCurrentSize().Height;
+        int right = 0;
+        int bottom = 0;
+        image.ProcessPixelRowsAsVector4((row, point) =>
+        {
+            for (int x = 0; x < row.Length; x++)
+            {
+                ref var pixel = ref row[x];
+                if (pixel.W != 0)
+                {
+                    left = Math.Min(x, left);
+                    top = Math.Min(point.Y, top);
+                    right = Math.Max(x, right);
+                    bottom = Math.Max(point.Y, bottom);
+                }
+            }
+        });
+        return new(left, top, right - left, bottom - top);
+    }
+
     private ProcessArtSettings GetSettings(string path)
     {
         var settings = new ProcessArtSettings();
-        foreach (var config in GetConfigs(path).Reverse())
+        foreach (var config in GetConfigs(path))
         {
             foreach (var (check, apply) in config.Settings)
             {
@@ -67,7 +154,7 @@ public class ArtRepo
                 yield return existing;
             if (File.Exists(Path.Combine(Folder, path, "images.yaml")))
             {
-                var config = new ArtConfig(Folder, path);
+                var config = new ArtConfig(this, Folder, path);
                 ConfigCache[path] = config;
                 yield return config;
             }

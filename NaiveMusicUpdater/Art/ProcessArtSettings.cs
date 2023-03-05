@@ -1,5 +1,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace NaiveMusicUpdater;
 
@@ -7,12 +9,12 @@ public class ProcessArtSettings
 {
     public int? Width;
     public int? Height;
-    public int? Buffer;
+    public bool? HasBuffer;
+    public int[]? Buffer;
     public Color? Background;
-    public ScaleOption? Scale;
-    public InterpolationOption? Interpolation;
+    public ResizeMode? Scale;
+    public IResampler? Interpolation;
     public bool? IntegerScale;
-    public bool? CropToContent;
 
     public ProcessArtSettings()
     {
@@ -25,7 +27,20 @@ public class ProcessArtSettings
         if (node.Children.TryGetValue("height", out var h))
             Height = h.Int();
         if (node.Children.TryGetValue("buffer", out var b))
-            Buffer = b.Int();
+        {
+            var bb = b.Bool();
+            if (bb == false)
+            {
+                HasBuffer = false;
+                Buffer = null;
+            }
+            else
+            {
+                HasBuffer = true;
+                Buffer = b.ToList(x => x.Int().Value).ToArray();
+            }
+        }
+
         if (node.Children.TryGetValue("background", out var bg))
         {
             var list = bg.ToList(x => (byte)x.Int().Value);
@@ -33,36 +48,28 @@ public class ProcessArtSettings
         }
 
         if (node.Children.TryGetValue("scale", out var s))
-            Scale = s.ToEnum<ScaleOption>();
+            Scale = s.ToEnum<ResizeMode>();
         if (node.Children.TryGetValue("interpolation", out var i))
-            Interpolation = i.ToEnum<InterpolationOption>();
+        {
+            if (i.String() == "bicubic")
+                Interpolation = KnownResamplers.Bicubic;
+            else if (i.String() == "nearest_neighbor")
+                Interpolation = KnownResamplers.NearestNeighbor;
+        }
+
         if (node.Children.TryGetValue("integer_scale", out var iscale))
             IntegerScale = iscale.Bool();
-        if (node.Children.TryGetValue("crop_to_content", out var cc))
-            CropToContent = cc.Bool();
     }
 
     public void MergeWith(ProcessArtSettings other)
     {
         this.Width ??= other.Width;
         this.Height ??= other.Height;
+        this.HasBuffer ??= other.HasBuffer;
         this.Buffer ??= other.Buffer;
         this.Background ??= other.Background;
         this.Scale ??= other.Scale;
         this.Interpolation ??= other.Interpolation;
         this.IntegerScale ??= other.IntegerScale;
-        this.CropToContent ??= other.CropToContent;
     }
-}
-
-public enum ScaleOption
-{
-    MaintainRatioFill,
-    MaintainRatioCrop
-}
-
-public enum InterpolationOption
-{
-    Bicubic,
-    NearestNeighbor
 }

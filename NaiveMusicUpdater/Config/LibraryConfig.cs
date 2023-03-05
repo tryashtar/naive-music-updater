@@ -51,7 +51,9 @@ public class LibraryConfig
                 ? new DiskArtCache(cache_folder)
                 : new MemoryArtCache();
             string? ico_folder = ParsePath(yaml.Go("art", "icons"));
-            ArtTemplates = new(template_folder, cache, ico_folder);
+            var named =
+                yaml.Go("art", "named_settings").ToDictionary(x => new ProcessArtSettings((YamlMappingNode)x)) ?? new();
+            ArtTemplates = new(template_folder, cache, ico_folder, named);
         }
 
         FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()), x => x.String()) ?? new();
