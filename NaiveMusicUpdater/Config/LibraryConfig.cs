@@ -10,6 +10,10 @@ public class LibraryConfig
     private readonly List<Regex>? KeepXiphMetadata;
     private readonly List<Regex>? KeepApeMetadata;
     private readonly List<string> SongExtensions;
+
+    private readonly Dictionary<MetadataField, (CustomField custom, Dictionary<IMusicItem, IValue> results)>
+        CustomFieldSaves;
+
     public readonly List<string> ConfigFolders;
     public readonly string LibraryFolder;
     public readonly string? LogFolder;
@@ -64,6 +68,78 @@ public class LibraryConfig
             .ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(),
                 x => new ReplayGain(x["path"].String(), x["args"].String()));
         ConfigFolders = yaml.Go("config_folders").ToStringList() ?? new() { LibraryFolder };
+        CustomFieldSaves = new();
+        foreach (var field in yaml.Go("custom_fields").ToList(ParseCustomField) ?? new())
+        {
+            CustomFieldSaves[field.Field] = (field, new());
+        }
+    }
+
+    public Predicate<MetadataField> IsCustomField => CustomFieldSaves.ContainsKey;
+    public IEnumerable<MetadataField> CustomFields => CustomFieldSaves.Keys;
+
+    public void RememberCustomField(MetadataField field, IMusicItem item, IValue value)
+    {
+        CustomFieldSaves[field].results[item] = value;
+    }
+
+    private YamlNode? SaveValue(IValue value)
+    {
+        if (value.IsBlank)
+            return null;
+        if (value is ListValue list)
+            return new YamlSequenceNode(list.Values.Select(x => new YamlMappingNode(x)));
+        return new YamlScalarNode(value.AsString().Value);
+    }
+
+    public void Save()
+    {
+        Cache.Save();
+        foreach (var save in CustomFieldSaves.Values)
+        {
+            if (save.custom.Export == null)
+                continue;
+            var yaml = new YamlMappingNode();
+            if (save.custom.Group == FieldGroup.Item)
+            {
+                foreach (var (item, value) in save.results)
+                {
+                    if (save.custom.IncludeBlanks || !value.IsBlank)
+                        yaml.Add(item.StringPathAfterRoot(), SaveValue(value));
+                }
+            }
+            else if (save.custom.Group == FieldGroup.Value)
+            {
+                var reverse_dict = new Dictionary<IValue, List<IMusicItem>>(new ValueEqualityChecker());
+                foreach (var (item, value) in save.results)
+                {
+                    if (!reverse_dict.ContainsKey(value))
+                        reverse_dict[value] = new();
+                    reverse_dict[value].Add(item);
+                }
+
+                foreach (var (value, list) in reverse_dict)
+                {
+                    if (save.custom.IncludeBlanks || !value.IsBlank)
+                    {
+                        yaml.Add(SaveValue(value) ?? "null",
+                            new YamlSequenceNode(list.Select(x => new YamlScalarNode(x.StringPathAfterRoot()))));
+                    }
+                }
+            }
+
+            YamlHelper.SaveToFile(yaml, save.custom.Export);
+        }
+    }
+
+    private CustomField ParseCustomField(YamlNode node)
+    {
+        var name = node.Go("name").String();
+        var field = new MetadataField(name, name);
+        var export = ParsePath(node.Go("export"));
+        var group = node.Go("group").ToEnum(FieldGroup.Item);
+        var blanks = node.Go("blanks").Bool() ?? false;
+        return new(field, export, group, blanks);
     }
 
     private string? ParsePath(YamlNode? node)
@@ -208,3 +284,11 @@ public class LibraryConfig
 }
 
 public record ReplayGain(string Path, string Args);
+
+public record CustomField(MetadataField Field, string? Export, FieldGroup Group, bool IncludeBlanks);
+
+public enum FieldGroup
+{
+    Item,
+    Value
+}

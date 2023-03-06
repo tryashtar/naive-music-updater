@@ -144,7 +144,7 @@ public class ArtRepo
         }
     }
 
-    private string? GetTemplatePath(string path)
+    public string? GetTemplatePath(string path)
     {
         var name = Path.Combine(Folder, path);
         if (!Directory.Exists(Path.GetDirectoryName(name)))

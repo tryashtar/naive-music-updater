@@ -16,6 +16,12 @@ public class Song : IMusicItem
     public void Update()
     {
         Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
+        var custom = this.GetMetadata(RootLibrary.LibraryConfig.IsCustomField);
+        foreach (var field in RootLibrary.LibraryConfig.CustomFields)
+        {
+            RootLibrary.LibraryConfig.RememberCustomField(field, this, custom.Get(field));
+        }
+
         if (!RootLibrary.LibraryConfig.Cache.NeedsUpdate(this))
             return;
         Logger.TabIn();

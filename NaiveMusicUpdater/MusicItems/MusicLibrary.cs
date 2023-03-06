@@ -15,7 +15,7 @@ public class MusicLibrary : MusicFolder
         if (LibraryConfig.LogFolder != null)
             Logger.Open(Path.Combine(LibraryConfig.LogFolder, DateTime.Now.ToString("yyyy-MM-dd HH_mm_ss") + ".txt"));
         this.Update();
-        LibraryConfig.Cache.Save();
+        LibraryConfig.Save();
     }
 
     protected override void RemoveIcon()

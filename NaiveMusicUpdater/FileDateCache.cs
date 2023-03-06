@@ -40,6 +40,20 @@ public static class FileDateCacheExtensions
                 yield return config.Location;
             }
         }
+
+        if (item.RootLibrary.LibraryConfig.ArtTemplates != null)
+        {
+            var art = item.GetMetadata(MetadataField.Art.Only).Get(MetadataField.Art);
+            if (!art.IsBlank)
+            {
+                foreach (var val in art.AsList().Values)
+                {
+                    var path = item.RootLibrary.LibraryConfig.ArtTemplates.GetTemplatePath(val);
+                    if (path != null)
+                        yield return path;
+                }
+            }
+        }
     }
 }
 
