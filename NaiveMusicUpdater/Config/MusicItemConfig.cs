@@ -35,7 +35,7 @@ public class MusicItemConfig : IMusicItemConfig
     private BulkSet ParseBulkSet(YamlNode yaml)
     {
         var field = MetadataField.FromID(yaml.Go("field").String());
-        var dict = yaml.Go("items").ToDictionary(ItemSelectorFactory.Create, ValueSourceFactory.Create);
+        var dict = yaml.Go("set").ToDictionary(ItemSelectorFactory.Create, ValueSourceFactory.Create);
         var mode = yaml.Go("mode").ToEnum(CombineMode.Replace);
         return new BulkSet(field, mode, dict);
     }

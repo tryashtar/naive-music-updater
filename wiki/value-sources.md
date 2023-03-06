@@ -1,4 +1,4 @@
-### Value Sources
+## Value Sources
 A value source is a method for obtaining a value that can be modified, then ultimately embedded into metadata.
 
 The simplest value source is just a literal string or list of strings. For example, `title: Joy to the World` would set the title of all relevant songs to exactly that.
@@ -37,7 +37,7 @@ from:
 ---
 
 **`value`**  
-This is to decide what kind of data should be acquired from the selected item. The default is [`clean_name`](names.md), but you can use `file_name` to select the original file name.
+This is to decide what kind of data should be acquired from the selected item. The default is [`clean_name`](names.md), but you can use `file_name` to select the original file name, or `path` to select the path to the file, starting from your library folder.
 
 The other option is `copy`, which lets you choose a metadata field. Note that this will copy the "final" value that ends up in that field. This means if later strategies modify the field you're copying from, this field will end up with those modifications as well. For example:
 ```yaml
