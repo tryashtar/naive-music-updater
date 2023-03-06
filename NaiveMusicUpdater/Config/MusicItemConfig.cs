@@ -57,13 +57,14 @@ public class MusicItemConfig : IMusicItemConfig
 
     public void Apply(Metadata meta, IMusicItem item, Predicate<MetadataField> desired)
     {
-        if (item == ConfiguredItem && ThisStrategy != null)
-            ThisStrategy.Apply(meta, item, desired);
+        if (item == ConfiguredItem)
+            ThisStrategy?.Apply(meta, item, desired);
         switch (item)
         {
             case MusicFolder:
             {
-                FoldersStrategy?.Apply(meta, item, desired);
+                if (item != ConfiguredItem)
+                    FoldersStrategy?.Apply(meta, item, desired);
                 break;
             }
             case Song:

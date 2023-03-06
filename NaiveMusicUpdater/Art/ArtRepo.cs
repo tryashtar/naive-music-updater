@@ -130,8 +130,9 @@ public class ArtRepo
 
     private IEnumerable<ArtConfig> GetConfigs(string path)
     {
-        while (true)
+        while (path != "")
         {
+            path = Path.GetDirectoryName(path);
             if (ConfigCache.TryGetValue(path, out var existing))
                 yield return existing;
             if (File.Exists(Path.Combine(Folder, path, "images.yaml")))
@@ -140,10 +141,6 @@ public class ArtRepo
                 ConfigCache[path] = config;
                 yield return config;
             }
-
-            if (path == "")
-                break;
-            path = Path.GetDirectoryName(path);
         }
     }
 

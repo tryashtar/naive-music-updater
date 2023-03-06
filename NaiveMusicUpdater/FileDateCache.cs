@@ -135,7 +135,7 @@ public class DebugFileDateCache : MemoryFileDateCache
     {
         if (Path.GetExtension(path) == ".png")
             return false;
-        return Check.Any(x => path.Contains(x, StringComparison.OrdinalIgnoreCase)) || base.NeedsUpdate(path);
+        return Check.Any(x => path.Contains(x, StringComparison.OrdinalIgnoreCase));
     }
 }
 #endif
