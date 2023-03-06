@@ -86,12 +86,6 @@ public class MusicItemConfig : IMusicItemConfig
             }
         }
 
-        foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
-        {
-            if (strat.Selector.IsSelectedFrom(ConfiguredItem, item))
-                strat.Strategy.Apply(meta, item, desired);
-        }
-
         foreach (var bulk in SetFields)
         {
             foreach (var (select, val) in bulk.Items)
@@ -103,6 +97,12 @@ public class MusicItemConfig : IMusicItemConfig
                         meta.Combine(bulk.Field, value, bulk.Mode);
                 }
             }
+        }
+
+        foreach (var strat in SharedStrategies.Concat(MetadataStrategies))
+        {
+            if (strat.Selector.IsSelectedFrom(ConfiguredItem, item))
+                strat.Strategy.Apply(meta, item, desired);
         }
     }
 
