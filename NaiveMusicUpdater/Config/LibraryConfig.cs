@@ -122,8 +122,8 @@ public class LibraryConfig
                 {
                     if (save.custom.IncludeBlanks || !value.IsBlank)
                     {
-                        yaml.Add(SaveValue(value) ?? "null",
-                            new YamlSequenceNode(list.Select(x => new YamlScalarNode(x.StringPathAfterRoot()))));
+                        var vals = list.Select(x => new YamlScalarNode(x.StringPathAfterRoot())).ToList();
+                        yaml.Add(SaveValue(value) ?? "null", vals.Count == 1 ? vals[0] : new YamlSequenceNode(vals));
                     }
                 }
             }
