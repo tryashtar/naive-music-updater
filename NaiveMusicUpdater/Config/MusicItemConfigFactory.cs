@@ -34,10 +34,10 @@ public static class MusicItemConfigFactory
             reverse_sets[field] = new(checker);
         }
 
-        var songs = folder.GetAllSongs();
+        var songs = folder.GetAllSongs().ToList();
         foreach (var song in songs)
         {
-            var setter = sets[song] = new();
+            sets[song] = new();
             var current = song.GetEmbeddedMetadata(MetadataField.All);
             var incoming = song.GetMetadata(MetadataField.All);
             foreach (var field in MetadataField.Values)
@@ -62,18 +62,13 @@ public static class MusicItemConfigFactory
 
         static YamlNode ValueToNode(IValue val)
         {
-            YamlNode MetadataContentsToNode()
-            {
-                var l = val.AsList();
-                if (l.Values.Count == 1)
-                    return l.Values[0];
-                return new YamlSequenceNode(l.Values.ToArray());
-            }
-
-            return MetadataContentsToNode();
+            var l = val.AsList();
+            if (l.Values.Count == 1)
+                return l.Values[0];
+            return new YamlSequenceNode(l.Values.ToArray());
         }
 
-        var songs_node = new YamlMappingNode();
+        YamlNode songs_node = new YamlMappingNode();
         var set_all_node = new YamlSequenceNode();
         var set_node = new YamlMappingNode();
         var order_node = new YamlSequenceNode();
@@ -106,51 +101,81 @@ public static class MusicItemConfigFactory
             }
         }
 
-        foreach (var prop in reverse_sets)
+        foreach (var (field, values) in reverse_sets)
         {
-            if (prop.Value.Count == 0)
+            if (values.Count == 0)
                 continue;
-            var max_list = prop.Value.OrderBy(x => x.Value.Count).ToList();
-            if ((prop.Value.Count == 1 && prop.Value.Single().Value.Count == songs.Count()) ||
+            var max_list = values.OrderBy(x => x.Value.Count).ToList();
+            if ((values.Count == 1 && values.Single().Value.Count == songs.Count()) ||
                 (max_list.Count > 1 && max_list[0].Value.Count > max_list[1].Value.Count))
             {
-                songs_node.Add(prop.Key.Id, ValueToNode(max_list[0].Key));
+                if (max_list[0].Key.IsBlank)
+                {
+                    if (songs_node is YamlMappingNode map)
+                        songs_node = new YamlSequenceNode(map,
+                            new YamlMappingNode() { { "remove", new YamlSequenceNode() } });
+                    ((YamlSequenceNode)songs_node[1]["remove"]).Add(field.Id);
+                }
+                else
+                {
+                    var add = songs_node is YamlMappingNode map ? map : (YamlMappingNode)songs_node[0];
+                    add.Add(field.Id, ValueToNode(max_list[0].Key));
+                }
             }
 
-            foreach (var val in prop.Value)
+            foreach (var (val, items) in values)
             {
-                if (val.Value != max_list[0].Value && val.Value.Count > 1)
+                if (items != max_list[0].Value && items.Count > 1)
                 {
-                    set_all_node.Add(new YamlMappingNode
+                    if (val.IsBlank)
                     {
-                        { "names", new YamlSequenceNode(val.Value.Select(ItemToPath)) },
-                        { "set", new YamlMappingNode { { prop.Key.Id, ValueToNode(val.Key) } } }
-                    });
+                        set_all_node.Add(new YamlMappingNode
+                        {
+                            { "names", new YamlSequenceNode(items.Select(ItemToPath)) },
+                            { "set", new YamlMappingNode { { "remove", new YamlSequenceNode() { field.Id } } } }
+                        });
+                    }
+                    else
+                    {
+                        set_all_node.Add(new YamlMappingNode
+                        {
+                            { "names", new YamlSequenceNode(items.Select(ItemToPath)) },
+                            { "set", new YamlMappingNode { { field.Id, ValueToNode(val) } } }
+                        });
+                    }
                 }
 
-                if (val.Value.Count == 1)
-                {
-                    sets[val.Value[0]][prop.Key] = val.Key;
-                }
+                if (items.Count == 1)
+                    sets[items[0]][field] = val;
             }
         }
 
-        foreach (var set in sets)
+        foreach (var (item, meta) in sets)
         {
-            var path = ItemToPath(set.Key);
-            var spec = new YamlMappingNode();
-            foreach (var field in set.Value)
+            var path = ItemToPath(item);
+            YamlNode spec = new YamlMappingNode();
+            foreach (var (field, val) in meta)
             {
-                var node = ValueToNode(field.Value);
-                spec.Add(field.Key.Id, node);
+                if (val.IsBlank)
+                {
+                    if (spec is YamlMappingNode map)
+                        spec = new YamlSequenceNode(map,
+                            new YamlMappingNode() { { "remove", new YamlSequenceNode() } });
+                    ((YamlSequenceNode)songs_node[1]["remove"]).Add(field.Id);
+                }
+                else
+                {
+                    var add = spec is YamlMappingNode map ? map : (YamlMappingNode)spec[0];
+                    add.Add(field.Id, ValueToNode(val));
+                }
             }
 
-            if (spec.Children.Count > 0)
+            if (spec is YamlMappingNode { Children.Count: > 0 } or YamlSequenceNode { Children.Count: > 0 })
                 set_node.Add(path, spec);
         }
 
         var final_node = new YamlMappingNode();
-        if (songs_node.Children.Count > 0)
+        if (songs_node is YamlMappingNode { Children.Count: > 0 } or YamlSequenceNode { Children.Count: > 0 })
             final_node.Add("songs", songs_node);
         if (set_all_node.Children.Count > 0)
             final_node.Add("set all", set_all_node);

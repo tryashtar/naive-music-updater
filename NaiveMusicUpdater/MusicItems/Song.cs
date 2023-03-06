@@ -5,7 +5,8 @@ public class Song : IMusicItem
     public string Location { get; }
     protected readonly MusicFolder _Parent;
     public MusicFolder Parent => _Parent;
-    public IMusicItemConfig[] Configs => Array.Empty<IMusicItemConfig>();
+    private static readonly List<IMusicItemConfig> _Empty = new();
+    public List<IMusicItemConfig> Configs => _Empty;
 
     public Song(MusicFolder parent, string file)
     {

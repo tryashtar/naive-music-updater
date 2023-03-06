@@ -4,7 +4,7 @@ public class MusicFolder : IMusicItem
 {
     private bool HasScanned = false;
     public string Location { get; }
-    public IMusicItemConfig[] Configs { get; private set; }
+    public List<IMusicItemConfig> Configs { get; private set; }
     private readonly MusicFolder? _Parent;
     public MusicFolder? Parent => _Parent;
     private readonly List<MusicFolder> ChildFolders = new();
@@ -44,16 +44,14 @@ public class MusicFolder : IMusicItem
 
     protected void LoadConfigs()
     {
-        var configs = new List<IMusicItemConfig>();
+        Configs = new();
         var path = this.StringPathAfterRoot();
         foreach (var place in RootLibrary.LibraryConfig.ConfigFolders)
         {
             string config = Path.Combine(place, path, "config.yaml");
             if (File.Exists(config))
-                configs.Add(MusicItemConfigFactory.Create(config, this));
+                Configs.Add(MusicItemConfigFactory.Create(config, this));
         }
-
-        Configs = configs.ToArray();
     }
 
     public IEnumerable<Song> GetAllSongs()
