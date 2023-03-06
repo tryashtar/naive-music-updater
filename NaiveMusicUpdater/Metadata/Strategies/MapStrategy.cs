@@ -13,17 +13,14 @@ public class MapStrategy : IMetadataStrategy
 
     public void Apply(Metadata start, IMusicItem item, Predicate<MetadataField> desired)
     {
-        var meta = new Metadata();
         foreach (var (field, source) in Fields)
         {
             if (desired(field))
             {
                 var value = source.Get(item);
                 if (value != null)
-                    meta.Register(field, value);
+                    start.Combine(field, value, Mode);
             }
         }
-
-        start.MergeWith(meta, Mode);
     }
 }

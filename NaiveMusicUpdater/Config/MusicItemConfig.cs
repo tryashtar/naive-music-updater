@@ -3,6 +3,7 @@
 public class MusicItemConfig : IMusicItemConfig
 {
     public string Location { get; }
+    private readonly IMusicItem ConfiguredItem;
     private readonly ISongOrder? TrackOrder;
     private readonly ISongOrder? DiscOrder;
     private readonly IMetadataStrategy? ThisStrategy;
@@ -10,7 +11,7 @@ public class MusicItemConfig : IMusicItemConfig
     private readonly IMetadataStrategy? FoldersStrategy;
     private readonly List<TargetedStrategy> MetadataStrategies;
     private readonly List<TargetedStrategy> SharedStrategies;
-    private readonly IMusicItem ConfiguredItem;
+    private readonly List<BulkSet> SetFields;
 
     public MusicItemConfig(string file, IMusicItem configured_item, YamlNode yaml)
     {
@@ -28,6 +29,15 @@ public class MusicItemConfig : IMusicItemConfig
         FoldersStrategy = yaml.Go("folders").NullableParse(LiteralOrReference);
         MetadataStrategies = yaml.Go("set").ToList(ParseStrategy) ?? new();
         SharedStrategies = yaml.Go("set all").ToList(x => ParseMultiple(x.Go("names"), x.Go("set"))) ?? new();
+        SetFields = yaml.Go("set fields").ToList(ParseBulkSet) ?? new();
+    }
+
+    private BulkSet ParseBulkSet(YamlNode yaml)
+    {
+        var field = MetadataField.FromID(yaml.Go("field").String());
+        var dict = yaml.Go("items").ToDictionary(ItemSelectorFactory.Create, ValueSourceFactory.Create);
+        var mode = yaml.Go("mode").ToEnum(CombineMode.Replace);
+        return new BulkSet(field, mode, dict);
     }
 
     private TargetedStrategy ParseStrategy(YamlNode key, YamlNode value)
@@ -81,12 +91,26 @@ public class MusicItemConfig : IMusicItemConfig
             if (strat.Selector.IsSelectedFrom(ConfiguredItem, item))
                 strat.Strategy.Apply(meta, item, desired);
         }
+
+        foreach (var bulk in SetFields)
+        {
+            foreach (var (select, val) in bulk.Items)
+            {
+                if (select.IsSelectedFrom(ConfiguredItem, item))
+                {
+                    var value = val.Get(item);
+                    if (value != null)
+                        meta.Combine(bulk.Field, value, bulk.Mode);
+                }
+            }
+        }
     }
 
     public CheckSelectorResults CheckSelectors()
     {
         var results = new CheckSelectorResults();
-        var all_selectors = SharedStrategies.Concat(MetadataStrategies).Select(x => x.Selector);
+        var all_selectors = SharedStrategies.Concat(MetadataStrategies).Select(x => x.Selector)
+            .Concat(SetFields.SelectMany(x => x.Items.Keys));
         if (TrackOrder is DefinedSongOrder tracks)
         {
             all_selectors = all_selectors.Append(tracks.Order);
@@ -109,3 +133,5 @@ public class MusicItemConfig : IMusicItemConfig
 }
 
 public record TargetedStrategy(IItemSelector Selector, IMetadataStrategy Strategy);
+
+public record BulkSet(MetadataField Field, CombineMode Mode, Dictionary<IItemSelector, IValueSource> Items);

@@ -67,7 +67,7 @@ public class LibraryConfig
         ReplayGains = yaml.Go("replay_gain")
             .ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(),
                 x => new ReplayGain(x["path"].String(), x["args"].String()));
-        ConfigFolders = yaml.Go("config_folders").ToStringList() ?? new() { LibraryFolder };
+        ConfigFolders = yaml.Go("config_folders").ToList(ParsePath) ?? new() { LibraryFolder };
         CustomFieldSaves = new();
         foreach (var field in yaml.Go("custom_fields").ToList(ParseCustomField) ?? new())
         {

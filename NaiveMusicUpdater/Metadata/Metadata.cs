@@ -10,6 +10,14 @@ public class Metadata
         SavedFields[field] = value;
     }
 
+    public void Combine(MetadataField field, IValue value, CombineMode mode)
+    {
+        if (SavedFields.TryGetValue(field, out var existing))
+            SavedFields[field] = ValueExtensions.Combine(existing, value, mode);
+        else
+            SavedFields[field] = value;
+    }
+
     public IValue Get(MetadataField field)
     {
         return SavedFields.TryGetValue(field, out var result) ? result : BlankValue.Instance;
@@ -17,12 +25,9 @@ public class Metadata
 
     public void MergeWith(Metadata other, CombineMode mode)
     {
-        foreach (var pair in other.SavedFields)
+        foreach (var (field, value) in other.SavedFields)
         {
-            if (SavedFields.TryGetValue(pair.Key, out var existing))
-                SavedFields[pair.Key] = ValueExtensions.Combine(existing, pair.Value, mode);
-            else
-                SavedFields[pair.Key] = pair.Value;
+            Combine(field, value, mode);
         }
     }
 
