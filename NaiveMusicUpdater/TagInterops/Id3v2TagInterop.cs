@@ -1,10 +1,13 @@
 ﻿namespace NaiveMusicUpdater;
 
-public class Id3v2TagInterop : AbstractInterop<TagLib.Id3v2.Tag>
+public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
 {
     private static readonly string[] ReadDelimiters = new string[] { "/", "; ", ";" };
     private const string WriteDelimiter = "; ";
-    public Id3v2TagInterop(TagLib.Id3v2.Tag tag, LibraryConfig config) : base(tag, config) { }
+
+    public Id3v2TagInterop(TagLib.Id3v2.Tag tag, LibraryConfig config) : base(tag, config)
+    {
+    }
 
     protected override void CustomSetup()
     {
@@ -17,42 +20,44 @@ public class Id3v2TagInterop : AbstractInterop<TagLib.Id3v2.Tag>
         return Tag.Render();
     }
 
-    protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
+    public override void Set(MetadataField field, IValue value)
     {
-        var schema = BasicInterop.BasicSchema(Tag);
-        schema[MetadataField.Language] = Delegates(() => Get(Language.Get(Tag)), x => Language.Set(Tag, Value(x)));
-        return schema;
+        if (field == MetadataField.Title && !Config.ShouldKeepFrame("TIT2"))
+            return;
+        if (field == MetadataField.Album && !Config.ShouldKeepFrame("TALB"))
+            return;
+        if (field == MetadataField.AlbumArtists && !Config.ShouldKeepFrame("TPE1"))
+            return;
+        if (field == MetadataField.Performers && !Config.ShouldKeepFrame("TPE2"))
+            return;
+        if (field == MetadataField.Arranger && !Config.ShouldKeepFrame("TPE4"))
+            return;
+        if (field == MetadataField.Composers && !Config.ShouldKeepFrame("TCOM"))
+            return;
+        if ((field == MetadataField.Track || field == MetadataField.TrackTotal) && !Config.ShouldKeepFrame("TRCK"))
+            return;
+        if (field == MetadataField.Language && !Config.ShouldKeepFrame("TLAN"))
+            return;
+        if (field == MetadataField.Year && !Config.ShouldKeepFrame("TDRC"))
+            return;
+        if (field == MetadataField.Genres && !Config.ShouldKeepFrame("TCON"))
+            return;
+        if (field == MetadataField.Comment && !Config.ShouldKeepFrame("COMM"))
+            return;
+        if ((field == MetadataField.Disc || field == MetadataField.DiscTotal) && !Config.ShouldKeepFrame("TPOS"))
+            return;
+        if (field == MetadataField.Art && !Config.ShouldKeepFrame("APIC"))
+            return;
+        base.Set(field, value);
     }
 
-    protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+    public override void Clean()
     {
-        var schema = BasicInterop.BasicWipeSchema(Tag);
-        schema.Add("compilation", SimpleWipeRet(() => Tag.IsCompilation.ToString(), () => Tag.IsCompilation = false));
-        AddFrameWipes(schema);
-        return schema;
-    }
-
-    private IEnumerable<Frame> UnwantedFrames()
-    {
-        return Config.DecideFrames(Tag).remove;
-    }
-
-    private void AddFrameWipes(Dictionary<string, WipeDelegates> schema)
-    {
-        schema.Add("unwanted frames", SimpleWipeRet(
-            () =>
-            {
-                var frames = UnwantedFrames();
-                return string.Join("\n", frames.Select(FrameViewer.ToString));
-            },
-            () =>
-            {
-                var frames = UnwantedFrames().ToList();
-                foreach (var frame in frames)
-                {
-                    Tag.RemoveFrame(frame);
-                }
-                return frames.Count > 0;
-            }));
+        var remove = Config.DecideFrames(Tag).remove.ToList();
+        foreach (var frame in remove)
+        {
+            Logger.WriteLine($"{Tag.TagTypes} frame removed: {FrameViewer.ToString(frame)}");
+            Tag.RemoveFrame(frame);
+        }
     }
 }

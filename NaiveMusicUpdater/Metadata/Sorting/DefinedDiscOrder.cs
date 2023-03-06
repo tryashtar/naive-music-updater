@@ -4,6 +4,7 @@ public class DefinedDiscOrder : ISongOrder
 {
     public readonly uint TotalDiscs;
     private readonly IReadOnlyDictionary<uint, DefinedSongOrder> Discs;
+
     public DefinedDiscOrder(IReadOnlyDictionary<uint, IItemSelector> discs, MusicFolder folder)
     {
         Discs = discs.ToDictionary(x => x.Key, x => new DefinedSongOrder(x.Value, folder));
@@ -23,10 +24,11 @@ public class DefinedDiscOrder : ISongOrder
         {
             unselected.IntersectWith(order[i].UnselectedItems);
         }
+
         return unselected;
     }
 
-    public Metadata Get(IMusicItem item)
+    public void Apply(Metadata start, IMusicItem item)
     {
         var metadata = new Metadata();
         foreach (var disc in Discs)
@@ -34,11 +36,10 @@ public class DefinedDiscOrder : ISongOrder
             uint? track = disc.Value.GetTrack(item);
             if (track != null)
             {
-                metadata.Merge(disc.Value.Get(item));
-                metadata.Register(MetadataField.Disc, new MetadataProperty(new NumberValue(disc.Key), CombineMode.Replace));
-                metadata.Register(MetadataField.DiscTotal, new MetadataProperty(new NumberValue(TotalDiscs), CombineMode.Replace));
+                disc.Value.Apply(start, item);
+                start.Register(MetadataField.Disc, new NumberValue(disc.Key));
+                start.Register(MetadataField.DiscTotal, new NumberValue(TotalDiscs));
             }
         }
-        return metadata;
     }
 }

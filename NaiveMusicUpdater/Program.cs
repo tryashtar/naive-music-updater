@@ -11,102 +11,123 @@ public static class Program
         TagLib.Id3v2.Tag.DefaultVersion = 3;
         TagLib.Id3v2.Tag.ForceDefaultVersion = true;
 
-#if DEBUG
-        if (args.Length > 0)
+        if (args.Length > 0 && args[0] == "--print-tags")
         {
-            try
-            {
-                PrintFrames(args);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
-            Console.ReadLine();
+            PrintTags(args[1..]);
             return;
         }
-#endif
 
-        string FolderPath;
-#if DEBUG
-        FolderPath = File.ReadAllText("folder.txt");
-#else
-            FolderPath = Directory.GetCurrentDirectory();
-#endif
-#if !DEBUG
-            try
-#endif
+        string library_yaml = args.Length > 0 ? args[0] : "library.yaml";
+        if (!File.Exists(library_yaml))
         {
-            var library = new MusicLibrary(FolderPath);
-            library.UpdateLibrary();
-            Logger.WriteLine();
-            library.UpdateSources();
-            Logger.WriteLine();
-            var results = library.CheckSelectors();
-#if !DEBUG
-                if (results.AnyUnused)
-                    Console.ReadLine();
-#endif
+            Logger.WriteLine($"File {library_yaml} not found.", ConsoleColor.Red);
+            if (args.Length == 0)
+                Logger.WriteLine("Specify the path to one as the first argument.", ConsoleColor.Red);
         }
-#if !DEBUG
-            catch (Exception ex)
-            {
-                Logger.WriteLine(ex.ToString());
-                Console.ReadLine();
-            }
-#endif
+        else
+            WrapException(() => CreateAndUpdateLibrary(library_yaml));
+
         Logger.Close();
     }
 
-    public static void PrintFrames(string[] paths)
+    private static void CreateAndUpdateLibrary(string path)
+    {
+        var config = new LibraryConfig(path);
+        var library = new MusicLibrary(config);
+        library.UpdateLibrary();
+        Logger.WriteLine();
+        var results = library.CheckSelectors();
+        if (results.AnyUnused)
+            Console.ReadLine();
+    }
+
+    private static void WrapException(Action action)
+    {
+#if DEBUG
+        action();
+#else
+        try
+        {
+            action();
+        }
+        catch (Exception ex)
+        {
+            Logger.WriteLine(ex.ToString(), ConsoleColor.Red);
+            Console.ReadLine();
+        }
+#endif
+    }
+
+    public static void PrintTags(IEnumerable<string> paths)
     {
         foreach (var item in paths)
         {
             if (File.Exists(item))
             {
                 var song = TagLib.File.Create(item);
-                Console.WriteLine(item);
+                Logger.WriteLine(item, ConsoleColor.Green);
                 var tag = song.Tag;
                 PrintTag(tag);
             }
+            else
+                Logger.WriteLine($"Not found: {item}", ConsoleColor.Red);
+
+            Logger.WriteLine();
         }
     }
 
     private static void PrintTag(TagLib.Tag tag)
     {
         var name = tag.GetType().ToString();
-        Console.WriteLine(name);
-        Console.WriteLine(new String('-', name.Length));
-        if (tag is TagLib.CombinedTag combined)
-        {
-            foreach (var sub in combined.Tags)
-            {
-                PrintTag(sub);
-            }
-        }
+        Logger.WriteLine(name, ConsoleColor.Yellow);
+
         if (tag is TagLib.Id3v2.Tag id3v2)
         {
             foreach (var frame in id3v2.GetFrames().ToList())
             {
-                Console.WriteLine(FrameViewer.ToString(frame));
+                Logger.WriteLine(FrameViewer.ToString(frame));
             }
         }
+
+        if (tag is TagLib.Id3v1.Tag id3v1)
+        {
+            Logger.WriteLine(id3v1.Render().ToString());
+        }
+
+        if (tag is TagLib.Flac.Metadata flac)
+        {
+            foreach (var pic in flac.Pictures)
+            {
+                Logger.WriteLine(pic.ToString());
+            }
+        }
+
         if (tag is TagLib.Ape.Tag ape)
         {
             foreach (var key in ape)
             {
                 var value = ape.GetItem(key);
-                Console.WriteLine($"{key}: {value}");
+                Logger.WriteLine($"{key}: {value}");
             }
         }
+
         if (tag is TagLib.Ogg.XiphComment xiph)
         {
             foreach (var key in xiph)
             {
                 var value = xiph.GetField(key);
-                Console.WriteLine($"{key}: {String.Join("\n", value)}");
+                Logger.WriteLine($"{key}: {String.Join("\n", value)}");
             }
         }
-        Console.WriteLine(new String('-', name.Length));
+
+        if (tag is TagLib.CombinedTag combined)
+        {
+            foreach (var sub in combined.Tags)
+            {
+                Logger.TabIn();
+                PrintTag(sub);
+                Logger.TabOut();
+            }
+        }
     }
 }

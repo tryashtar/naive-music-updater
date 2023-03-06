@@ -1,53 +1,82 @@
 ﻿namespace NaiveMusicUpdater;
 
-public class XiphTagInterop : AbstractInterop<TagLib.Ogg.XiphComment>
+public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
 {
-    public XiphTagInterop(TagLib.Ogg.XiphComment tag, LibraryConfig config) : base(tag, config) { }
+    public XiphTagInterop(TagLib.Ogg.XiphComment tag, LibraryConfig config) : base(tag, config)
+    {
+    }
 
     protected override ByteVector RenderTag()
     {
         return Tag.Render(false);
     }
 
-    protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
+    public override IValue Get(MetadataField field)
     {
-        var schema = BasicInterop.BasicSchema(Tag);
-        schema[MetadataField.Year] = new InteropDelegates(() => Get(Tag.GetField("YEAR")), x => Tag.SetField("YEAR", Number(x)), NumberEqual);
-        return schema;
-    }
-
-    protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
-    {
-        var schema = BasicInterop.BasicWipeSchema(Tag);
-        AddFieldWipes(schema);
-        return schema;
-    }
-
-    private IEnumerable<(string key, string val)> UnwantedMetadata()
-    {
-        foreach (var key in Tag)
+        if (field == MetadataField.Year)
         {
-            if (!Config.ShouldKeepXiph(key))
-                yield return (key, String.Join("; ", Tag.GetField(key)));
+            var val = Tag.GetField("YEAR");
+            return val.Length == 0 ? BlankValue.Instance : new ListValue(val);
+        }
+        else
+            return base.Get(field);
+    }
+
+    public override void Set(MetadataField field, IValue value)
+    {
+        if (field == MetadataField.Art)
+            return;
+        if (field == MetadataField.Year)
+        {
+            var raw = Get(field);
+            var existing = raw.IsBlank ? Array.Empty<string>() : raw.AsList().Values.ToArray();
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!existing.SequenceEqual(val))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                if (value.IsBlank)
+                    Tag.RemoveField("YEAR");
+                else
+                    Tag.SetField("YEAR", val);
+            }
+        }
+        else
+        {
+            if (field == MetadataField.Title && !Config.ShouldKeepXiph("TITLE"))
+                return;
+            if (field == MetadataField.Album && !Config.ShouldKeepXiph("ALBUM"))
+                return;
+            if (field == MetadataField.AlbumArtists && !Config.ShouldKeepXiph("ALBUMARTIST"))
+                return;
+            if (field == MetadataField.Performers && !Config.ShouldKeepXiph("ARTIST"))
+                return;
+            if (field == MetadataField.Arranger && !Config.ShouldKeepXiph("REMIXEDBY"))
+                return;
+            if (field == MetadataField.Composers && !Config.ShouldKeepXiph("COMPOSER"))
+                return;
+            if (field == MetadataField.Track && !Config.ShouldKeepXiph("TRACKNUMBER"))
+                return;
+            if (field == MetadataField.TrackTotal && !Config.ShouldKeepXiph("TRACKTOTAL"))
+                return;
+            if (field == MetadataField.Comment && !Config.ShouldKeepXiph("COMMENT"))
+                return;
+            if (field == MetadataField.Disc && !Config.ShouldKeepXiph("DISCNUMBER"))
+                return;
+            if (field == MetadataField.DiscTotal && !Config.ShouldKeepXiph("DISCTOTAL"))
+                return;
+            base.Set(field, value);
         }
     }
 
-    private void AddFieldWipes(Dictionary<string, WipeDelegates> schema)
+    public override void Clean()
     {
-        schema.Add("unwanted metadata", SimpleWipeRet(
-            () =>
+        foreach (var key in Tag.ToList())
+        {
+            if (!Config.ShouldKeepXiph(key))
             {
-                var unwanted = UnwantedMetadata();
-                return string.Join("\n", unwanted.Select(x => $"Key: {x.key}, Value: {x.val}"));
-            },
-            () =>
-            {
-                var unwanted = UnwantedMetadata().ToList();
-                foreach (var meta in unwanted)
-                {
-                    Tag.RemoveField(meta.key);
-                }
-                return unwanted.Count > 0;
-            }));
+                Logger.WriteLine($"{Tag.TagTypes} {key} removed: {new ListValue(Tag.GetField(key))}");
+                Tag.RemoveField(key);
+            }
+        }
     }
 }

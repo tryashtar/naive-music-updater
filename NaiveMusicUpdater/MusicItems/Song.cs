@@ -2,39 +2,32 @@ namespace NaiveMusicUpdater;
 
 public class Song : IMusicItem
 {
-    public string Location { get; private set; }
+    public string Location { get; }
     protected readonly MusicFolder _Parent;
     public MusicFolder Parent => _Parent;
-    public IMusicItemConfig? LocalConfig => null;
-    public LibraryCache GlobalCache => _Parent.GlobalCache;
+    private static readonly List<IMusicItemConfig> _Empty = new();
+    public List<IMusicItemConfig> Configs => _Empty;
+
     public Song(MusicFolder parent, string file)
     {
         _Parent = parent;
         Location = file;
     }
 
-#if DEBUG
-    private static readonly string? Breakpoint;
-    static Song()
-    {
-        if (File.Exists("break.txt"))
-            Breakpoint = File.ReadAllText("break.txt").ToLower().Replace("\n", "").Replace("\r", "");
-    }
-#endif
-
     public void Update()
     {
         Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
-#if !DEBUG
-        if (!GlobalCache.NeedsUpdate(this))
+        var custom = this.GetMetadata(RootLibrary.LibraryConfig.IsCustomField);
+        foreach (var field in RootLibrary.LibraryConfig.CustomFields)
+        {
+            RootLibrary.LibraryConfig.RememberCustomField(field, this, custom.Get(field));
+        }
+
+        if (!RootLibrary.LibraryConfig.Cache.NeedsUpdate(this))
             return;
-#endif
-#if DEBUG
-        if (Breakpoint != null && !SimpleName.ToLower().Contains(Breakpoint) && !String.Join('/', PathFromRoot().Select(x => x.SimpleName)).ToLower().Contains(Breakpoint))
-            return;
-#endif
+        Logger.TabIn();
         Logger.WriteLine($"(checking)");
-        var metadata = MusicItemUtils.GetMetadata(this, MetadataField.All);
+        var metadata = this.GetMetadata(MetadataField.All);
 #if !DEBUG
         bool reload_file = true;
         using var replay_file = TagLib.File.Create(Location);
@@ -42,7 +35,7 @@ public class Song : IMusicItem
         if (needs_replaygain)
         {
             Logger.WriteLine($"Normalizing audio with ReplayGain");
-            GlobalCache.Config.NormalizeAudio(this);
+            RootLibrary.LibraryConfig.NormalizeAudio(this);
             replay_file.Dispose();
         }
         else
@@ -51,10 +44,8 @@ public class Song : IMusicItem
 #else
         using var file = TagLib.File.Create(Location);
 #endif
-        var path = Util.StringPathAfterRoot(this);
-        var art = GlobalCache.GetArtPathFor(this);
-        var modifier = new TagModifier(file, GlobalCache);
-        modifier.UpdateArt(art);
+        var path = this.StringPathAfterRoot();
+        var modifier = new TagModifier(file, RootLibrary.LibraryConfig);
         modifier.UpdateMetadata(metadata);
         modifier.WriteLyrics(path);
         modifier.WriteChapters(path);
@@ -68,16 +59,17 @@ public class Song : IMusicItem
             catch (IOException ex)
             {
                 Logger.WriteLine($"Save failed because {ex.Message}! Skipping...", ConsoleColor.Red);
-                GlobalCache.MarkNeedsUpdateNextTime(this);
+                RootLibrary.LibraryConfig.Cache.MarkNeedsUpdateNextTime(this);
                 success = false;
             }
         }
         if (success)
-            GlobalCache.MarkUpdatedRecently(this);
+            RootLibrary.LibraryConfig.Cache.MarkUpdatedRecently(this);
 #else
         if (modifier.HasChanged)
             Logger.WriteLine("Changed!");
 #endif
+        Logger.TabOut();
     }
 
     private bool HasReplayGain(TagLib.File file)
@@ -90,12 +82,14 @@ public class Song : IMusicItem
             if (frames.Any())
                 return true;
         }
+
         var ape = (TagLib.Ape.Tag)file.GetTag(TagTypes.Ape);
         if (ape != null)
         {
             if (ape.HasItem(TRACK_GAIN))
                 return true;
         }
+
         var ogg = (TagLib.Ogg.XiphComment)file.GetTag(TagTypes.Xiph);
         if (ogg != null)
         {
@@ -103,18 +97,18 @@ public class Song : IMusicItem
             if (gain != null)
                 return true;
         }
+
         return false;
     }
 
     public string SimpleName => Path.GetFileNameWithoutExtension(this.Location);
 
-    public IEnumerable<IMusicItem> PathFromRoot() => MusicItemUtils.PathFromRoot(this);
-    public MusicLibrary RootLibrary => (MusicLibrary)PathFromRoot().First();
+    public MusicLibrary RootLibrary => (MusicLibrary)this.PathFromRoot().First();
 
     public Metadata GetEmbeddedMetadata(Predicate<MetadataField> desired)
     {
         using var file = TagLib.File.Create(Location);
-        var interop = TagInteropFactory.GetDynamicInterop(file.Tag, GlobalCache.Config);
+        var interop = TagInteropFactory.GetDynamicInterop(file.Tag, RootLibrary.LibraryConfig);
         return interop.GetFullMetadata(desired);
     }
 }

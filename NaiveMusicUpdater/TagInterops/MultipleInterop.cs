@@ -3,24 +3,26 @@
 public class MultipleInterop : ITagInterop
 {
     private readonly List<ITagInterop> Interops;
-    public bool Changed => Interops.Any(x => x.Changed);
+    public virtual bool Changed => Interops.Any(x => x.Changed);
+
     public MultipleInterop(CombinedTag tag, LibraryConfig config)
     {
         Interops = tag.Tags.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();
     }
 
-    public MetadataProperty Get(MetadataField field)
+    public virtual IValue Get(MetadataField field)
     {
         foreach (var interop in Interops)
         {
             var result = interop.Get(field);
-            if (!result.Value.IsBlank)
+            if (!result.IsBlank)
                 return result;
         }
-        return MetadataProperty.Ignore();
+
+        return BlankValue.Instance;
     }
 
-    public void Set(MetadataField field, MetadataProperty value)
+    public virtual void Set(MetadataField field, IValue value)
     {
         foreach (var interop in Interops)
         {
@@ -28,11 +30,11 @@ public class MultipleInterop : ITagInterop
         }
     }
 
-    public void WipeUselessProperties()
+    public virtual void Clean()
     {
         foreach (var interop in Interops)
         {
-            interop.WipeUselessProperties();
+            interop.Clean();
         }
     }
 }
@@ -41,23 +43,25 @@ public class MultipleXiphInterop : ITagInterop
 {
     private readonly List<ITagInterop> Interops;
     public bool Changed => Interops.Any(x => x.Changed);
+
     public MultipleXiphInterop(TagLib.Ogg.GroupedComment tag, LibraryConfig config)
     {
         Interops = tag.Comments.Select(x => TagInteropFactory.GetDynamicInterop(x, config)).ToList();
     }
 
-    public MetadataProperty Get(MetadataField field)
+    public IValue Get(MetadataField field)
     {
         foreach (var interop in Interops)
         {
             var result = interop.Get(field);
-            if (!result.Value.IsBlank)
+            if (!result.IsBlank)
                 return result;
         }
-        return MetadataProperty.Ignore();
+
+        return BlankValue.Instance;
     }
 
-    public void Set(MetadataField field, MetadataProperty value)
+    public void Set(MetadataField field, IValue value)
     {
         foreach (var interop in Interops)
         {
@@ -65,11 +69,11 @@ public class MultipleXiphInterop : ITagInterop
         }
     }
 
-    public void WipeUselessProperties()
+    public void Clean()
     {
         foreach (var interop in Interops)
         {
-            interop.WipeUselessProperties();
+            interop.Clean();
         }
     }
 }

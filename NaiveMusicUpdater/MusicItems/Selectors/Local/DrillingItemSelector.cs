@@ -5,6 +5,7 @@ public class DrillingItemSelector : ILocalItemSelector
     public readonly DrillDirection Direction;
     public readonly Range Range;
     public readonly MusicItemType? MustBe;
+
     public DrillingItemSelector(DrillDirection dir, Range up, MusicItemType? must_be = null)
     {
         Direction = dir;
@@ -34,13 +35,15 @@ public class DrillingItemSelector : ILocalItemSelector
 
     private bool CheckMustBe(IMusicItem item)
     {
-        if (MustBe == null)
-            return true;
-        if (MustBe == MusicItemType.File && item is Song)
-            return true;
-        if (MustBe == MusicItemType.Folder && item is MusicFolder)
-            return true;
-        return false;
+        switch (MustBe)
+        {
+            case null:
+            case MusicItemType.File when item is Song:
+            case MusicItemType.Folder when item is MusicFolder:
+                return true;
+            default:
+                return false;
+        }
     }
 }
 

@@ -3,6 +3,7 @@
 public class PathItemSelector : IItemSelector
 {
     private readonly IItemPredicate[] Path;
+
     public PathItemSelector(params IItemPredicate[] items)
     {
         Path = items;
@@ -20,6 +21,7 @@ public class PathItemSelector : IItemSelector
         {
             from = from.OfType<MusicFolder>().SelectMany(x => x.SubItems.Where(y => item.Matches(y)));
         }
+
         return from;
     }
 
@@ -46,6 +48,7 @@ public class PathItemSelector : IItemSelector
             if (!Path[i].Matches(item_path[i]))
                 return false;
         }
+
         return true;
     }
 

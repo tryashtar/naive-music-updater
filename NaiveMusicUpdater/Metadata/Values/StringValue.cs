@@ -3,11 +3,10 @@
 public class StringValue : IValue
 {
     public readonly string Value;
+
     public StringValue(string value)
     {
-        if (value == null)
-            throw new ArgumentNullException(nameof(value));
-        Value = value;
+        Value = value ?? throw new ArgumentNullException(nameof(value));
     }
 
     public ListValue AsList() => new(Value);

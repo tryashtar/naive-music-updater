@@ -2,7 +2,6 @@
 global using System.Collections.Generic;
 global using System.Collections.ObjectModel;
 global using System.Diagnostics;
-global using System.Globalization;
 global using System.IO;
 global using System.Linq;
 global using System.Text;
@@ -14,3 +13,4 @@ global using TagLib;
 global using TagLib.Id3v2;
 global using File = System.IO.File;
 global using Tag = TagLib.Tag;
+global using Image = SixLabors.ImageSharp.Image;

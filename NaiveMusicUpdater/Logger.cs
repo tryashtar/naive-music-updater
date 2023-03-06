@@ -8,6 +8,7 @@ public static class Logger
 
     public static void Open(string path)
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
         Writer = new StreamWriter(File.Create(path));
         Writer.Write(UnwrittenData);
         UnwrittenData = "";
@@ -32,7 +33,7 @@ public static class Logger
     {
         string tabs = new('\t', TabCount);
         if (text != null)
-            text = text.Replace("\n", tabs + '\n');
+            text = text.Replace("\n", '\n' + tabs);
         var prev_color = Console.ForegroundColor;
         Console.ForegroundColor = color;
         Console.WriteLine(tabs + text);

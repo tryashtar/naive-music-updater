@@ -17,6 +17,7 @@ public static class FrameViewer
             builder.AppendLine($"Synced Lyrics Type: {lyrics.Type}");
             builder.AppendLine($"Synced Lyrics Text: {LyricsString(lyrics.Text)}");
         }
+
         if (frame is ChapterFrame chapter)
         {
             builder.AppendLine($"Chapter ID: {chapter.Id}");
@@ -24,15 +25,18 @@ public static class FrameViewer
             builder.AppendLine($"Chapter End MS: {chapter.EndMilliseconds}");
             builder.AppendLine($"Chapter End Subframes: {String.Join("\n", chapter.SubFrames.Select(ToString))}");
         }
+
         if (frame is PrivateFrame priv)
         {
             builder.AppendLine($"Private Owner: {priv.Owner}");
             builder.AppendLine($"Private Data: {priv.PrivateData}");
         }
+
         if (frame is MusicCdIdentifierFrame mcd)
         {
             builder.AppendLine($"MCD Data: {mcd.Data}");
         }
+
         return builder.ToString();
     }
 

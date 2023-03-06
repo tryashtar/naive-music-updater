@@ -7,21 +7,30 @@ public interface IMusicItemValueSource
 
 public static class MusicItemGetterFactory
 {
+    public static readonly Dictionary<NameType, IMusicItemValueSource> NameGetters = new()
+    {
+        [NameType.FileName] = new FuncGetter(x => new StringValue(x.SimpleName)),
+        [NameType.CleanName] =
+            new FuncGetter(x => new StringValue(x.RootLibrary.LibraryConfig.CleanName(x.SimpleName))),
+        [NameType.Path] = new FuncGetter(x => new StringValue(x.StringPathAfterRoot()))
+    };
+
     public static IMusicItemValueSource Create(YamlNode yaml)
     {
-        if (yaml is YamlScalarNode scalar)
+        switch (yaml)
         {
-            var name = scalar.ToEnum<NameType>();
-            if (name == NameType.CleanName)
-                return CleanNameGetter.Instance;
-            else if (name == NameType.FileName)
-                return SimpleNameGetter.Instance;
-        }
-        else if (yaml is YamlMappingNode map)
-        {
-            var copy = yaml.Go("copy").NullableParse(x => MetadataField.FromID(x.String()));
-            if (copy != null)
-                return new CopyMetadataGetter(copy);
+            case YamlScalarNode scalar:
+            {
+                var name = scalar.ToEnum<NameType>();
+                return NameGetters[name.Value];
+            }
+            case YamlMappingNode map:
+            {
+                var copy = map.Go("copy").NullableParse(x => MetadataField.FromID(x.String()));
+                if (copy != null)
+                    return new CopyMetadataGetter(copy);
+                break;
+            }
         }
 
         throw new ArgumentException($"Can't make metadata selector from {yaml}");
@@ -31,5 +40,6 @@ public static class MusicItemGetterFactory
 public enum NameType
 {
     CleanName,
-    FileName
+    FileName,
+    Path
 }

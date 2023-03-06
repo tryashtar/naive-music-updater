@@ -7,6 +7,7 @@ public class DefinedSongOrder : ISongOrder
     public readonly IItemSelector Order;
     public readonly uint TotalNumber;
     public ReadOnlyCollection<IMusicItem> UnselectedItems => Unselected.AsReadOnly();
+
     public DefinedSongOrder(IItemSelector order, MusicFolder folder)
     {
         Order = order;
@@ -19,6 +20,7 @@ public class DefinedSongOrder : ISongOrder
             CachedResults[item] = index;
             used_folders.Add(item.Parent);
         }
+
         TotalNumber = index;
         Unselected = new List<IMusicItem>();
         foreach (var used in used_folders)
@@ -34,14 +36,12 @@ public class DefinedSongOrder : ISongOrder
         return null;
     }
 
-    public Metadata Get(IMusicItem item)
+    public void Apply(Metadata start, IMusicItem item)
     {
-        var metadata = new Metadata();
         if (CachedResults.TryGetValue(item, out uint track))
         {
-            metadata.Register(MetadataField.Track, new MetadataProperty(new NumberValue(track), CombineMode.Replace));
-            metadata.Register(MetadataField.TrackTotal, new MetadataProperty(new NumberValue(TotalNumber), CombineMode.Replace));
+            start.Register(MetadataField.Track, new NumberValue(track));
+            start.Register(MetadataField.TrackTotal, new NumberValue(TotalNumber));
         }
-        return metadata;
     }
 }

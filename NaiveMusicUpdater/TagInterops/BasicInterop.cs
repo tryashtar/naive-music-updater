@@ -1,78 +1,193 @@
 ﻿namespace NaiveMusicUpdater;
 
-public abstract class BasicInterop : AbstractInterop<Tag>
+public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
 {
-    public BasicInterop(Tag tag, LibraryConfig config) : base(tag, config) { }
-    protected override Dictionary<MetadataField, InteropDelegates> CreateSchema()
+    public BacicInterop(T tag, LibraryConfig config) : base(tag, config)
     {
-        return BasicSchema(Tag);
     }
 
-    protected override Dictionary<string, WipeDelegates> CreateWipeSchema()
+    public override IValue Get(MetadataField field)
     {
-        return BasicWipeSchema(Tag);
+        if (field == MetadataField.Album)
+            return Tag.Album == null ? BlankValue.Instance : new StringValue(Tag.Album);
+        if (field == MetadataField.AlbumArtists)
+            return Tag.AlbumArtists.Length == 0 ? BlankValue.Instance : new ListValue(Tag.AlbumArtists);
+        if (field == MetadataField.Arranger)
+            return Tag.RemixedBy == null ? BlankValue.Instance : new StringValue(Tag.RemixedBy);
+        if (field == MetadataField.Comment)
+            return Tag.Comment == null ? BlankValue.Instance : new StringValue(Tag.Comment);
+        if (field == MetadataField.Composers)
+            return Tag.Composers.Length == 0 ? BlankValue.Instance : new ListValue(Tag.Composers);
+        if (field == MetadataField.Genres)
+            return Tag.Genres.Length == 0 ? BlankValue.Instance : new ListValue(Tag.Genres);
+        if (field == MetadataField.Performers)
+            return Tag.Performers.Length == 0 ? BlankValue.Instance : new ListValue(Tag.Performers);
+        if (field == MetadataField.Title)
+            return Tag.Title == null ? BlankValue.Instance : new StringValue(Tag.Title);
+        if (field == MetadataField.Track)
+            return Tag.Track == 0 ? BlankValue.Instance : new NumberValue(Tag.Track);
+        if (field == MetadataField.TrackTotal)
+            return Tag.TrackCount == 0 ? BlankValue.Instance : new NumberValue(Tag.TrackCount);
+        if (field == MetadataField.Disc)
+            return Tag.Disc == 0 ? BlankValue.Instance : new NumberValue(Tag.Disc);
+        if (field == MetadataField.DiscTotal)
+            return Tag.DiscCount == 0 ? BlankValue.Instance : new NumberValue(Tag.DiscCount);
+        if (field == MetadataField.Year)
+            return Tag.Year == 0 ? BlankValue.Instance : new NumberValue(Tag.Year);
+        return BlankValue.Instance;
     }
 
-    public static Dictionary<MetadataField, InteropDelegates> BasicSchema(Tag tag)
+    public override void Set(MetadataField field, IValue value)
     {
-        return new Dictionary<MetadataField, InteropDelegates>
+        if (field == MetadataField.Album)
+        {
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (Tag.Album != val)
             {
-                { MetadataField.Album, Delegates(() => Get(tag.Album), x => tag.Album = Value(x)) },
-                { MetadataField.AlbumArtists, Delegates(() => Get(tag.AlbumArtists), x => tag.AlbumArtists = Array(x)) },
-                { MetadataField.Arranger, Delegates(() => Get(tag.RemixedBy), x => tag.RemixedBy = Value(x)) },
-                { MetadataField.Comment, Delegates(() => Get(tag.Comment), x => tag.Comment = Value(x)) },
-                { MetadataField.Composers, Delegates(() => Get(tag.Composers), x => tag.Composers = Array(x)) },
-                { MetadataField.Genres, Delegates(() => Get(tag.Genres), x => tag.Genres = Array(x)) },
-                { MetadataField.Performers, Delegates(() => Get(tag.Performers), x => tag.Performers = Array(x)) },
-                { MetadataField.Title, Delegates(() => Get(tag.Title), x => tag.Title = Value(x)) },
-                { MetadataField.Track, NumDelegates(() => Get(tag.Track), x => tag.Track = Number(x)) },
-                { MetadataField.TrackTotal, NumDelegates(() => Get(tag.TrackCount), x => tag.TrackCount = Number(x)) },
-                { MetadataField.Disc, NumDelegates(() => Get(tag.Disc), x => tag.Disc = Number(x)) },
-                { MetadataField.DiscTotal, NumDelegates(() => Get(tag.DiscCount), x => tag.DiscCount = Number(x)) },
-                { MetadataField.Year, NumDelegates(() => Get(tag.Year), x => tag.Year = Number(x)) },
-            };
-    }
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Album = val;
+            }
+        }
 
-    public static Dictionary<string, WipeDelegates> BasicWipeSchema(Tag tag)
-    {
-        return new Dictionary<string, WipeDelegates>
+        if (field == MetadataField.AlbumArtists)
+        {
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!Tag.AlbumArtists.SequenceEqual(val))
             {
-                { "publisher", SimpleWipe(() => tag.Publisher, () => tag.Publisher = null) },
-                { "bpm", SimpleWipe(() => tag.BeatsPerMinute, () => tag.BeatsPerMinute = 0) },
-                { "description", SimpleWipe(() => tag.Description, () => tag.Description = null) },
-                { "grouping", SimpleWipe(() => tag.Grouping, () => tag.Grouping = null) },
-                { "subtitle", SimpleWipe(() => tag.Subtitle, () => tag.Subtitle = null) },
-                { "amazon id", SimpleWipe(() => tag.AmazonId, () => tag.AmazonId = null) },
-                { "conductor", SimpleWipe(() => tag.Conductor, () => tag.Conductor = null) },
-                { "copyright", SimpleWipe(() => tag.Copyright, () => tag.Copyright = null) },
-                { "musicbrainz data", SimpleWipe(() => GetMusicBrainz(tag), () => WipeMusicBrainz(tag)) },
-                { "music ip", SimpleWipe(() => tag.MusicIpId, () => tag.MusicIpId = null) },
-            };
-    }
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.AlbumArtists = val;
+            }
+        }
 
-    private static string[] GetMusicBrainz(Tag tag)
-    {
-        return new string[] {
-                tag.MusicBrainzArtistId,
-                tag.MusicBrainzDiscId,
-                tag.MusicBrainzReleaseArtistId,
-                tag.MusicBrainzReleaseCountry,
-                tag.MusicBrainzReleaseId,
-                tag.MusicBrainzReleaseStatus,
-                tag.MusicBrainzReleaseType,
-                tag.MusicBrainzTrackId,
-            };
-    }
+        if (field == MetadataField.Arranger)
+        {
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (Tag.RemixedBy != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.RemixedBy = val;
+            }
+        }
 
-    private static void WipeMusicBrainz(Tag tag)
-    {
-        tag.MusicBrainzArtistId = null;
-        tag.MusicBrainzDiscId = null;
-        tag.MusicBrainzReleaseArtistId = null;
-        tag.MusicBrainzReleaseCountry = null;
-        tag.MusicBrainzReleaseId = null;
-        tag.MusicBrainzReleaseStatus = null;
-        tag.MusicBrainzReleaseType = null;
-        tag.MusicBrainzTrackId = null;
+        if (field == MetadataField.Comment)
+        {
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (Tag.Comment != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Comment = val;
+            }
+        }
+
+        if (field == MetadataField.Composers)
+        {
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!Tag.Composers.SequenceEqual(val))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Composers = val;
+            }
+        }
+
+        if (field == MetadataField.Genres)
+        {
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!Tag.Genres.SequenceEqual(val))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Genres = val;
+            }
+        }
+
+        if (field == MetadataField.Performers)
+        {
+            var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
+            if (!Tag.Performers.SequenceEqual(val))
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Performers = val;
+            }
+        }
+
+        if (field == MetadataField.Title)
+        {
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (Tag.Title != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Title = val;
+            }
+        }
+
+        if (field == MetadataField.Track)
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.Track != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Track = val;
+            }
+        }
+
+        if (field == MetadataField.TrackTotal)
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.TrackCount != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.TrackCount = val;
+            }
+        }
+
+        if (field == MetadataField.Disc)
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.Disc != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Disc = val;
+            }
+        }
+
+        if (field == MetadataField.DiscTotal)
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.DiscCount != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.DiscCount = val;
+            }
+        }
+
+        if (field == MetadataField.Year)
+        {
+            var val = value.IsBlank ? 0 : value.AsNumber().Value;
+            if (Tag.Year != val)
+            {
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {Get(field)} -> {value}");
+                Tag.Year = val;
+            }
+        }
+
+        if (field == MetadataField.Art)
+        {
+            IPicture? pic = null;
+            if (!value.IsBlank && Config.ArtTemplates != null)
+                pic = Config.ArtTemplates.FirstArt(value.AsList().Values).picture;
+
+            if (pic == null && Tag.Pictures.Length > 0)
+            {
+                Logger.WriteLine(
+                    $"{Tag.TagTypes} {field.DisplayName}: {Tag.Pictures[0].Description} -> {BlankValue.Instance}");
+                Tag.Pictures = Array.Empty<IPicture>();
+            }
+            else if (pic != null && (Tag.Pictures.Length == 0 || Tag.Pictures[0].Data.Count != pic.Data.Count ||
+                                     Tag.Pictures[0].Data != pic.Data))
+            {
+                var prev = Tag.Pictures.Length == 0 ? BlankValue.Instance.ToString() : Tag.Pictures[0].Description;
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {prev} -> {pic.Description}");
+                Tag.Pictures = new[] { pic };
+            }
+        }
     }
 }
