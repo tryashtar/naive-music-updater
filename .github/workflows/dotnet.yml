@@ -25,4 +25,4 @@ jobs:
       with:
         files: |
           ./NaiveMusicUpdater/bin/Release/net6.0/win-x64/publish/NaiveMusicUpdater.exe
-          ./NaiveMusicUpdater/bin/Release/net6.0/linux-x64/publish/NaiveMusicUpdater.exe
+          ./NaiveMusicUpdater/bin/Release/net6.0/linux-x64/publish/NaiveMusicUpdater
