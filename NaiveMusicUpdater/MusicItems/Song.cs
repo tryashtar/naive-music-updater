@@ -59,12 +59,12 @@ public class Song : IMusicItem
             catch (IOException ex)
             {
                 Logger.WriteLine($"Save failed because {ex.Message}! Skipping...", ConsoleColor.Red);
-                RootLibrary.LibraryConfig.Cache.MarkNeedsUpdateNextTime(this);
+                RootLibrary.LibraryConfig.Cache.MarkPendingNotUpdated(this);
                 success = false;
             }
         }
         if (success)
-            RootLibrary.LibraryConfig.Cache.MarkUpdatedRecently(this);
+            RootLibrary.LibraryConfig.Cache.MarkUpdated(this);
 #else
         if (modifier.HasChanged)
             Logger.WriteLine("Changed!");

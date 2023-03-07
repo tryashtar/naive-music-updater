@@ -81,7 +81,7 @@ public class ArtRepo
         settings.Apply(template);
         using var stream = File.Create(ico_path);
         SaveIcon(template, stream);
-        DateCache.MarkUpdatedRecently(template_path);
+        DateCache.MarkUpdated(template_path);
         return ico_path;
     }
 
@@ -109,7 +109,7 @@ public class ArtRepo
             Description = name
         };
         Cache.Put(path, result);
-        DateCache.MarkUpdatedRecently(template_path);
+        DateCache.MarkUpdated(template_path);
         return result;
     }
 
@@ -126,6 +126,17 @@ public class ArtRepo
         }
 
         return settings;
+    }
+
+    public IEnumerable<string> GetConfigPaths(string path)
+    {
+        while (path != "")
+        {
+            path = Path.GetDirectoryName(path);
+            var file = Path.Combine(Folder, path, "images.yaml");
+            if (File.Exists(file))
+                yield return file;
+        }
     }
 
     private IEnumerable<ArtConfig> GetConfigs(string path)

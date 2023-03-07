@@ -32,7 +32,6 @@ public class LibraryConfig
 
         LibraryFolder = ParsePath(yaml.Go("library")) ??
                         throw new InvalidDataException("Library yaml file must specify a \"library\" folder");
-        LibraryFolder = Path.GetFullPath(LibraryFolder);
 #if DEBUG
         Cache = new DebugFileDateCache(File.Exists("debug_check.txt")
             ? File.ReadLines("debug_check.txt").ToList()
@@ -144,7 +143,7 @@ public class LibraryConfig
 
     private string? ParsePath(YamlNode? node)
     {
-        return node?.NullableParse(x => Path.Combine(Path.GetDirectoryName(ConfigPath), x.String()));
+        return node?.NullableParse(x => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(ConfigPath), x.String())));
     }
 
     private record KeepFrameDefinition(Regex Id, Regex[] Descriptions, bool DuplicatesAllowed);

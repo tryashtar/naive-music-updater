@@ -6,8 +6,9 @@ public interface IFileDateCache
 {
     void Save();
     bool NeedsUpdate(string path);
-    void MarkUpdatedRecently(string path);
-    void MarkNeedsUpdateNextTime(string path);
+    void MarkUpdated(string path);
+    void MarkPendingUpdated(string path);
+    void MarkPendingNotUpdated(string path);
 }
 
 public static class FileDateCacheExtensions
@@ -17,17 +18,18 @@ public static class FileDateCacheExtensions
         return RelevantPaths(item).Any(cache.NeedsUpdate);
     }
 
-    public static void MarkUpdatedRecently(this IFileDateCache cache, IMusicItem item)
+    public static void MarkUpdated(this IFileDateCache cache, IMusicItem item)
     {
+        cache.MarkUpdated(item.Location);
         foreach (var path in RelevantPaths(item))
         {
-            cache.MarkUpdatedRecently(path);
+            cache.MarkPendingUpdated(path);
         }
     }
 
-    public static void MarkNeedsUpdateNextTime(this IFileDateCache cache, IMusicItem item)
+    public static void MarkPendingNotUpdated(this IFileDateCache cache, IMusicItem item)
     {
-        cache.MarkNeedsUpdateNextTime(item.Location);
+        cache.MarkPendingNotUpdated(item.Location);
     }
 
     private static IEnumerable<string> RelevantPaths(IMusicItem item)
@@ -50,7 +52,13 @@ public static class FileDateCacheExtensions
                 {
                     var path = item.RootLibrary.LibraryConfig.ArtTemplates.GetTemplatePath(val);
                     if (path != null)
+                    {
                         yield return path;
+                        foreach (var conf in item.RootLibrary.LibraryConfig.ArtTemplates.GetConfigPaths(val))
+                        {
+                            yield return conf;
+                        }
+                    }
                 }
             }
         }
@@ -61,6 +69,7 @@ public class FileDateCache : IFileDateCache
 {
     public readonly string FilePath;
     private readonly Dictionary<string, DateTime> DateCache;
+    private readonly Dictionary<string, DateTime> PendingDateCache;
 
     public FileDateCache(string file)
     {
@@ -68,13 +77,14 @@ public class FileDateCache : IFileDateCache
         if (File.Exists(file))
         {
             var deserializer = new DeserializerBuilder().Build();
-            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(File.OpenText(file)) ??
-                        new Dictionary<string, DateTime>();
+            DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(File.OpenText(file)) ?? new();
+            PendingDateCache = new(DateCache);
         }
         else
         {
             Logger.WriteLine($"Couldn't find date cache {file}, starting fresh", ConsoleColor.Yellow);
-            DateCache = new Dictionary<string, DateTime>();
+            DateCache = new();
+            PendingDateCache = new();
         }
     }
 
@@ -82,7 +92,7 @@ public class FileDateCache : IFileDateCache
     {
         var serializer = new SerializerBuilder().Build();
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
-        File.WriteAllText(FilePath, serializer.Serialize(DateCache));
+        File.WriteAllText(FilePath, serializer.Serialize(PendingDateCache));
     }
 
     public bool NeedsUpdate(string path)
@@ -100,14 +110,20 @@ public class FileDateCache : IFileDateCache
         return modified > created ? modified : created;
     }
 
-    public void MarkUpdatedRecently(string path)
+    public void MarkUpdated(string path)
     {
         DateCache[path] = DateTime.Now;
+        PendingDateCache[path] = DateTime.Now;
     }
 
-    public void MarkNeedsUpdateNextTime(string path)
+    public void MarkPendingUpdated(string path)
     {
-        DateCache.Remove(path);
+        PendingDateCache[path] = DateTime.Now;
+    }
+
+    public void MarkPendingNotUpdated(string path)
+    {
+        PendingDateCache.Remove(path);
     }
 }
 
@@ -124,14 +140,17 @@ public class MemoryFileDateCache : IFileDateCache
         return !Updated.Contains(path);
     }
 
-    public void MarkUpdatedRecently(string path)
+    public void MarkUpdated(string path)
     {
         Updated.Add(path);
     }
 
-    public void MarkNeedsUpdateNextTime(string path)
+    public void MarkPendingUpdated(string path)
     {
-        Updated.Remove(path);
+    }
+
+    public void MarkPendingNotUpdated(string path)
+    {
     }
 }
 
