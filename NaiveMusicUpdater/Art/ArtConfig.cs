@@ -10,9 +10,6 @@ public class ArtConfig
         Owner = owner;
         var node = (YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, relative, "images.yaml"));
         Settings = new();
-        var all = node.Go("all").NullableParse(LiteralOrReference);
-        if (all != null)
-            Settings.Add((_ => true, all));
         var set_dict = node.Go("set").ToDictionary(x => x.String(), LiteralOrReference);
         if (set_dict != null)
         {
@@ -31,6 +28,10 @@ public class ArtConfig
                 Settings.Add((x => names.Contains(x), set));
             }
         }
+        
+        var all = node.Go("all").NullableParse(LiteralOrReference);
+        if (all != null)
+            Settings.Add((_ => true, all));
     }
 
     private ProcessArtSettings LiteralOrReference(YamlNode node)
