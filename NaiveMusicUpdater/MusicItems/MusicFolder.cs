@@ -168,47 +168,6 @@ public class MusicFolder : IMusicItem
         HasScanned = true;
     }
 
-    public CheckSelectorResults CheckSelectors()
-    {
-        var answer = new CheckSelectorResults();
-        foreach (var config in Configs)
-        {
-            var results = config.CheckSelectors();
-            if (results.UnusedSelectors.Any())
-            {
-                Logger.WriteLine($"{this} has unused selectors:");
-                Logger.TabIn();
-                foreach (var unused in results.UnusedSelectors)
-                {
-                    Logger.WriteLine(unused.ToString());
-                }
-
-                Logger.TabOut();
-            }
-
-            if (results.UnselectedItems.Any())
-            {
-                Logger.WriteLine($"{this} has unselected items:");
-                Logger.TabIn();
-                foreach (var unselected in results.UnselectedItems)
-                {
-                    Logger.WriteLine(unselected.SimpleName);
-                }
-
-                Logger.TabOut();
-            }
-
-            answer.AddResults(results);
-        }
-
-        foreach (var item in SubFolders)
-        {
-            answer.AddResults(item.CheckSelectors());
-        }
-
-        return answer;
-    }
-
     public override string ToString()
     {
         return String.Join("/", this.PathFromRoot().Select(x => x.SimpleName));

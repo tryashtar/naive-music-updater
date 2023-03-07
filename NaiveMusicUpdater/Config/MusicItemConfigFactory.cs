@@ -11,15 +11,85 @@ public static class MusicItemConfigFactory
 {
     public static IMusicItemConfig Create(string file, IMusicItem item)
     {
-        var yaml = YamlHelper.ParseFile(file);
-        var reverse = yaml.Go("reverse");
-        if (reverse != null && item is MusicFolder folder)
+        while (true)
         {
-            var type = StringUtils.ParseUnderscoredEnum<ReversalType>(reverse.String());
-            yaml = ProcessReversedConfig(folder, type, file);
+            var yaml = TryParseFile(file);
+            var reverse = yaml.Go("reverse");
+            if (reverse != null && item is MusicFolder folder)
+            {
+                var type = StringUtils.ParseUnderscoredEnum<ReversalType>(reverse.String());
+                yaml = ProcessReversedConfig(folder, type, file);
+            }
+
+            var config = new MusicItemConfig(file, item, yaml);
+            if (!CheckSelectorsAndReload(config))
+                return config;
+        }
+    }
+
+    private static YamlNode TryParseFile(string file)
+    {
+        while (true)
+        {
+            try
+            {
+                return YamlHelper.ParseFile(file);
+            }
+            catch (Exception ex)
+            {
+                Logger.WriteLine($"Error loading config file: {file}", ConsoleColor.Yellow);
+                Logger.WriteLine(ex.Message, ConsoleColor.Yellow);
+                if (!AskUserEdit(file))
+                    throw;
+            }
+        }
+    }
+
+    private static bool AskUserEdit(string path)
+    {
+        Logger.WriteLine("Would you like to edit the file now to correct it?");
+        Logger.WriteLine("Type 'Y' to edit.");
+        bool reload = Console.ReadKey().Key == ConsoleKey.Y;
+        if (reload)
+        {
+            var proc = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            proc.WaitForExit();
         }
 
-        return new MusicItemConfig(file, item, yaml);
+        return reload;
+    }
+
+    private static bool CheckSelectorsAndReload(MusicItemConfig config)
+    {
+        var results = config.CheckSelectors();
+        if (results.AnyUnused)
+            Logger.WriteLine($"Problems found in config file: {config.Location}", ConsoleColor.Yellow);
+        if (results.UnusedSelectors.Count > 0)
+        {
+            Logger.WriteLine($"Has {results.UnusedSelectors.Count} selectors that didn't find anything:",
+                ConsoleColor.Yellow);
+            Logger.TabIn();
+            foreach (var sel in results.UnusedSelectors)
+            {
+                Logger.WriteLine(sel.ToString(), ConsoleColor.Yellow);
+            }
+
+            Logger.TabOut();
+        }
+
+        if (results.UnselectedItems.Count > 0)
+        {
+            Logger.WriteLine($"Has {results.UnselectedItems.Count} unselected items:", ConsoleColor.Yellow);
+            Logger.TabIn();
+            foreach (var sel in results.UnselectedItems)
+            {
+                Logger.WriteLine(sel.SimpleName, ConsoleColor.Yellow);
+            }
+
+            Logger.TabOut();
+        }
+
+        return results.AnyUnused && AskUserEdit(config.Location);
     }
 
     private static YamlNode ProcessReversedConfig(MusicFolder folder, ReversalType type, string file)
