@@ -11,7 +11,7 @@ public class ProcessArtSettings
     public int? Height;
     public bool? HasBuffer;
     public int[]? Buffer;
-    public Color? Background;
+    public Rgba32? Background;
     public ResizeMode? Scale;
     public IResampler? Interpolation;
     public bool? IntegerScale;
@@ -121,8 +121,6 @@ public class ProcessArtSettings
                         x.GetCurrentSize().Height + Buffer[3]),
                     Position = AnchorPositionMode.TopLeft
                 };
-                if (Background != null)
-                    resize.PadColor = Background.Value;
                 x.Resize(resize);
 
                 var resize2 = new ResizeOptions()
@@ -132,14 +130,33 @@ public class ProcessArtSettings
                         x.GetCurrentSize().Height + Buffer[1]),
                     Position = AnchorPositionMode.BottomRight
                 };
-                if (Background != null)
-                    resize2.PadColor = Background.Value;
                 x.Resize(resize2);
             }
 
             if (Background != null)
                 x.BackgroundColor(Background.Value);
         });
+
+        if (Background != null)
+        {
+            var bg = Background.Value;
+            if (bg.A == 0 && (bg.R != 0 || bg.G != 0 || bg.B != 0))
+            {
+                image.ProcessPixelRows(access =>
+                {
+                    for (int y = 0; y < access.Height; y++)
+                    {
+                        var row = access.GetRowSpan(y);
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            ref var pixel = ref row[x];
+                            if (pixel.A == 0)
+                                pixel = bg;
+                        }
+                    }
+                });
+            }
+        }
     }
 
     private static Rectangle GetBoundingRectangle(Image<Rgba32> image)
@@ -152,7 +169,7 @@ public class ProcessArtSettings
         {
             for (int y = 0; y < access.Height; y++)
             {
-                Span<Rgba32> row = access.GetRowSpan(y);
+                var row = access.GetRowSpan(y);
                 for (int x = 0; x < row.Length; x++)
                 {
                     ref var pixel = ref row[x];

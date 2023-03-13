@@ -5,31 +5,26 @@ namespace NaiveMusicUpdater;
 public interface IFileDateCache
 {
     void Save();
-    bool NeedsUpdate(string path);
-    void MarkUpdated(string path);
-    void MarkPendingUpdated(string path);
-    void MarkPendingNotUpdated(string path);
+    bool ChangedSinceLastRun(string path);
+    void Acknowledge(string path);
+    bool IsAcknowledged(string path);
 }
 
 public static class FileDateCacheExtensions
 {
     public static bool NeedsUpdate(this IFileDateCache cache, IMusicItem item)
     {
-        return RelevantPaths(item).Any(cache.NeedsUpdate);
+        if (cache.IsAcknowledged(item.Location))
+            return false;
+        return RelevantPaths(item).Any(cache.ChangedSinceLastRun);
     }
 
     public static void MarkUpdated(this IFileDateCache cache, IMusicItem item)
     {
-        cache.MarkUpdated(item.Location);
         foreach (var path in RelevantPaths(item))
         {
-            cache.MarkPendingUpdated(path);
+            cache.Acknowledge(path);
         }
-    }
-
-    public static void MarkPendingNotUpdated(this IFileDateCache cache, IMusicItem item)
-    {
-        cache.MarkPendingNotUpdated(item.Location);
     }
 
     private static IEnumerable<string> RelevantPaths(IMusicItem item)
@@ -50,14 +45,10 @@ public static class FileDateCacheExtensions
             {
                 foreach (var val in art.AsList().Values)
                 {
-                    var path = item.RootLibrary.LibraryConfig.ArtTemplates.GetTemplatePath(val);
-                    if (path != null)
+                    var relevant = item.RootLibrary.LibraryConfig.ArtTemplates.RelevantPaths(val);
+                    foreach (var r in relevant)
                     {
-                        yield return path;
-                        foreach (var conf in item.RootLibrary.LibraryConfig.ArtTemplates.GetConfigPaths(val))
-                        {
-                            yield return conf;
-                        }
+                        yield return r;
                     }
                 }
             }
@@ -69,7 +60,7 @@ public class FileDateCache : IFileDateCache
 {
     public readonly string FilePath;
     private readonly Dictionary<string, DateTime> DateCache;
-    private readonly Dictionary<string, DateTime> PendingDateCache;
+    private readonly HashSet<string> Acknowledged = new();
 
     public FileDateCache(string file)
     {
@@ -78,24 +69,27 @@ public class FileDateCache : IFileDateCache
         {
             var deserializer = new DeserializerBuilder().Build();
             DateCache = deserializer.Deserialize<Dictionary<string, DateTime>>(File.OpenText(file)) ?? new();
-            PendingDateCache = new(DateCache);
         }
         else
         {
             Logger.WriteLine($"Couldn't find date cache {file}, starting fresh", ConsoleColor.Yellow);
             DateCache = new();
-            PendingDateCache = new();
         }
     }
 
     public void Save()
     {
+        foreach (var item in Acknowledged)
+        {
+            DateCache[item] = DateTime.Now;
+        }
+
         var serializer = new SerializerBuilder().Build();
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
-        File.WriteAllText(FilePath, serializer.Serialize(PendingDateCache));
+        File.WriteAllText(FilePath, serializer.Serialize(DateCache));
     }
 
-    public bool NeedsUpdate(string path)
+    public bool ChangedSinceLastRun(string path)
     {
         var date = TouchedTime(path);
         if (DateCache.TryGetValue(path, out var cached))
@@ -110,20 +104,14 @@ public class FileDateCache : IFileDateCache
         return modified > created ? modified : created;
     }
 
-    public void MarkUpdated(string path)
+    public void Acknowledge(string path)
     {
-        DateCache[path] = DateTime.Now;
-        PendingDateCache[path] = DateTime.Now;
+        Acknowledged.Add(path);
     }
 
-    public void MarkPendingUpdated(string path)
+    public bool IsAcknowledged(string path)
     {
-        PendingDateCache[path] = DateTime.Now;
-    }
-
-    public void MarkPendingNotUpdated(string path)
-    {
-        PendingDateCache.Remove(path);
+        return Acknowledged.Contains(path);
     }
 }
 
@@ -135,22 +123,19 @@ public class MemoryFileDateCache : IFileDateCache
     {
     }
 
-    public virtual bool NeedsUpdate(string path)
+    public virtual bool ChangedSinceLastRun(string path)
     {
         return !Updated.Contains(path);
     }
 
-    public void MarkUpdated(string path)
+    public void Acknowledge(string path)
     {
         Updated.Add(path);
     }
 
-    public void MarkPendingUpdated(string path)
+    public bool IsAcknowledged(string path)
     {
-    }
-
-    public void MarkPendingNotUpdated(string path)
-    {
+        return Updated.Contains(path);
     }
 }
 
@@ -164,7 +149,7 @@ public class DebugFileDateCache : MemoryFileDateCache
         Check = check;
     }
 
-    public override bool NeedsUpdate(string path)
+    public override bool ChangedSinceLastRun(string path)
     {
         if (Path.GetExtension(path) == ".png")
             return false;

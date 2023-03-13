@@ -1,5 +1,6 @@
 using System.Numerics;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Transforms;
@@ -74,15 +75,44 @@ public class ArtRepo
         if (template_path == null)
             return null;
         var ico_path = Path.Combine(IcoFolder, DiskArtCache.NonAscii.Replace(path, "_")) + ".ico";
-        if (!DateCache.NeedsUpdate(template_path) && File.Exists(ico_path))
+        if (!DateCache.ChangedSinceLastRun(template_path) && File.Exists(ico_path))
             return ico_path;
         var template = Image.Load<Rgba32>(template_path);
         var settings = GetSettings(path);
         settings.Apply(template);
         using var stream = File.Create(ico_path);
         SaveIcon(template, stream);
-        DateCache.MarkUpdated(template_path);
+        DateCache.Acknowledge(template_path);
         return ico_path;
+    }
+
+    public IEnumerable<string> RelevantPaths(string path)
+    {
+        var template = GetTemplatePath(path);
+        if (template != null)
+        {
+            yield return template;
+            foreach (var conf in GetConfigPaths(path))
+            {
+                yield return conf;
+            }
+        }
+    }
+
+    private bool NeedsUpdate(string path)
+    {
+        var template_path = GetTemplatePath(path);
+        if (template_path == null || DateCache.IsAcknowledged(template_path))
+            return false;
+        return RelevantPaths(path).Any(DateCache.ChangedSinceLastRun);
+    }
+
+    private void MarkUpdated(string path)
+    {
+        foreach (var relevant in RelevantPaths(path))
+        {
+            DateCache.Acknowledge(relevant);
+        }
     }
 
     public IPicture? GetProcessed(string path)
@@ -90,7 +120,7 @@ public class ArtRepo
         var template_path = GetTemplatePath(path);
         if (template_path == null)
             return null;
-        if (!DateCache.NeedsUpdate(template_path))
+        if (!NeedsUpdate(path))
         {
             var cached = Cache.Get(path);
             if (cached != null)
@@ -101,7 +131,7 @@ public class ArtRepo
         var settings = GetSettings(path);
         settings.Apply(template);
         using var stream = new MemoryStream();
-        template.SaveAsPng(stream);
+        template.SaveAsPng(stream, new PngEncoder() { TransparentColorMode = PngTransparentColorMode.Preserve });
         string name = Path.GetFileName(path + ".png");
         var result = new Picture(stream.ToArray())
         {
@@ -109,7 +139,7 @@ public class ArtRepo
             Description = name
         };
         Cache.Put(path, result);
-        DateCache.MarkUpdated(template_path);
+        MarkUpdated(path);
         return result;
     }
 
