@@ -1,9 +1,15 @@
 ﻿namespace NaiveMusicUpdater;
 
+// we only want to save files that were actually changed
+// while TagLib does a good job unifying different tag types under a shared class,
+// we need to be more specific about which tags we're saving to in order to determine when this is the case
 public interface ITagInterop
 {
+    // used by reverse configs to get pre-existing values
     IValue Get(MetadataField field);
     void Set(MetadataField field, IValue value);
+    // remove tags/frames that are configured as undesired
+    // (which may not have corresponding fields)
     void Clean();
     bool Changed { get; }
 
@@ -22,6 +28,7 @@ public interface ITagInterop
 
 public static class TagInteropFactory
 {
+    // use dynamic to find the best match at runtime
     public static ITagInterop GetDynamicInterop(dynamic tag, LibraryConfig config)
     {
         return GetInterop(tag, config);

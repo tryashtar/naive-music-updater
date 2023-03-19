@@ -1,10 +1,13 @@
 ﻿namespace NaiveMusicUpdater;
 
+// a music item: either a file or folder
+// folders can have metadata too, but don't do much with it
 public interface IMusicItem
 {
     string Location { get; }
     string SimpleName { get; }
     MusicFolder? Parent { get; }
+    // configs that directly apply to this item
     List<IMusicItemConfig> Configs { get; }
     MusicLibrary RootLibrary { get; }
 }
@@ -25,6 +28,7 @@ public static class MusicItemExtensions
         return metadata;
     }
 
+    // all parent items, starting from root, to the given item
     public static IEnumerable<IMusicItem> PathFromRoot(this IMusicItem item)
     {
         var list = new List<IMusicItem>();
@@ -38,6 +42,7 @@ public static class MusicItemExtensions
         return list;
     }
 
+    // path relative to root
     public static string StringPathAfterRoot(this IMusicItem item)
     {
         return String.Join(Path.DirectorySeparatorChar.ToString(),

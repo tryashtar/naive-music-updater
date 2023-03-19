@@ -13,6 +13,8 @@ public class Id3v1TagInterop : BacicInterop<TagLib.Id3v1.Tag>
 
     public override void Set(MetadataField field, IValue value)
     {
+        // Id3v1 has a maximum length for its limited selection of fields
+        // make sure not to wrongly report a value as changed just because the incoming value is too long 
         if (field == MetadataField.Title)
         {
             var val = value.IsBlank ? null : Trim(value.AsString().Value, 30);

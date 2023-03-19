@@ -37,6 +37,9 @@ public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
         return BlankValue.Instance;
     }
 
+    // set the value using the normal TagLib properties
+    // if the tag type doesn't support a certain field, or mangles it in some way,
+    // make a new interop to redirect those special cases instead before using this
     public override void Set(MetadataField field, IValue value)
     {
         if (field == MetadataField.Album)
@@ -169,6 +172,7 @@ public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
             }
         }
 
+        // this logic is duplicated in FlacTagInterop
         if (field == MetadataField.Art)
         {
             IPicture? pic = null;

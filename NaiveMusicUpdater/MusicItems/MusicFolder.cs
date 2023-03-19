@@ -3,10 +3,14 @@
 public class MusicFolder : IMusicItem
 {
     private bool HasScanned = false;
+
+    // full path to folder
     public string Location { get; }
+
+    // configs found directly in this particular folder
     public List<IMusicItemConfig> Configs { get; private set; }
-    private readonly MusicFolder? _Parent;
-    public MusicFolder? Parent => _Parent;
+    public MusicFolder? Parent { get; }
+
     private readonly List<MusicFolder> ChildFolders = new();
     private readonly List<Song> SongList = new();
 
@@ -39,7 +43,7 @@ public class MusicFolder : IMusicItem
     private MusicFolder(MusicFolder? parent, string folder)
     {
         Location = folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).TrimEnd('.');
-        _Parent = parent;
+        Parent = parent;
     }
 
     protected void LoadConfigs()
@@ -68,6 +72,9 @@ public class MusicFolder : IMusicItem
 
     public MusicLibrary RootLibrary => (MusicLibrary)this.PathFromRoot().First();
 
+    // icon implementation is very lazy
+    // it makes no effort to preserve any fields in these files besides the ones that control icons
+    // also .directory files are certainly not ubiquitous among linux file managers
     protected virtual void RemoveIcon()
     {
         if (OperatingSystem.IsWindows())

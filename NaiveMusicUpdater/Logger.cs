@@ -1,5 +1,7 @@
 ﻿namespace NaiveMusicUpdater;
 
+// static logger, because you're insane if you think I'm passing it into every constructor
+// prints to the console, and also optionally to a file
 public static class Logger
 {
     private static StreamWriter? Writer;
@@ -19,6 +21,8 @@ public static class Logger
         Writer?.Close();
     }
 
+    // if we have a file opened, write to it
+    // otherwise, save this text to write to the file when we do open one
     private static void Write(string text)
     {
         if (Writer == null)

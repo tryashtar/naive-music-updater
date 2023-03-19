@@ -12,12 +12,12 @@ public class MusicLibrary : MusicFolder
 
     public void UpdateLibrary()
     {
-        if (LibraryConfig.LogFolder != null)
-            Logger.Open(Path.Combine(LibraryConfig.LogFolder, DateTime.Now.ToString("yyyy-MM-dd HH_mm_ss") + ".txt"));
         this.Update();
         LibraryConfig.Save();
     }
 
+    // the root library folder is just wherever the user wants it
+    // it's not appropriate to replace its icon
     protected override void RemoveIcon()
     {
     }

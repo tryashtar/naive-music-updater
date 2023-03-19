@@ -28,6 +28,7 @@ public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
             return;
         if (field == MetadataField.Year)
         {
+            // TagLib wants to use "DATE" instead of "YEAR", no idea why
             var raw = Get(field);
             var existing = raw.IsBlank ? Array.Empty<string>() : raw.AsList().Values.ToArray();
             var val = value.IsBlank ? Array.Empty<string>() : value.AsList().Values.ToArray();
@@ -42,6 +43,7 @@ public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
         }
         else
         {
+            // don't set fields that are going to be cleaned away
             if (field == MetadataField.Title && !Config.ShouldKeepXiph("TITLE"))
                 return;
             if (field == MetadataField.Album && !Config.ShouldKeepXiph("ALBUM"))

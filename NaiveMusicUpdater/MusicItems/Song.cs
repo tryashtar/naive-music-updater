@@ -2,15 +2,18 @@ namespace NaiveMusicUpdater;
 
 public class Song : IMusicItem
 {
+    // full path to file
     public string Location { get; }
-    protected readonly MusicFolder _Parent;
-    public MusicFolder Parent => _Parent;
+    public MusicFolder Parent { get; }
+    
+    // songs are not folders and therefore can't have config files inside of them
+    // of course, configs in parent folders can still apply to particular songs
     private static readonly List<IMusicItemConfig> _Empty = new();
     public List<IMusicItemConfig> Configs => _Empty;
 
     public Song(MusicFolder parent, string file)
     {
-        _Parent = parent;
+        Parent = parent;
         Location = file;
     }
 

@@ -1,5 +1,6 @@
 namespace NaiveMusicUpdater;
 
+// entry point to interfacing with the TagLib library
 public class TagModifier
 {
     public bool HasChanged { get; private set; }

@@ -13,6 +13,7 @@ public class ApeTagInterop : BacicInterop<TagLib.Ape.Tag>
 
     public override void Set(MetadataField field, IValue value)
     {
+        // don't set fields that are unsupported, or are going to be cleaned away
         if (field == MetadataField.Arranger)
             return;
         if (field == MetadataField.Title && !Config.ShouldKeepApe("Title"))

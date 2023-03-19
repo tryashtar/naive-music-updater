@@ -15,6 +15,7 @@ public class FlacTagInterop : MultipleInterop
 
     public override void Set(MetadataField field, IValue value)
     {
+        // this logic is duplicated from BasicInterop
         if (field == MetadataField.Art)
         {
             IPicture? pic = null;

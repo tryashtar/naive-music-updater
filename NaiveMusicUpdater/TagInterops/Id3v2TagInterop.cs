@@ -22,6 +22,7 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
 
     public override void Set(MetadataField field, IValue value)
     {
+        // don't set fields that are are going to be cleaned away
         if (field == MetadataField.Title && !Config.ShouldKeepFrame("TIT2"))
             return;
         if (field == MetadataField.Album && !Config.ShouldKeepFrame("TALB"))

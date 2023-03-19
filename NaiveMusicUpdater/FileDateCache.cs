@@ -2,11 +2,19 @@
 
 namespace NaiveMusicUpdater;
 
+// the program scans lots of music, image, and config files
+// if you run the program often, most of them probably didn't change since last time
+// this cache keeps track of that
 public interface IFileDateCache
 {
     void Save();
+    // whether the path has changed since last time
     bool ChangedSinceLastRun(string path);
+    // mark this path as updated
     void Acknowledge(string path);
+    // whether the path was marked as updated
+    // this is different from ChangedSinceLastRun,
+    // because when a song's configs are acknowledged, other songs using those configs may still need to be updated
     bool IsAcknowledged(string path);
 }
 
@@ -27,6 +35,8 @@ public static class FileDateCacheExtensions
         }
     }
 
+    // a music file needs to be checked if any of the following have changed:
+    // the file itself, any configs that apply to it, any art templates it references, and any configs that apply to those templates
     private static IEnumerable<string> RelevantPaths(IMusicItem item)
     {
         yield return item.Location;
@@ -125,7 +135,7 @@ public class MemoryFileDateCache : IFileDateCache
 
     public virtual bool ChangedSinceLastRun(string path)
     {
-        return !Updated.Contains(path);
+        return true;
     }
 
     public void Acknowledge(string path)

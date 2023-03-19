@@ -35,6 +35,7 @@ public class MovieTagInterop : BacicInterop<TagLib.Riff.MovieIdTag>
 
     public override void Set(MetadataField field, IValue value)
     {
+        // don't set fields that are unsupported
         if (!Supported.Contains(field))
             return;
         base.Set(field, value);
@@ -64,6 +65,7 @@ public class DivTagInterop : BacicInterop<TagLib.Riff.DivXTag>
 
     public override void Set(MetadataField field, IValue value)
     {
+        // don't set fields that are unsupported
         if (!Supported.Contains(field))
             return;
         base.Set(field, value);
