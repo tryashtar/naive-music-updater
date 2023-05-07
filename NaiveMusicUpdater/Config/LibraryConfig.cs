@@ -122,7 +122,8 @@ public class LibraryConfig
                     if (save.custom.IncludeBlanks || !value.IsBlank)
                     {
                         var vals = list.Select(x => new YamlScalarNode(x.StringPathAfterRoot())).ToList();
-                        yaml.Add(SaveValue(value) ?? "null", vals.Count == 1 ? vals[0] : new YamlSequenceNode(vals));
+                        string key = value.IsBlank ? "(blank)" : String.Join(save.custom.Separator, value.AsList().Values);
+                        yaml.Add(key, vals.Count == 1 ? vals[0] : new YamlSequenceNode(vals));
                     }
                 }
             }
@@ -134,11 +135,12 @@ public class LibraryConfig
     private CustomField ParseCustomField(YamlNode node)
     {
         var name = node.Go("name").String();
-        var field = new MetadataField(name, name);
+        var field = MetadataField.TryFromID(name) ?? new MetadataField(name, name);
         var export = ParsePath(node.Go("export"));
         var group = node.Go("group").ToEnum(FieldGroup.Item);
         var blanks = node.Go("blanks").Bool() ?? false;
-        return new(field, export, group, blanks);
+        var separator = node.Go("separator").String() ?? "";
+        return new(field, export, separator, group, blanks);
     }
 
     private string? ParsePath(YamlNode? node)
@@ -284,7 +286,7 @@ public class LibraryConfig
 
 public record ReplayGain(string Path, string Args);
 
-public record CustomField(MetadataField Field, string? Export, FieldGroup Group, bool IncludeBlanks);
+public record CustomField(MetadataField Field, string? Export, string Separator, FieldGroup Group, bool IncludeBlanks);
 
 public enum FieldGroup
 {

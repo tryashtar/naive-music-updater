@@ -35,6 +35,13 @@ public class MetadataField
         throw new ArgumentException($"No metadata field named {id}");
     }
 
+    public static MetadataField? TryFromID(string id)
+    {
+        if (AliasCache.TryGetValue(id, out var result))
+            return result;
+        return null;
+    }
+
     private static readonly List<MetadataField> AllFields = new();
     public static readonly MetadataField Title = new("Title", "title");
     public static readonly MetadataField Album = new("Album", "album");
