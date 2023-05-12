@@ -82,15 +82,6 @@ public class LibraryConfig
         CustomFieldSaves[field].results[item] = value;
     }
 
-    private YamlNode? SaveValue(IValue value)
-    {
-        if (value.IsBlank)
-            return null;
-        if (value is ListValue list)
-            return new YamlSequenceNode(list.Values.Select(x => new YamlMappingNode(x)));
-        return new YamlScalarNode(value.AsString().Value);
-    }
-
     public void Save()
     {
         Cache.Save();
@@ -99,35 +90,10 @@ public class LibraryConfig
             if (save.custom.Export == null)
                 continue;
             var yaml = new YamlMappingNode();
-            if (save.custom.Group == FieldGroup.Item)
-            {
-                foreach (var (item, value) in save.results)
-                {
-                    if (save.custom.IncludeBlanks || !value.IsBlank)
-                        yaml.Add(item.StringPathAfterRoot(), SaveValue(value));
-                }
-            }
-            else if (save.custom.Group == FieldGroup.Value)
-            {
-                var reverse_dict = new Dictionary<IValue, List<IMusicItem>>(new ValueEqualityChecker());
-                foreach (var (item, value) in save.results)
-                {
-                    if (!reverse_dict.ContainsKey(value))
-                        reverse_dict[value] = new();
-                    reverse_dict[value].Add(item);
-                }
-
-                foreach (var (value, list) in reverse_dict)
-                {
-                    if (save.custom.IncludeBlanks || !value.IsBlank)
-                    {
-                        var vals = list.Select(x => new YamlScalarNode(x.StringPathAfterRoot())).ToList();
-                        string key = value.IsBlank ? "(blank)" : String.Join(save.custom.Separator, value.AsList().Values);
-                        yaml.Add(key, vals.Count == 1 ? vals[0] : new YamlSequenceNode(vals));
-                    }
-                }
-            }
-
+            var results = save.results.AsEnumerable();
+            if (!save.custom.IncludeBlanks)
+                results = results.Where(x => !x.Value.IsBlank);
+            save.custom.Group.SaveResults(yaml, results);
             YamlHelper.SaveToFile(yaml, save.custom.Export);
         }
     }
@@ -137,10 +103,10 @@ public class LibraryConfig
         var name = node.Go("name").String();
         var field = MetadataField.TryFromID(name) ?? new MetadataField(name, name);
         var export = ParsePath(node.Go("export"));
-        var group = node.Go("group").ToEnum(FieldGroup.Item);
+        var group_node = node.Go("group");
+        var group = group_node == null ? new ItemFieldGrouping() : FieldGroupingFactory.Create(node.Go("group"));
         var blanks = node.Go("blanks").Bool() ?? false;
-        var separator = node.Go("separator").String() ?? "";
-        return new(field, export, separator, group, blanks);
+        return new(field, export, group, blanks);
     }
 
     private string? ParsePath(YamlNode? node)
@@ -285,11 +251,3 @@ public class LibraryConfig
 }
 
 public record ReplayGain(string Path, string Args);
-
-public record CustomField(MetadataField Field, string? Export, string Separator, FieldGroup Group, bool IncludeBlanks);
-
-public enum FieldGroup
-{
-    Item,
-    Value
-}
