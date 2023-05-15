@@ -5,7 +5,7 @@ public class Song : IMusicItem
     // full path to file
     public string Location { get; }
     public MusicFolder Parent { get; }
-    
+
     // songs are not folders and therefore can't have config files inside of them
     // of course, configs in parent folders can still apply to particular songs
     private static readonly List<IMusicItemConfig> _Empty = new();
@@ -19,7 +19,8 @@ public class Song : IMusicItem
 
     public void Update()
     {
-        Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
+        if (RootLibrary.LibraryConfig.ShowUnchanged)
+            Logger.WriteLine($"Song: {SimpleName}", ConsoleColor.Gray);
         var custom = this.GetMetadata(RootLibrary.LibraryConfig.IsCustomField);
         foreach (var field in RootLibrary.LibraryConfig.CustomFields)
         {
@@ -28,8 +29,14 @@ public class Song : IMusicItem
 
         if (!RootLibrary.LibraryConfig.Cache.NeedsUpdate(this))
             return;
-        Logger.TabIn();
-        Logger.WriteLine($"(checking)");
+        if (RootLibrary.LibraryConfig.ShowUnchanged)
+        {
+            Logger.TabIn();
+            Logger.WriteLine($"(checking)");
+        }
+        else
+            Logger.WriteLine($"Song: {this.StringPathAfterRoot()}", ConsoleColor.Gray);
+
         var metadata = this.GetMetadata(MetadataField.All);
 #if !DEBUG
         bool reload_file = true;
@@ -69,9 +76,13 @@ public class Song : IMusicItem
             RootLibrary.LibraryConfig.Cache.MarkUpdated(this);
 #else
         if (modifier.HasChanged)
-            Logger.WriteLine("Changed!");
+        {
+            if (RootLibrary.LibraryConfig.ShowUnchanged)
+                Logger.WriteLine("Changed!");
+        }
 #endif
-        Logger.TabOut();
+        if (RootLibrary.LibraryConfig.ShowUnchanged)
+            Logger.TabOut();
     }
 
     private bool HasReplayGain(TagLib.File file)

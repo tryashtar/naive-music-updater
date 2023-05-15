@@ -1,8 +1,4 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Advanced;
+using System.Text.Json;
 
 namespace NaiveMusicUpdater;
 
@@ -72,7 +68,9 @@ public static class ExportConfigExtensions
                             return false;
                     }
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    string? parent = Path.GetDirectoryName(path);
+                    if (parent != null)
+                        Directory.CreateDirectory(parent);
                     File.WriteAllLines(path, lrc);
                     return true;
                 }
@@ -90,12 +88,14 @@ public static class ExportConfigExtensions
                 }
                 else
                 {
-                    var json = LyricsIO.ToJson(lyrics);
-                    var existing = ReadJson(path);
-                    if (existing != null &&
-                        (JToken.DeepEquals(json, existing) || json.ToString() == existing.ToString()))
+                    var json = JsonSerializer.Serialize(lyrics);
+                    var existing = File.Exists(path) ? File.ReadAllText(path) : null;
+                    if (existing != null && json == existing)
                         return false;
-                    WriteJson(json, path);
+                    string? parent = Path.GetDirectoryName(path);
+                    if (parent != null)
+                        Directory.CreateDirectory(parent);
+                    File.WriteAllText(path, json);
                     return true;
                 }
             default:
@@ -112,8 +112,10 @@ public static class ExportConfigExtensions
     private static Lyrics? RichFileLyrics(string path)
     {
         path += ".lrc.json";
-        var json = ReadJson(path);
-        return json == null ? null : LyricsIO.FromJson(json);
+        if (!File.Exists(path))
+            return null;
+        using var stream = File.OpenRead(path);
+        return JsonSerializer.Deserialize<Lyrics>(stream);
     }
 
     public static ChapterCollection? BestChapters(this ExportConfig<ChaptersType> config, TagLib.File file, string path)
@@ -163,7 +165,9 @@ public static class ExportConfigExtensions
                             return false;
                     }
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    string? parent = Path.GetDirectoryName(path);
+                    if (parent != null)
+                        Directory.CreateDirectory(parent);
                     File.WriteAllLines(path, chp);
                     return true;
                 }
@@ -181,12 +185,11 @@ public static class ExportConfigExtensions
                 }
                 else
                 {
-                    var json = ChaptersIO.ToJson(chapters);
-                    var existing = ReadJson(path);
-                    if (existing != null &&
-                        (JToken.DeepEquals(json, existing) || json.ToString() == existing.ToString()))
+                    var json = JsonSerializer.Serialize(chapters);
+                    var existing = File.Exists(path) ? File.ReadAllText(path) : null;
+                    if (existing != null && json == existing)
                         return false;
-                    WriteJson(json, path);
+                    File.WriteAllText(path, json);
                     return true;
                 }
             default:
@@ -203,25 +206,10 @@ public static class ExportConfigExtensions
     private static ChapterCollection? RichFileChapters(string path)
     {
         path += ".chp.json";
-        var json = ReadJson(path);
-        return json == null ? null : ChaptersIO.FromJson(json);
-    }
-
-    private static JObject? ReadJson(string path)
-    {
         if (!File.Exists(path))
             return null;
-        using var file = File.OpenText(path);
-        using var reader = new JsonTextReader(file);
-        return JObject.Load(reader);
-    }
-
-    private static void WriteJson(JToken json, string path)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
-        using var stream = File.CreateText(path);
-        using var writer = new JsonTextWriter(stream) { Formatting = Formatting.Indented };
-        json.WriteTo(writer);
+        using var stream = File.OpenRead(path);
+        return JsonSerializer.Deserialize<ChapterCollection>(stream);
     }
 }
 

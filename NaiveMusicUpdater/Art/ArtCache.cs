@@ -40,7 +40,9 @@ public class DiskArtCache : IArtCache
     {
         MemoryCache.Put(path, picture);
         var file = ExpandPath(path);
-        Directory.CreateDirectory(Path.GetDirectoryName(file));
+        string? parent = Path.GetDirectoryName(file);
+        if (parent != null)
+            Directory.CreateDirectory(parent);
         File.WriteAllBytes(file, picture.Data.Data);
     }
 }

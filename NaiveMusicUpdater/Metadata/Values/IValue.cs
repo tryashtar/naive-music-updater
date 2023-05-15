@@ -26,8 +26,12 @@ public class ValueEqualityChecker : IEqualityComparer<IValue>
 {
     public static readonly ValueEqualityChecker Instance = new();
 
-    public bool Equals(IValue x, IValue y)
+    public bool Equals(IValue? x, IValue? y)
     {
+        if (x == null)
+            return y == null;
+        if (y == null)
+            return false;
         if (x.IsBlank && y.IsBlank)
             return true;
         if (x.IsBlank || y.IsBlank)

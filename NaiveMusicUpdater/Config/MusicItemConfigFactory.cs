@@ -14,10 +14,10 @@ public static class MusicItemConfigFactory
         while (true)
         {
             var yaml = TryParseFile(file);
-            var reverse = yaml.Go("reverse");
+            var reverse = yaml.Go("reverse").String();
             if (reverse != null && item is MusicFolder folder)
             {
-                var type = StringUtils.ParseUnderscoredEnum<ReversalType>(reverse.String());
+                var type = StringUtils.ParseUnderscoredEnum<ReversalType>(reverse);
                 yaml = ProcessReversedConfig(folder, type, file);
             }
 
@@ -27,7 +27,7 @@ public static class MusicItemConfigFactory
         }
     }
 
-    private static YamlNode TryParseFile(string file)
+    private static YamlNode? TryParseFile(string file)
     {
         while (true)
         {

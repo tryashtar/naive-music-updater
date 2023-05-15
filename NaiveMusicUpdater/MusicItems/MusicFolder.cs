@@ -132,12 +132,13 @@ public class MusicFolder : IMusicItem
 
     public void Update()
     {
-        Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
+        if (RootLibrary.LibraryConfig.ShowUnchanged)
+            Logger.WriteLine($"Folder: {SimpleName}", ConsoleColor.Gray);
 #if !DEBUG
         HandleIcon();
 #endif
-
-        Logger.TabIn();
+        if (RootLibrary.LibraryConfig.ShowUnchanged)
+            Logger.TabIn();
         foreach (var child in SubFolders)
         {
             child.Update();
@@ -148,7 +149,8 @@ public class MusicFolder : IMusicItem
             song.Update();
         }
 
-        Logger.TabOut();
+        if (RootLibrary.LibraryConfig.ShowUnchanged)
+            Logger.TabOut();
     }
 
     private void ScanContents()

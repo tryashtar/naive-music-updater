@@ -36,10 +36,10 @@ public class ItemFieldGrouping : IFieldGrouping
         }
     }
 
-    private YamlNode? SaveValue(IValue value)
+    private static YamlNode SaveValue(IValue value)
     {
         if (value.IsBlank)
-            return null;
+            return new YamlScalarNode(null);
         if (value is ListValue list)
             return new YamlSequenceNode(list.Values.Select(x => new YamlMappingNode(x)));
         return new YamlScalarNode(value.AsString().Value);

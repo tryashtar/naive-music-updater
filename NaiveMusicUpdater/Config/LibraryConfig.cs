@@ -17,6 +17,7 @@ public class LibraryConfig
     public readonly List<string> ConfigFolders;
     public readonly string LibraryFolder;
     public readonly string? LogFolder;
+    public readonly bool ShowUnchanged;
     public readonly ExportConfig<LyricsType>? LyricsConfig;
     public readonly ExportConfig<ChaptersType>? ChaptersConfig;
     public readonly IFileDateCache Cache;
@@ -41,6 +42,7 @@ public class LibraryConfig
         Cache = cachepath != null ? new FileDateCache(cachepath) : new MemoryFileDateCache();
 #endif
         LogFolder = ParsePath(yaml.Go("logs"));
+        ShowUnchanged = yaml.Go("show_unchanged").Bool() ?? true;
         LyricsConfig = ParseExportConfig<LyricsType>(yaml.Go("lyrics"));
         ChaptersConfig = ParseExportConfig<ChaptersType>(yaml.Go("chapters"));
         string? template_folder = ParsePath(yaml.Go("art", "templates"));
