@@ -9,7 +9,6 @@ public class ProcessArtSettings
 {
     public int? Width;
     public int? Height;
-    public bool? HasBuffer;
     public int[]? Buffer;
     public Rgba32? Background;
     public ResizeMode? Scale;
@@ -30,20 +29,14 @@ public class ProcessArtSettings
         {
             var bb = b.Bool();
             if (bb == false)
-            {
-                HasBuffer = false;
                 Buffer = null;
-            }
             else
-            {
-                HasBuffer = true;
-                Buffer = b.ToList(x => x.Int().Value).ToArray();
-            }
+                Buffer = b.ToList(x => x.Int() ?? 0)!.ToArray();
         }
 
         if (node.Children.TryGetValue("background", out var bg))
         {
-            var list = bg.ToList(x => (byte)x.Int().Value);
+            var list = bg.ToList(x => (byte)(x.Int() ?? 0))!;
             Background = Color.FromRgba(list[0], list[1], list[2], list[3]);
         }
 
@@ -65,7 +58,6 @@ public class ProcessArtSettings
     {
         this.Width ??= other.Width;
         this.Height ??= other.Height;
-        this.HasBuffer ??= other.HasBuffer;
         this.Buffer ??= other.Buffer;
         this.Background ??= other.Background;
         this.Scale ??= other.Scale;
@@ -75,7 +67,7 @@ public class ProcessArtSettings
 
     public void Apply(Image<Rgba32> image)
     {
-        if (HasBuffer ?? false)
+        if (Buffer != null)
         {
             var bounding = GetBoundingRectangle(image);
             image.Mutate(x => x.Crop(bounding));
@@ -95,7 +87,7 @@ public class ProcessArtSettings
                         height = height / image.Height * image.Height;
                 }
 
-                if (HasBuffer ?? false)
+                if (Buffer != null)
                 {
                     width -= Buffer[0] + Buffer[2];
                     height -= Buffer[1] + Buffer[3];
@@ -112,7 +104,7 @@ public class ProcessArtSettings
                 x.Resize(resize);
             }
 
-            if (HasBuffer ?? false)
+            if (Buffer != null)
             {
                 var resize = new ResizeOptions()
                 {

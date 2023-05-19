@@ -23,7 +23,7 @@ public static class DiscOrderFactory
             var dict = new Dictionary<uint, IItemSelector>();
             foreach (var item in map)
             {
-                if (uint.TryParse((string)item.Key, out uint n))
+                if (uint.TryParse(item.Key.String(), out uint n))
                     dict[n] = ItemSelectorFactory.Create(item.Value);
             }
 

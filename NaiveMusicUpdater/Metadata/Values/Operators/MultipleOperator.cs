@@ -11,13 +11,14 @@ public class MultipleOperator : IValueOperator
 
     public IValue? Apply(IMusicItem item, IValue original)
     {
+        var final = original;
         foreach (var op in Operators)
         {
-            original = op.Apply(item, original);
-            if (original == null)
+            final = op.Apply(item, final);
+            if (final == null)
                 return null;
         }
 
-        return original;
+        return final;
     }
 }

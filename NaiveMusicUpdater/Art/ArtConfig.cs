@@ -8,9 +8,9 @@ public class ArtConfig
     public ArtConfig(ArtRepo owner, string folder, string relative)
     {
         Owner = owner;
-        var node = (YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, relative, "images.yaml"));
+        var node = (YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, relative, "images.yaml"))!;
         Settings = new();
-        var set_dict = node.Go("set").ToDictionary(x => x.String(), LiteralOrReference);
+        var set_dict = node.Go("set").ToDictionary(x => x.String()!, LiteralOrReference);
         if (set_dict != null)
         {
             foreach (var (name, settings) in set_dict)
@@ -23,7 +23,7 @@ public class ArtConfig
         {
             foreach (var item in (YamlSequenceNode)set_all)
             {
-                var names = item.Go("names").ToStringList().Select(x => Path.Combine(relative, x)).ToList();
+                var names = item.Go("names").ToStringList()!.Select(x => Path.Combine(relative, x)).ToList();
                 var set = LiteralOrReference(item["set"]);
                 Settings.Add((x => names.Contains(x), set));
             }

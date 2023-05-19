@@ -54,7 +54,7 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
 
     public override void Clean()
     {
-        var remove = Config.DecideFrames(Tag).remove.ToList();
+        var remove = Config.DecideFramesToRemove(Tag).ToList();
         foreach (var frame in remove)
         {
             Logger.WriteLine($"{Tag.TagTypes} frame removed: {TagPrinter.ToString(frame)}");

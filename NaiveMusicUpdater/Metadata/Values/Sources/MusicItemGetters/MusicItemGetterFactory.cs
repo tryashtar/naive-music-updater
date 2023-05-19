@@ -21,12 +21,12 @@ public static class MusicItemGetterFactory
         {
             case YamlScalarNode scalar:
             {
-                var name = scalar.ToEnum<NameType>();
-                return NameGetters[name.Value];
+                var name = scalar.ToEnum(NameType.CleanName);
+                return NameGetters[name];
             }
             case YamlMappingNode map:
             {
-                var copy = map.Go("copy").NullableParse(x => MetadataField.FromID(x.String()));
+                var copy = map.Go("copy").NullableParse(x => MetadataField.FromID(x.String()!));
                 if (copy != null)
                     return new CopyMetadataGetter(copy);
                 break;

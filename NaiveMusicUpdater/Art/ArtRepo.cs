@@ -162,7 +162,7 @@ public class ArtRepo
     {
         while (path != "")
         {
-            path = Path.GetDirectoryName(path);
+            path = Path.GetDirectoryName(path)!;
             var file = Path.Combine(Folder, path, "images.yaml");
             if (File.Exists(file))
                 yield return file;
@@ -173,7 +173,7 @@ public class ArtRepo
     {
         while (path != "")
         {
-            path = Path.GetDirectoryName(path);
+            path = Path.GetDirectoryName(path)!;
             if (ConfigCache.TryGetValue(path, out var existing))
                 yield return existing;
             if (File.Exists(Path.Combine(Folder, path, "images.yaml")))
@@ -190,7 +190,10 @@ public class ArtRepo
         var name = Path.Combine(Folder, path);
         if (!Directory.Exists(Path.GetDirectoryName(name)))
             return null;
-        foreach (var file in Directory.EnumerateFiles(Path.GetDirectoryName(name)))
+        string? parent = Path.GetDirectoryName(name);
+        if (parent == null)
+            return null;
+        foreach (var file in Directory.EnumerateFiles(parent))
         {
             if (Path.GetFileNameWithoutExtension(file) == Path.GetFileName(name))
                 return file;

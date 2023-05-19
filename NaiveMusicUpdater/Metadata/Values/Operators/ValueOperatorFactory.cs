@@ -40,7 +40,7 @@ public static class ValueOperatorFactory
                 if (group != null)
                     return new RegexGroupOperator(group);
 
-                var regex = map.Go("regex").NullableParse(x => new Regex(x.String()));
+                var regex = map.Go("regex").NullableParse(x => new Regex(x.String()!));
                 if (regex != null)
                 {
                     var decision = yaml.Go("fail").ToEnum(def: MatchFailDecision.Exit);
@@ -63,7 +63,7 @@ public static class ValueOperatorFactory
                 break;
             }
             case YamlSequenceNode sequence:
-                return new MultipleOperator(sequence.ToList(ValueOperatorFactory.Create));
+                return new MultipleOperator(sequence.ToList(ValueOperatorFactory.Create)!);
         }
 
         throw new ArgumentException($"Can't make value operator from {yaml}");

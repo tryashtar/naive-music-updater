@@ -11,11 +11,11 @@ public static class ItemPredicateFactory
     {
         switch (node)
         {
-            case YamlScalarNode { Value: { } } scalar:
+            case YamlScalarNode { Value: not null } scalar:
                 return new ExactItemPredicate(scalar.Value);
             case YamlMappingNode map:
             {
-                var regex = map.Go("regex").Parse(x => new Regex(x.String(), RegexOptions.IgnoreCase));
+                var regex = map.Go("regex")!.Parse(x => new Regex(x.String()!, RegexOptions.IgnoreCase));
                 return new RegexItemPredicate(regex);
             }
             default:

@@ -13,26 +13,26 @@ public static class ItemSelectorFactory
     {
         switch (node)
         {
-            case YamlScalarNode { Value: { } } scalar:
+            case YamlScalarNode { Value: not null } scalar:
                 return new PathItemSelector(scalar.Value);
             case YamlSequenceNode sequence:
             {
                 var subselectors = sequence.ToList(ItemSelectorFactory.Create);
-                return new MultiItemSelector(subselectors);
+                return new MultiItemSelector(subselectors!);
             }
             case YamlMappingNode map:
             {
                 var path = node.Go("path");
                 if (path != null)
                 {
-                    var predicates = path.ToList(ItemPredicateFactory.Create).ToArray();
+                    var predicates = path.ToList(ItemPredicateFactory.Create)!.ToArray();
                     return new PathItemSelector(predicates);
                 }
 
                 var subpath = node.Go("subpath").NullableParse(ItemSelectorFactory.Create);
                 if (subpath != null)
                 {
-                    var select = node.Go("select").Parse(ItemSelectorFactory.Create);
+                    var select = node.Go("select")!.Parse(ItemSelectorFactory.Create);
                     return new SubPathItemSelector(subpath, select);
                 }
 

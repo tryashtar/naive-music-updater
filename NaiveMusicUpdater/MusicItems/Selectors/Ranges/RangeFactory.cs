@@ -20,8 +20,8 @@ public static class RangeFactory
             }
             case YamlSequenceNode seq:
             {
-                int start = seq[0].Int().Value;
-                int stop = seq[1].Int().Value;
+                int start = seq[0].Int() ?? 0;
+                int stop = seq[1].Int() ?? 0;
                 return new Range(start, stop + 1);
             }
             default:

@@ -8,10 +8,13 @@ namespace NaiveMusicUpdater;
 public interface IFileDateCache
 {
     void Save();
+
     // whether the path has changed since last time
     bool ChangedSinceLastRun(string path);
+
     // mark this path as updated
     void Acknowledge(string path);
+
     // whether the path was marked as updated
     // this is different from ChangedSinceLastRun,
     // because when a song's configs are acknowledged, other songs using those configs may still need to be updated
@@ -95,7 +98,9 @@ public class FileDateCache : IFileDateCache
         }
 
         var serializer = new SerializerBuilder().Build();
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
+        string? parent = Path.GetDirectoryName(FilePath);
+        if (parent != null)
+            Directory.CreateDirectory(parent);
         File.WriteAllText(FilePath, serializer.Serialize(DateCache));
     }
 

@@ -58,17 +58,21 @@ public class LibraryConfig
             ArtTemplates = new(template_folder, cache, Cache, ico_folder, named);
         }
 
-        FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()), x => x.String()) ?? new();
+        FindReplace = yaml.Go("find_replace").ToDictionary(x => new Regex(x.String()!), x => x.String()!) ?? new();
         NamedStrategies = yaml.Go("named_strategies").ToDictionary(MetadataStrategyFactory.Create) ?? new();
         KeepFrameIDs = yaml.Go("keep", "id3v2").ToList(ParseFrameDefinition)?.ToDictionary(x => x.Id, x => x);
-        KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x));
-        KeepApeMetadata = yaml.Go("keep", "ape").ToListFromStrings(x => new Regex(x));
+        KeepXiphMetadata = yaml.Go("keep", "xiph").ToListFromStrings(x => new Regex(x!));
+        KeepApeMetadata = yaml.Go("keep", "ape").ToListFromStrings(x => new Regex(x!));
         SongExtensions =
-            yaml.Go("extensions").ToListFromStrings(x => x.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
+            yaml.Go("extensions").ToListFromStrings(x => x!.StartsWith('.') ? x.ToLower() : "." + x.ToLower()) ?? new();
         ReplayGains = yaml.Go("replay_gain")
-            .ToDictionary(x => x.String().StartsWith('.') ? x.String() : '.' + x.String(),
-                x => new ReplayGain(x["path"].String(), x["args"].String()));
-        ConfigFolders = yaml.Go("config_folders").ToList(ParsePath) ?? new() { LibraryFolder };
+            .ToDictionary(x =>
+                {
+                    var str = x.String()!;
+                    return str.StartsWith('.') ? str : '.' + str;
+                },
+                x => new ReplayGain(x["path"].String()!, x["args"].String()!)) ?? new();
+        ConfigFolders = yaml.Go("config_folders").ToList(x => ParsePath(x)!) ?? new() { LibraryFolder };
         CustomFieldSaves = new();
         foreach (var field in yaml.Go("custom_fields").ToList(ParseCustomField) ?? new())
         {
@@ -102,18 +106,19 @@ public class LibraryConfig
 
     private CustomField ParseCustomField(YamlNode node)
     {
-        var name = node.Go("name").String();
+        var name = node.Go("name").String()!;
         var field = MetadataField.TryFromID(name) ?? new MetadataField(name, name);
         var export = ParsePath(node.Go("export"));
         var group_node = node.Go("group");
-        var group = group_node == null ? new ItemFieldGrouping() : FieldGroupingFactory.Create(node.Go("group"));
+        var group = group_node == null ? new ItemFieldGrouping() : FieldGroupingFactory.Create(node.Go("group")!);
         var blanks = node.Go("blanks").Bool() ?? false;
         return new(field, export, group, blanks);
     }
 
     private string? ParsePath(YamlNode? node)
     {
-        return node?.NullableParse(x => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(ConfigPath), x.String())));
+        return node?.NullableParse(x =>
+            Path.GetFullPath(Path.Combine(Path.GetDirectoryName(ConfigPath)!, x.String()!)));
     }
 
     private record KeepFrameDefinition(Regex Id, Regex[] Descriptions, bool DuplicatesAllowed);
@@ -122,9 +127,9 @@ public class LibraryConfig
     {
         return node switch
         {
-            YamlScalarNode simple => new KeepFrameDefinition(new Regex(simple.Value), Array.Empty<Regex>(), false),
-            YamlMappingNode map => new KeepFrameDefinition(new Regex(map.Go("id").String()),
-                map.TryGet("desc").ToList(x => new Regex(x.String()))?.ToArray() ?? Array.Empty<Regex>(),
+            YamlScalarNode simple => new KeepFrameDefinition(new Regex(simple.Value!), Array.Empty<Regex>(), false),
+            YamlMappingNode map => new KeepFrameDefinition(new Regex(map.Go("id").String()!),
+                map.TryGet("desc").ToList(x => new Regex(x.String()!))?.ToArray() ?? Array.Empty<Regex>(),
                 map.Go("dupes").Bool() ?? false),
             _ => throw new ArgumentException($"Can't make frame definition from {node}")
         };
@@ -135,19 +140,18 @@ public class LibraryConfig
         if (node == null)
             return null;
         var path = ParsePath(node.Go("folder"));
-        var priority = node.Go("priority").ToList<T>(x =>
-                               x.ToEnum<T>().Value)
+        var priority = node.Go("priority").ToList(x =>
+                               x.ToEnum<T>()!.Value)
                            ?.ToArray() ??
                        Array.Empty<T>();
         var dict = node.Go("config")
-                       .ToDictionary<T, ExportOption>(
-                           x => x.ToEnum<T>().Value,
-                           x => x.ToEnum<ExportOption>().Value) ??
+                       .ToDictionary(
+                           x => x.ToEnum<T>()!.Value,
+                           x => x.ToEnum<ExportOption>()!.Value) ??
                    new();
         foreach (var entry in Enum.GetValues<T>())
         {
-            if (!dict.ContainsKey(entry))
-                dict.Add(entry, ExportOption.Ignore);
+            dict.TryAdd(entry, ExportOption.Ignore);
         }
 
         return new ExportConfig<T>(path ?? LibraryFolder, priority, dict);
@@ -164,11 +168,11 @@ public class LibraryConfig
         return NamedStrategies[name];
     }
 
-    public (IEnumerable<Frame> keep, IEnumerable<Frame> remove) DecideFrames(TagLib.Id3v2.Tag tag)
+    public List<Frame> DecideFramesToRemove(TagLib.Id3v2.Tag tag)
     {
-        if (KeepFrameIDs == null)
-            return (tag.GetFrames(), Enumerable.Empty<Frame>());
         var remove = new List<Frame>();
+        if (KeepFrameIDs == null)
+            return remove;
         var frame_types = tag.GetFrames().GroupBy(x => x.FrameId.ToString()).ToList();
         foreach (var group in frame_types)
         {
@@ -178,18 +182,24 @@ public class LibraryConfig
             else
             {
                 var definition = KeepFrameIDs[match];
-                IEnumerable<Frame> allowed = group;
+                var frames = group.ToList();
+
                 if (group.Key == "TXXX")
-                    allowed = group.OfType<UserTextInformationFrame>()
-                        .Where(x => definition.Descriptions.Any(y => y.IsMatch(x.Description)));
-                if (allowed != group)
-                    remove.AddRange(group.Except(allowed));
-                if (!definition.DuplicatesAllowed && allowed.Count() > 1)
-                    remove.AddRange(allowed.Skip(1));
+                {
+                    foreach (var frame in frames.OfType<UserTextInformationFrame>().Where(frame =>
+                                 definition.Descriptions.Any(y => y.IsMatch(frame.Description))).ToList())
+                    {
+                        remove.Add(frame);
+                        frames.Remove(frame);
+                    }
+                }
+
+                if (!definition.DuplicatesAllowed && frames.Count > 1)
+                    remove.AddRange(frames.Skip(1));
             }
         }
 
-        return (frame_types.SelectMany(x => x).Except(remove), remove);
+        return remove;
     }
 
     public bool ShouldKeepFrame(string id)

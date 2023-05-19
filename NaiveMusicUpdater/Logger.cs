@@ -10,7 +10,9 @@ public static class Logger
 
     public static void Open(string path)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        string? parent = Path.GetDirectoryName(path);
+        if (parent != null)
+            Directory.CreateDirectory(parent);
         Writer = new StreamWriter(File.Create(path));
         Writer.Write(UnwrittenData);
         UnwrittenData = "";

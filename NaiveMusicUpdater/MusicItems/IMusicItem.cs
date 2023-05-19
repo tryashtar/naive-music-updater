@@ -31,11 +31,12 @@ public static class MusicItemExtensions
     // all parent items, starting from root, to the given item
     public static IEnumerable<IMusicItem> PathFromRoot(this IMusicItem item)
     {
+        var next = item;
         var list = new List<IMusicItem>();
-        while (item != null)
+        while (next != null)
         {
-            list.Add(item);
-            item = item.Parent;
+            list.Add(next);
+            next = next.Parent;
         }
 
         list.Reverse();

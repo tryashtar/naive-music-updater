@@ -2,13 +2,23 @@
 
 public class MusicFolder : IMusicItem
 {
-    private bool HasScanned = false;
+    private bool HasScanned;
 
     // full path to folder
     public string Location { get; }
 
     // configs found directly in this particular folder
-    public List<IMusicItemConfig> Configs { get; private set; }
+    public List<IMusicItemConfig> Configs
+    {
+        get
+        {
+            if (_Configs == null) LoadConfigs();
+            return _Configs!;
+        }
+    }
+
+    private List<IMusicItemConfig>? _Configs;
+
     public MusicFolder? Parent { get; }
 
     private readonly List<MusicFolder> ChildFolders = new();
@@ -48,7 +58,7 @@ public class MusicFolder : IMusicItem
 
     protected void LoadConfigs()
     {
-        Configs = new();
+        _Configs = new();
         var path = this.StringPathAfterRoot();
         foreach (var place in RootLibrary.LibraryConfig.ConfigFolders)
         {

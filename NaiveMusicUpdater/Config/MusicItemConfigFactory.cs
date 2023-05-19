@@ -21,6 +21,8 @@ public static class MusicItemConfigFactory
                 yaml = ProcessReversedConfig(folder, type, file);
             }
 
+            if (yaml == null)
+                continue;
             var config = new MusicItemConfig(file, item, yaml);
             if (!CheckSelectorsAndReload(config))
                 return config;
@@ -53,7 +55,7 @@ public static class MusicItemConfigFactory
         if (reload)
         {
             var proc = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-            proc.WaitForExit();
+            proc?.WaitForExit();
         }
 
         return reload;

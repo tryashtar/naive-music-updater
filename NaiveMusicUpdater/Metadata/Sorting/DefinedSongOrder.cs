@@ -18,7 +18,8 @@ public class DefinedSongOrder : ISongOrder
         {
             index++;
             CachedResults[item] = index;
-            used_folders.Add(item.Parent);
+            if (item.Parent != null)
+                used_folders.Add(item.Parent);
         }
 
         TotalNumber = index;

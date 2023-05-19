@@ -28,16 +28,16 @@ public class MusicItemConfig : IMusicItemConfig
         SongsStrategy = yaml.Go("songs").NullableParse(LiteralOrReference);
         FoldersStrategy = yaml.Go("folders").NullableParse(LiteralOrReference);
         MetadataStrategies = yaml.Go("set").ToList(ParseStrategy) ?? new();
-        SharedStrategies = yaml.Go("set all").ToList(x => ParseMultiple(x.Go("names"), x.Go("set"))) ?? new();
+        SharedStrategies = yaml.Go("set all").ToList(x => ParseMultiple(x.Go("names")!, x.Go("set")!)) ?? new();
         SetFields = yaml.Go("set fields").ToList(ParseBulkSet) ?? new();
     }
 
     private BulkSet ParseBulkSet(YamlNode yaml)
     {
-        var field = MetadataField.FromID(yaml.Go("field").String());
+        var field = MetadataField.FromID(yaml.Go("field").String()!);
         var dict = yaml.Go("set").ToDictionary(ItemSelectorFactory.Create, ValueSourceFactory.Create);
         var mode = yaml.Go("mode").ToEnum(CombineMode.Replace);
-        return new BulkSet(field, mode, dict);
+        return new BulkSet(field, mode, dict!);
     }
 
     private TargetedStrategy ParseStrategy(YamlNode key, YamlNode value)
@@ -51,7 +51,7 @@ public class MusicItemConfig : IMusicItemConfig
     {
         var selectors = names.ToList(ItemSelectorFactory.Create);
         var strategy = LiteralOrReference(value);
-        return new TargetedStrategy(new MultiItemSelector(selectors), strategy);
+        return new TargetedStrategy(new MultiItemSelector(selectors!), strategy);
     }
 
     private IMetadataStrategy LiteralOrReference(YamlNode node)

@@ -11,13 +11,13 @@ public static class ValueSourceFactory
     {
         switch (yaml)
         {
-            case YamlScalarNode { Value: { } } scalar:
+            case YamlScalarNode { Value: not null } scalar:
                 return new LiteralValueSource(new StringValue(scalar.Value));
             case YamlSequenceNode sequence:
-                return new LiteralValueSource(new ListValue(sequence.ToStringList()));
+                return new LiteralValueSource(new ListValue(sequence.ToStringList()!));
             case YamlMappingNode map:
             {
-                var selector = map.Go("from").Parse(LocalItemSelectorFactory.Create);
+                var selector = map.Go("from")!.Parse(LocalItemSelectorFactory.Create);
                 var getter = map.Go("value").NullableParse(MusicItemGetterFactory.Create) ??
                              MusicItemGetterFactory.NameGetters[NameType.CleanName];
                 var modifier = map.Go("modify").NullableParse(ValueOperatorFactory.Create);
