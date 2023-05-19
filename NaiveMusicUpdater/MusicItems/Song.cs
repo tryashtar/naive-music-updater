@@ -35,7 +35,10 @@ public class Song : IMusicItem
             Logger.WriteLine($"(checking)");
         }
         else
+        {
             Logger.WriteLine($"Song: {this.StringPathAfterRoot()}", ConsoleColor.Gray);
+            Logger.TabIn();
+        }
 
         var metadata = this.GetMetadata(MetadataField.All);
 #if !DEBUG
@@ -50,6 +53,7 @@ public class Song : IMusicItem
         }
         else
             reload_file = false;
+
         using var file = reload_file ? TagLib.File.Create(Location) : replay_file;
 #else
         using var file = TagLib.File.Create(Location);
@@ -65,13 +69,17 @@ public class Song : IMusicItem
         if (modifier.HasChanged)
         {
             Logger.WriteLine("Saving...", ConsoleColor.Green);
-            try { file.Save(); }
+            try
+            {
+                file.Save();
+            }
             catch (IOException ex)
             {
                 Logger.WriteLine($"Save failed because {ex.Message}! Skipping...", ConsoleColor.Red);
                 success = false;
             }
         }
+
         if (success)
             RootLibrary.LibraryConfig.Cache.MarkUpdated(this);
 #else
@@ -81,8 +89,7 @@ public class Song : IMusicItem
                 Logger.WriteLine("Changed!");
         }
 #endif
-        if (RootLibrary.LibraryConfig.ShowUnchanged)
-            Logger.TabOut();
+        Logger.TabOut();
     }
 
     private bool HasReplayGain(TagLib.File file)
