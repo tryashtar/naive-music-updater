@@ -37,14 +37,14 @@ public class ProcessArtSettings
             else
             {
                 HasBuffer = true;
-                Buffer = b.ToList(x => x.Int().Value).ToArray();
+                Buffer = b.ToList(x => x.Int() ?? 0)!.ToArray();
             }
-        }
 
-        if (node.Children.TryGetValue("background", out var bg))
-        {
-            var list = bg.ToList(x => (byte)x.Int().Value);
-            Background = Color.FromRgba(list[0], list[1], list[2], list[3]);
+            if (node.Children.TryGetValue("background", out var bg))
+            {
+                var list = bg.ToList(x => (byte)(x.Int() ?? 0))!;
+                Background = Color.FromRgba(list[0], list[1], list[2], list[3]);
+            }
         }
 
         if (node.Children.TryGetValue("scale", out var s))
@@ -95,7 +95,7 @@ public class ProcessArtSettings
                         height = height / image.Height * image.Height;
                 }
 
-                if (HasBuffer ?? false)
+                if ((HasBuffer ?? false) && Buffer != null)
                 {
                     width -= Buffer[0] + Buffer[2];
                     height -= Buffer[1] + Buffer[3];
@@ -112,7 +112,7 @@ public class ProcessArtSettings
                 x.Resize(resize);
             }
 
-            if (HasBuffer ?? false)
+            if ((HasBuffer ?? false) && Buffer != null)
             {
                 var resize = new ResizeOptions()
                 {
