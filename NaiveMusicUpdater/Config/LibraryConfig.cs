@@ -187,7 +187,7 @@ public class LibraryConfig
                 if (group.Key == "TXXX")
                 {
                     foreach (var frame in frames.OfType<UserTextInformationFrame>().Where(frame =>
-                                 definition.Descriptions.Any(y => y.IsMatch(frame.Description))).ToList())
+                                 !definition.Descriptions.Any(y => y.IsMatch(frame.Description))).ToList())
                     {
                         remove.Add(frame);
                         frames.Remove(frame);
