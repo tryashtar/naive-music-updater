@@ -10,15 +10,11 @@ public class ArtConfig
         Owner = owner;
         var node = (YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, relative, "images.yaml"))!;
         Settings = new();
-        var set_dict = node.Go("set").ToDictionary(x => x.String()!, LiteralOrReference);
-        if (set_dict != null)
-        {
-            foreach (var (name, settings) in set_dict)
-            {
-                Settings.Add((x => x == Path.Combine(relative, name), settings));
-            }
-        }
-
+        
+        var all = node.Go("all").NullableParse(LiteralOrReference);
+        if (all != null)
+            Settings.Add((_ => true, all));
+        
         if (node.Children.TryGetValue("set all", out var set_all))
         {
             foreach (var item in (YamlSequenceNode)set_all)
@@ -29,14 +25,19 @@ public class ArtConfig
             }
         }
         
-        var all = node.Go("all").NullableParse(LiteralOrReference);
-        if (all != null)
-            Settings.Add((_ => true, all));
+        var set_dict = node.Go("set").ToDictionary(x => x.String()!, LiteralOrReference);
+        if (set_dict != null)
+        {
+            foreach (var (name, settings) in set_dict)
+            {
+                Settings.Add((x => x == Path.Combine(relative, name), settings));
+            }
+        }
     }
 
     private ProcessArtSettings LiteralOrReference(YamlNode node)
     {
-        if (node is YamlScalarNode { Value: { } } scalar)
+        if (node is YamlScalarNode { Value: not null } scalar)
             return Owner.NamedSettings[scalar.Value];
         return new ProcessArtSettings((YamlMappingNode)node);
     }
