@@ -5,16 +5,21 @@ using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 namespace NaiveMusicUpdater;
 
+// these "Has" fields are for merging with other settings
+// thus we can differentiate between unspecified, and explicitly disabled
 public class ProcessArtSettings
 {
+    private bool SetWidth = false;
     public int? Width;
+    private bool SetHeight = false;
     public int? Height;
-    public bool? HasBuffer;
+    private bool HasBuffer = false;
     public int[]? Buffer;
+    private bool HasBackground = false;
     public Rgba32? Background;
-    public ResizeMode? Scale;
-    public IResampler? Interpolation;
-    public bool? IntegerScale;
+    public ResizeMode Scale = ResizeMode.Pad;
+    public IResampler Interpolation = KnownResamplers.Bicubic;
+    public bool IntegerScale = false;
 
     public ProcessArtSettings()
     {
@@ -23,24 +28,31 @@ public class ProcessArtSettings
     public ProcessArtSettings(YamlMappingNode node)
     {
         if (node.Children.TryGetValue("width", out var w))
-            Width = w.Int();
+        {
+            SetWidth = true;
+            Width = w.String() == "original" ? null : w.Int();
+        }
+
         if (node.Children.TryGetValue("height", out var h))
-            Height = h.Int();
+        {
+            SetHeight = true;
+            Height = h.String() == "original" ? null : h.Int();
+        }
+
         if (node.Children.TryGetValue("buffer", out var b))
         {
+            HasBuffer = true;
             var bb = b.Bool();
-            if (bb == false)
-            {
-                HasBuffer = false;
-                Buffer = null;
-            }
-            else
-            {
-                HasBuffer = true;
-                Buffer = b.ToList(x => x.Int() ?? 0)!.ToArray();
-            }
+            Buffer = bb == false ? null : b.ToList(x => x.Int() ?? 0)!.ToArray();
+        }
 
-            if (node.Children.TryGetValue("background", out var bg))
+        if (node.Children.TryGetValue("background", out var bg))
+        {
+            HasBackground = true;
+            var bb = bg.Bool();
+            if (bb == false)
+                Background = null;
+            else
             {
                 var list = bg.ToList(x => (byte)(x.Int() ?? 0))!;
                 Background = Color.FromRgba(list[0], list[1], list[2], list[3]);
@@ -48,7 +60,7 @@ public class ProcessArtSettings
         }
 
         if (node.Children.TryGetValue("scale", out var s))
-            Scale = s.ToEnum<ResizeMode>();
+            Scale = s.ToEnum<ResizeMode>()!.Value;
         if (node.Children.TryGetValue("interpolation", out var i))
         {
             if (i.String() == "bicubic")
@@ -58,24 +70,43 @@ public class ProcessArtSettings
         }
 
         if (node.Children.TryGetValue("integer_scale", out var iscale))
-            IntegerScale = iscale.Bool();
+            IntegerScale = iscale.Bool()!.Value;
     }
 
     public void MergeWith(ProcessArtSettings other)
     {
-        this.Width ??= other.Width;
-        this.Height ??= other.Height;
-        this.HasBuffer ??= other.HasBuffer;
-        this.Buffer ??= other.Buffer;
-        this.Background ??= other.Background;
-        this.Scale ??= other.Scale;
-        this.Interpolation ??= other.Interpolation;
-        this.IntegerScale ??= other.IntegerScale;
+        if (other.SetWidth)
+        {
+            this.Width = other.Width;
+            this.SetWidth = true;
+        }
+
+        if (other.SetHeight)
+        {
+            this.Height = other.Height;
+            this.SetHeight = true;
+        }
+
+        if (other.HasBuffer)
+        {
+            this.Buffer = other.Buffer;
+            this.HasBuffer = true;
+        }
+
+        if (other.HasBackground)
+        {
+            this.Background = other.Background;
+            this.HasBackground = true;
+        }
+
+        this.Scale = other.Scale;
+        this.Interpolation = other.Interpolation;
+        this.IntegerScale = other.IntegerScale;
     }
 
     public void Apply(Image<Rgba32> image)
     {
-        if (HasBuffer ?? false)
+        if (Buffer != null)
         {
             var bounding = GetBoundingRectangle(image);
             image.Mutate(x => x.Crop(bounding));
@@ -87,7 +118,7 @@ public class ProcessArtSettings
             {
                 int width = Width ?? 0;
                 int height = Height ?? 0;
-                if (IntegerScale ?? false)
+                if (IntegerScale)
                 {
                     if (width > 0)
                         width = width / image.Width * image.Width;
@@ -95,7 +126,7 @@ public class ProcessArtSettings
                         height = height / image.Height * image.Height;
                 }
 
-                if ((HasBuffer ?? false) && Buffer != null)
+                if (Buffer != null)
                 {
                     width -= Buffer[0] + Buffer[2];
                     height -= Buffer[1] + Buffer[3];
@@ -103,8 +134,8 @@ public class ProcessArtSettings
 
                 var resize = new ResizeOptions()
                 {
-                    Mode = Scale ?? ResizeMode.BoxPad,
-                    Sampler = Interpolation ?? KnownResamplers.Bicubic,
+                    Mode = Scale,
+                    Sampler = Interpolation,
                     Size = new(width, height)
                 };
                 if (Background != null)
@@ -112,7 +143,7 @@ public class ProcessArtSettings
                 x.Resize(resize);
             }
 
-            if ((HasBuffer ?? false) && Buffer != null)
+            if (Buffer != null)
             {
                 var resize = new ResizeOptions()
                 {

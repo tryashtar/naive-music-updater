@@ -146,7 +146,7 @@ public class ArtRepo
     private ProcessArtSettings GetSettings(string path)
     {
         var settings = new ProcessArtSettings();
-        foreach (var config in GetConfigs(path))
+        foreach (var config in GetConfigs(path).Reverse())
         {
             foreach (var (check, apply) in config.Settings)
             {
@@ -169,6 +169,7 @@ public class ArtRepo
         }
     }
 
+    // in order from most to least specific
     private IEnumerable<ArtConfig> GetConfigs(string path)
     {
         while (path != "")
