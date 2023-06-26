@@ -30,10 +30,30 @@ public static class ExportConfigExtensions
             LyricsType.SimpleEmbedded => LyricsIO.FromFile(file, LyricTypes.Simple),
             LyricsType.SyncedEmbedded => LyricsIO.FromFile(file, LyricTypes.Synced),
             LyricsType.RichEmbedded => LyricsIO.FromFile(file, LyricTypes.Rich),
+            LyricsType.CustomEmbedded => CustomLyrics(file, file.Properties.Duration),
             LyricsType.SyncedFile => SyncedFileLyrics(path, file.Properties.Duration),
             LyricsType.RichFile => RichFileLyrics(path),
             _ => null
         };
+    }
+
+    private static Lyrics? CustomLyrics(TagLib.File file, TimeSpan duration)
+    {
+        var tag = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
+        if (tag == null)
+            return null;
+        foreach (var frame in tag.GetFrames<UserTextInformationFrame>()
+                     .Where(x => x.Description == "LYRICS"))
+        {
+            if (frame.Text.Length > 0)
+            {
+                var lyrics = StringUtils.SplitLines(frame.Text[0]).ToArray();
+                if (LyricsIO.TryFromLrc(lyrics, duration, out var result))
+                    return result;
+            }
+        }
+
+        return null;
     }
 
     public static bool SetLyrics(Lyrics? lyrics, LyricsType type, TagLib.File file, string path)
@@ -46,6 +66,33 @@ public static class ExportConfigExtensions
                 return LyricsIO.ToFile(file, lyrics, LyricTypes.Synced);
             case LyricsType.RichEmbedded:
                 return LyricsIO.ToFile(file, lyrics, LyricTypes.Rich);
+            case LyricsType.CustomEmbedded:
+                var tag = (TagLib.Id3v2.Tag)file.GetTag(TagTypes.Id3v2);
+                if (tag == null)
+                    return false;
+                bool changed = false;
+                var frames = tag.GetFrames<UserTextInformationFrame>()
+                    .Where(x => x.Description == "LYRICS")
+                    .ToList();
+                foreach (var frame in frames)
+                {
+                    tag.RemoveFrame(frame);
+                }
+
+                if (lyrics == null)
+                    changed = changed || frames.Count > 1;
+                else
+                {
+                    string lrc = String.Join("\n", lyrics.ToLrc());
+                    var frame = new UserTextInformationFrame("LYRICS", StringType.Latin1)
+                    {
+                        Text = new[] { lrc }
+                    };
+                    tag.AddFrame(frame);
+                    changed = changed || frames.Count == 0 || frames[0].Render(4) != frame.Render(4);
+                }
+
+                return changed;
             case LyricsType.SyncedFile:
                 path += ".lrc";
                 if (lyrics == null)
@@ -218,6 +265,7 @@ public enum LyricsType
     SimpleEmbedded,
     SyncedEmbedded,
     RichEmbedded,
+    CustomEmbedded,
     SyncedFile,
     RichFile
 }

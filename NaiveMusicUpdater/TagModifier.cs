@@ -44,7 +44,7 @@ public class TagModifier
             var old = ExportConfigExtensions.GetLyrics(type, TagFile, location);
             if (ExportConfigExtensions.SetLyrics(write, type, TagFile, location))
             {
-                if (type is LyricsType.RichEmbedded or LyricsType.SyncedEmbedded or LyricsType.SimpleEmbedded)
+                if (type is LyricsType.RichEmbedded or LyricsType.SyncedEmbedded or LyricsType.SimpleEmbedded or LyricsType.CustomEmbedded)
                     HasChanged = true;
                 Logger.WriteLine($"Replacing lyrics at {type}:");
                 Logger.TabIn();
