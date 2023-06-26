@@ -80,7 +80,7 @@ public static class ExportConfigExtensions
                 }
 
                 if (lyrics == null)
-                    changed = changed || frames.Count > 1;
+                    changed = changed || frames.Count > 0;
                 else
                 {
                     string lrc = String.Join("\n", lyrics.ToLrc());
@@ -89,7 +89,7 @@ public static class ExportConfigExtensions
                         Text = new[] { lrc }
                     };
                     tag.AddFrame(frame);
-                    changed = changed || frames.Count == 0 || frames[0].Render(4) != frame.Render(4);
+                    changed = changed || frames.Count != 1 || frames[0].Render(4) != frame.Render(4);
                 }
 
                 return changed;
