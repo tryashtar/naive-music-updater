@@ -2,7 +2,7 @@
 
 public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
 {
-    private static readonly string[] ReadDelimiters = new string[] { "/", "; ", ";" };
+    private static readonly string[] ReadDelimiters = { "/", "; ", ";" };
     private const string WriteDelimiter = "; ";
 
     public Id3v2TagInterop(TagLib.Id3v2.Tag tag, LibraryConfig config) : base(tag, config)
@@ -37,8 +37,6 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
             return;
         if ((field == MetadataField.Track || field == MetadataField.TrackTotal) && !Config.ShouldKeepFrame("TRCK"))
             return;
-        if (field == MetadataField.Language && !Config.ShouldKeepFrame("TLAN"))
-            return;
         if (field == MetadataField.Year && !Config.ShouldKeepFrame("TDRC"))
             return;
         if (field == MetadataField.Genres && !Config.ShouldKeepFrame("TCON"))
@@ -49,6 +47,14 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
             return;
         if (field == MetadataField.Art && !Config.ShouldKeepFrame("APIC"))
             return;
+        if (field == MetadataField.Language && Config.ShouldKeepFrame("TLAN"))
+        {
+            var existing = LanguageExtensions.GetId3v2(this.Tag) ?? "(blank)";
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (LanguageExtensions.SetId3v2(this.Tag, val))
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {existing} -> {value}");
+            return;
+        }
         base.Set(field, value);
     }
 

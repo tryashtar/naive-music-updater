@@ -58,7 +58,7 @@ public class MusicItemConfig : IMusicItemConfig
     {
         return node switch
         {
-            YamlScalarNode { Value: { } } scalar => ConfiguredItem.RootLibrary.LibraryConfig.GetNamedStrategy(
+            YamlScalarNode { Value: not null } scalar => ConfiguredItem.RootLibrary.LibraryConfig.GetNamedStrategy(
                 scalar.Value),
             YamlSequenceNode sequence => new MultipleStrategy(sequence.Select(LiteralOrReference)),
             _ => MetadataStrategyFactory.Create(node)
