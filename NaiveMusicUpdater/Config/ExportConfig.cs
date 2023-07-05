@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace NaiveMusicUpdater;
@@ -135,7 +136,12 @@ public static class ExportConfigExtensions
                 }
                 else
                 {
-                    var json = JsonSerializer.Serialize(lyrics);
+                    var json = JsonSerializer.Serialize(lyrics,
+                        new JsonSerializerOptions()
+                        {
+                            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                            WriteIndented = true
+                        });
                     var existing = File.Exists(path) ? File.ReadAllText(path) : null;
                     if (existing != null && json == existing)
                         return false;
@@ -232,7 +238,12 @@ public static class ExportConfigExtensions
                 }
                 else
                 {
-                    var json = JsonSerializer.Serialize(chapters);
+                    var json = JsonSerializer.Serialize(chapters,
+                        new JsonSerializerOptions()
+                        {
+                            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                            WriteIndented = true
+                        });
                     var existing = File.Exists(path) ? File.ReadAllText(path) : null;
                     if (existing != null && json == existing)
                         return false;
