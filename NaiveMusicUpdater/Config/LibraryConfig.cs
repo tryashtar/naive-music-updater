@@ -183,11 +183,20 @@ public class LibraryConfig
             {
                 var definition = KeepFrameIDs[match];
                 var frames = group.ToList();
-
-                if (group.Key == "TXXX")
+                IEnumerable<Frame>? filter = group.Key switch
                 {
-                    foreach (var frame in frames.OfType<UserTextInformationFrame>().Where(frame =>
-                                 !definition.Descriptions.Any(y => y.IsMatch(frame.Description))).ToList())
+                    "TXXX" => frames.OfType<UserTextInformationFrame>()
+                        .Where(frame => !definition.Descriptions.Any(y => y.IsMatch(frame.Description)))
+                        .ToList(),
+                    "COMM" => frames.OfType<CommentsFrame>()
+                        .Where(frame => !definition.Descriptions.Any(y => y.IsMatch(frame.Description)))
+                        .ToList(),
+                    _ => null
+                };
+
+                if (filter != null)
+                {
+                    foreach (var frame in filter)
                     {
                         remove.Add(frame);
                         frames.Remove(frame);
