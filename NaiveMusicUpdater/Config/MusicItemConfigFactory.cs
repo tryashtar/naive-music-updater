@@ -106,7 +106,7 @@ public static class MusicItemConfigFactory
             reverse_sets[field] = new(checker);
         }
 
-        var songs = folder.GetAllSongs().ToList();
+        var songs = folder.Songs.ToList();
         foreach (var song in songs)
         {
             sets[song] = new();
