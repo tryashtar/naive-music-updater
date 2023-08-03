@@ -2,9 +2,9 @@
 
 public class ModifyStrategy : IMetadataStrategy
 {
-    private readonly Dictionary<MetadataField, IValueOperator> Fields;
+    private readonly IReadOnlyDictionary<MetadataField, IValueOperator> Fields;
 
-    public ModifyStrategy(Dictionary<MetadataField, IValueOperator> fields)
+    public ModifyStrategy(IReadOnlyDictionary<MetadataField, IValueOperator> fields)
     {
         Fields = fields;
     }

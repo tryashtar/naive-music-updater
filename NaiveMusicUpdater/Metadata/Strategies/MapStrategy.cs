@@ -2,10 +2,10 @@
 
 public class MapStrategy : IMetadataStrategy
 {
-    private readonly Dictionary<MetadataField, IValueSource> Fields;
+    private readonly IReadOnlyDictionary<MetadataField, IValueSource> Fields;
     public CombineMode Mode { get; }
 
-    public MapStrategy(Dictionary<MetadataField, IValueSource> fields, CombineMode mode)
+    public MapStrategy(IReadOnlyDictionary<MetadataField, IValueSource> fields, CombineMode mode)
     {
         Fields = fields;
         Mode = mode;

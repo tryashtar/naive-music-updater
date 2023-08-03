@@ -30,7 +30,6 @@ public class DefinedDiscOrder : ISongOrder
 
     public void Apply(Metadata start, IMusicItem item)
     {
-        var metadata = new Metadata();
         foreach (var disc in Discs)
         {
             uint? track = disc.Value.GetTrack(item);

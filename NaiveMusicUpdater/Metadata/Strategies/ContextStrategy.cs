@@ -3,9 +3,9 @@
 public class ContextStrategy : IMetadataStrategy
 {
     private readonly IValueSource Context;
-    private readonly Dictionary<MetadataField, IValueOperator> Fields;
+    private readonly IReadOnlyDictionary<MetadataField, IValueOperator> Fields;
 
-    public ContextStrategy(IValueSource context, Dictionary<MetadataField, IValueOperator> fields)
+    public ContextStrategy(IValueSource context, IReadOnlyDictionary<MetadataField, IValueOperator> fields)
     {
         Context = context;
         Fields = fields;
