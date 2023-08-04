@@ -10,10 +10,8 @@ public class LibraryConfig
     private readonly List<Regex>? KeepXiphMetadata;
     private readonly List<Regex>? KeepApeMetadata;
     private readonly List<string> SongExtensions;
-
-    private readonly Dictionary<MetadataField, (CustomField custom, Dictionary<IMusicItem, IValue> results)>
-        CustomFieldSaves;
-
+    private readonly List<MetadataField> CustomFieldsList;
+    private readonly List<(IFieldExport export, bool embedded, string path)> FieldExportsList;
     public readonly List<string> ConfigFolders;
     public readonly string LibraryFolder;
     public readonly string? LogFolder;
@@ -73,46 +71,22 @@ public class LibraryConfig
                 },
                 x => new ReplayGain(x["path"].String()!, x["args"].String()!)) ?? new();
         ConfigFolders = yaml.Go("config_folders").ToList(x => ParsePath(x)!) ?? new() { LibraryFolder };
-        CustomFieldSaves = new();
-        foreach (var field in yaml.Go("custom_fields").ToList(ParseCustomField) ?? new())
-        {
-            CustomFieldSaves[field.Field] = (field, new());
-        }
+        CustomFieldsList = yaml.Go("custom_fields").ToListFromStrings(x => new MetadataField(x, x)) ?? new();
+        FieldExportsList =
+            yaml.Go("export_fields").ToList(x =>
+                (FieldExportFactory.Create(x), x.Go("embedded").Bool() ?? false, ParsePath(x.Go("path")))) ?? new();
     }
 
-    public Predicate<MetadataField> IsCustomField => CustomFieldSaves.ContainsKey;
-    public IEnumerable<MetadataField> CustomFields => CustomFieldSaves.Keys;
-
-    public void RememberCustomField(MetadataField field, IMusicItem item, IValue value)
-    {
-        CustomFieldSaves[field].results[item] = value;
-    }
+    public IEnumerable<(IFieldExport export, bool embedded, string path)> FieldExports => FieldExportsList;
 
     public void Save()
     {
         Cache.Save();
-        foreach (var save in CustomFieldSaves.Values)
+        foreach (var (export, _, path) in FieldExportsList)
         {
-            if (save.custom.Export == null)
-                continue;
-            var yaml = new YamlMappingNode();
-            var results = save.results.AsEnumerable();
-            if (!save.custom.IncludeBlanks)
-                results = results.Where(x => !x.Value.IsBlank);
-            save.custom.Group.SaveResults(yaml, results);
-            YamlHelper.SaveToFile(yaml, save.custom.Export);
+            var yaml = export.Export();
+            YamlHelper.SaveToFile(yaml, path);
         }
-    }
-
-    private CustomField ParseCustomField(YamlNode node)
-    {
-        var name = node.Go("name").String()!;
-        var field = MetadataField.TryFromID(name) ?? new MetadataField(name, name);
-        var export = ParsePath(node.Go("export"));
-        var group_node = node.Go("group");
-        var group = group_node == null ? new ItemFieldGrouping() : FieldGroupingFactory.Create(node.Go("group")!);
-        var blanks = node.Go("blanks").Bool() ?? false;
-        return new(field, export, group, blanks);
     }
 
     private string? ParsePath(YamlNode? node)

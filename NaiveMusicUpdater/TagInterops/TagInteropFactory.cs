@@ -7,19 +7,24 @@ public interface ITagInterop
 {
     // used by reverse configs to get pre-existing values
     IValue Get(MetadataField field);
+
     void Set(MetadataField field, IValue value);
+
     // remove tags/frames that are configured as undesired
     // (which may not have corresponding fields)
     void Clean();
     bool Changed { get; }
+}
 
-    sealed Metadata GetFullMetadata(Predicate<MetadataField> desired)
+public static class TagInteropExtensions
+{
+    public static Metadata GetFullMetadata(this ITagInterop interop, Predicate<MetadataField> desired)
     {
         var meta = new Metadata();
         foreach (var field in MetadataField.Values)
         {
             if (desired(field))
-                meta.Register(field, Get(field));
+                meta.Register(field, interop.Get(field));
         }
 
         return meta;
