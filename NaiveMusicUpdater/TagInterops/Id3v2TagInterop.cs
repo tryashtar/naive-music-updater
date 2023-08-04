@@ -20,6 +20,17 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
         return Tag.Render();
     }
 
+    public override IValue Get(MetadataField field)
+    {
+        if (field == MetadataField.Language)
+        {
+            var val = LanguageExtensions.GetId3v2(this.Tag);
+            return val == null ? BlankValue.Instance : new StringValue(val);
+        }
+
+        return base.Get(field);
+    }
+
     public override void Set(MetadataField field, IValue value)
     {
         // don't set fields that are are going to be cleaned away
@@ -55,6 +66,7 @@ public class Id3v2TagInterop : BacicInterop<TagLib.Id3v2.Tag>
                 Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {existing} -> {value}");
             return;
         }
+
         base.Set(field, value);
     }
 

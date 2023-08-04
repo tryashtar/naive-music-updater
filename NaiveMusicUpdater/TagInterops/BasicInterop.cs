@@ -34,6 +34,9 @@ public abstract class BacicInterop<T> : AbstractInterop<T> where T : Tag
             return Tag.DiscCount == 0 ? BlankValue.Instance : new NumberValue(Tag.DiscCount);
         if (field == MetadataField.Year)
             return Tag.Year == 0 ? BlankValue.Instance : new NumberValue(Tag.Year);
+        if (field == MetadataField.SimpleLyrics)
+            return Tag.Lyrics == null ? BlankValue.Instance : new StringValue(Tag.Lyrics);
+
         return BlankValue.Instance;
     }
 

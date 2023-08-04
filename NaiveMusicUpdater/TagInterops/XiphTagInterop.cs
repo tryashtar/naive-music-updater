@@ -18,8 +18,20 @@ public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
             var val = Tag.GetField("YEAR");
             return val.Length == 0 ? BlankValue.Instance : new ListValue(val);
         }
-        else
-            return base.Get(field);
+
+        if (field == MetadataField.Language)
+        {
+            var val = LanguageExtensions.GetXiph(this.Tag);
+            return val == null ? BlankValue.Instance : new StringValue(val);
+        }
+
+        if (field == MetadataField.SimpleLyrics)
+        {
+            var val = Tag.GetFirstField(LyricsIO.OGG_UNSYNCED_LYRICS);
+            return val == null ? BlankValue.Instance : new StringValue(val);
+        }
+
+        return base.Get(field);
     }
 
     public override void Set(MetadataField field, IValue value)
@@ -40,6 +52,15 @@ public class XiphTagInterop : BacicInterop<TagLib.Ogg.XiphComment>
                 else
                     Tag.SetField("YEAR", val);
             }
+        }
+        else if (field == MetadataField.Language)
+        {
+            if (!Config.ShouldKeepXiph(LanguageExtensions.XIPH_LANGUAGE_TAG))
+                return;
+            var existing = LanguageExtensions.GetXiph(this.Tag) ?? "(blank)";
+            var val = value.IsBlank ? null : value.AsString().Value;
+            if (LanguageExtensions.SetXiph(this.Tag, val))
+                Logger.WriteLine($"{Tag.TagTypes} {field.DisplayName}: {existing} -> {value}");
         }
         else
         {

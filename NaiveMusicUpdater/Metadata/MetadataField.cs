@@ -58,6 +58,7 @@ public class MetadataField
     public static readonly MetadataField Language = new("Language", "lang", "language");
     public static readonly MetadataField Genres = new("Genres", "genre", "genres");
     public static readonly MetadataField Art = new("Art", "art");
+    public static readonly MetadataField SimpleLyrics = new("Simple Lyrics", "simple lyrics", "lyrics");
 
     public static ReadOnlyCollection<MetadataField> Values => AllFields.AsReadOnly();
 }
