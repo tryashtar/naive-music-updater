@@ -29,6 +29,14 @@ public static class MetadataStrategyFactory
                         ? new RemoveStrategy(MetadataField.Values.ToHashSet())
                         : new RemoveStrategy(remove.ToListFromStrings(x => MetadataField.FromID(x!))!.ToHashSet());
                 }
+                
+                var keep = map.Go("keep");
+                if (keep != null)
+                {
+                    return keep.String() == "*"
+                        ? new KeepStrategy(MetadataField.Values.ToHashSet())
+                        : new KeepStrategy(keep.ToListFromStrings(x => MetadataField.FromID(x!))!.ToHashSet());
+                }
 
                 Dictionary<MetadataField, IValueSource> direct;
                 var mode = map.Go("mode").ToEnum<CombineMode>();

@@ -18,3 +18,22 @@ public class RemoveStrategy : IMetadataStrategy
         }
     }
 }
+
+public class KeepStrategy : IMetadataStrategy
+{
+    public readonly HashSet<MetadataField> Fields;
+
+    public KeepStrategy(HashSet<MetadataField> fields)
+    {
+        Fields = fields;
+    }
+
+    public void Apply(Metadata start, IMusicItem item, Predicate<MetadataField> desired)
+    {
+        foreach (var field in Fields)
+        {
+            if (desired(field))
+                start.SavedFields.Remove(field);
+        }
+    }
+}
