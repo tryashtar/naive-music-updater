@@ -2,13 +2,13 @@
 
 public class IndexOperator : IValueOperator
 {
-    public readonly int Index;
+    public readonly Range Range;
     public readonly OutofBoundsDecision OutOfBounds;
     public readonly int? MinLength;
 
-    public IndexOperator(int index, OutofBoundsDecision oob, int? min_length = null)
+    public IndexOperator(Range range, OutofBoundsDecision oob, int? min_length = null)
     {
-        Index = index;
+        Range = range;
         OutOfBounds = oob;
         MinLength = min_length;
     }
@@ -18,19 +18,10 @@ public class IndexOperator : IValueOperator
         var list = original.AsList();
         if (MinLength != null && list.Values.Count < MinLength)
             return null;
-
-        int real_index = Index >= 0 ? Index : list.Values.Count + Index;
-        if (real_index >= list.Values.Count || real_index < 0)
-        {
-            if (OutOfBounds == OutofBoundsDecision.Exit || list.Values.Count == 0)
-                return null;
-            else if (OutOfBounds == OutofBoundsDecision.Clamp)
-                real_index = Math.Clamp(real_index, 0, list.Values.Count - 1);
-            else if (OutOfBounds == OutofBoundsDecision.Wrap)
-                real_index %= list.Values.Count;
-        }
-
-        return new StringValue(list.Values[real_index]);
+        var items = RangeFactory.Get(list.Values.ToArray(), Range, OutOfBounds);
+        if (items == null)
+            return null;
+        return items.Length == 1 ? new StringValue(items[0]) : new ListValue(items);
     }
 }
 

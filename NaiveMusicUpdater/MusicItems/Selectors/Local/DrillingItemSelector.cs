@@ -18,9 +18,10 @@ public class DrillingItemSelector : ILocalItemSelector
         var path = start.PathFromRoot();
         if (Direction == DrillDirection.Up)
             path = path.Reverse();
-        var arr = path.ToArray();
-        var range = Range.WithLength(arr.Length);
-        return arr[range.Start..range.End].Where(CheckMustBe);
+        var arr = RangeFactory.Get(path.ToArray(), Range, OutofBoundsDecision.Clamp);
+        if (arr == null)
+            return Enumerable.Empty<IMusicItem>();
+        return arr.Where(CheckMustBe);
     }
 
     public bool IsSelectedFrom(IMusicItem start, IMusicItem item)

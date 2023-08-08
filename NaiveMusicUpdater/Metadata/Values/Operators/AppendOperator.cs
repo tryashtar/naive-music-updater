@@ -27,9 +27,11 @@ public class AppendOperator : IValueOperator
         }
         else
         {
-            var list = original.AsList().Values.ToList();
-            var range = Range.WithLength(list.Count);
-            for (int i = range.Start; i < range.End; i++)
+            var list = original.AsList().Values.ToArray();
+            var indices = RangeFactory.GetIndices(list, Range.Value, OutofBoundsDecision.Exit);
+            if (indices == null)
+                return null;
+            for (int i = indices.Value.start; i < indices.Value.end; i++)
             {
                 list[i] = Modify(list[i], extra.AsString().Value);
             }

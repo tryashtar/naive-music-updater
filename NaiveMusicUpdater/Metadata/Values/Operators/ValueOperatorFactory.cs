@@ -11,22 +11,23 @@ public static class ValueOperatorFactory
     {
         switch (yaml)
         {
-            case YamlScalarNode { Value: "first" }:
-                return new IndexOperator(0, OutofBoundsDecision.Exit);
-            case YamlScalarNode { Value: "last" }:
-                return new IndexOperator(-1, OutofBoundsDecision.Exit);
-            case YamlScalarNode scalar when int.TryParse(scalar.Value, out int index):
-                return new IndexOperator(index, OutofBoundsDecision.Exit);
             case YamlScalarNode { Value: "reverse" }:
                 return ReverseOperator.Instance;
             case YamlMappingNode map:
             {
-                var index = map.Go("index").Int();
-                if (index != null)
+                var take = map.Go("take");
+                if (take != null)
                 {
-                    var oob = map.Go("out_of_bounds").ToEnum(def: OutofBoundsDecision.Exit);
-                    var min_length = map.Go("min_length").Int();
-                    return new IndexOperator(index.Value, oob, min_length);
+                    if (take is YamlMappingNode indmap)
+                    {
+                        var index = indmap.Go("index").NullableStructParse(RangeFactory.Create).Value;
+                        var oob = indmap.Go("out_of_bounds").ToEnum(def: OutofBoundsDecision.Exit);
+                        var min_length = indmap.Go("min_length").Int();
+                        return new IndexOperator(index, oob, min_length);
+                    }
+                    else
+                        return new IndexOperator(take.NullableStructParse(RangeFactory.Create).Value,
+                            OutofBoundsDecision.Exit);
                 }
 
                 var split = map.Go("split").String();
@@ -50,12 +51,12 @@ public static class ValueOperatorFactory
                 var prepend = map.Go("prepend").NullableParse(ValueSourceFactory.Create);
                 if (prepend != null)
                     return new AppendOperator(prepend, AppendMode.Prepend,
-                        map.Go("range").NullableParse(RangeFactory.Create));
+                        map.Go("index").NullableStructParse(RangeFactory.Create));
 
                 var append = map.Go("append").NullableParse(ValueSourceFactory.Create);
                 if (append != null)
                     return new AppendOperator(append, AppendMode.Append,
-                        map.Go("range").NullableParse(RangeFactory.Create));
+                        map.Go("index").NullableStructParse(RangeFactory.Create));
 
                 var join = map.Go("join").NullableParse(ValueSourceFactory.Create);
                 if (join != null)

@@ -22,10 +22,12 @@ public static class LocalItemSelectorFactory
                 var must = map.Go("must_be").ToEnum<MusicItemType>();
                 var up = map.Go("up");
                 if (up != null)
-                    return new DrillingItemSelector(DrillDirection.Up, up.Parse(RangeFactory.Create), must);
+                    return new DrillingItemSelector(DrillDirection.Up,
+                        up.NullableStructParse(RangeFactory.Create).Value, must);
                 var down = map.Go("from_root");
                 if (down != null)
-                    return new DrillingItemSelector(DrillDirection.Down, down.Parse(RangeFactory.Create), must);
+                    return new DrillingItemSelector(DrillDirection.Down,
+                        down.NullableStructParse(RangeFactory.Create).Value, must);
                 var selector = map.Go("selector").NullableParse(ItemSelectorFactory.Create);
                 if (selector != null)
                     return new LocalSelectorWrapper(selector);
