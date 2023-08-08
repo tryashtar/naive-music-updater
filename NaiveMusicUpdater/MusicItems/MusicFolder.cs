@@ -123,20 +123,15 @@ public class MusicFolder : IMusicItem
 
     private void HandleIcon()
     {
-        var image = this.GetMetadata(MetadataField.Art.Only).Get(MetadataField.Art);
-        if (!image.IsBlank && RootLibrary.LibraryConfig.ArtTemplates != null)
+        var metadata = this.GetMetadata(MetadataField.Art.Only);
+        MusicItemExtensions.HandleArt(metadata, RootLibrary.LibraryConfig);
+        var image = metadata.Get(MetadataField.Art);
+        if (image.IsBlank)
+            RemoveIcon();
+        else if (RootLibrary.LibraryConfig.ArtTemplates != null)
         {
-            var path = RootLibrary.LibraryConfig.ArtTemplates.FirstArt(image.AsList().Values).path;
-            if (path == null)
-                RemoveIcon();
-            else
-            {
-                var icon = RootLibrary.LibraryConfig.ArtTemplates.GetIcon(path);
-                if (icon == null)
-                    RemoveIcon();
-                else
-                    SetIcon(Path.GetFullPath(icon));
-            }
+            var icon = RootLibrary.LibraryConfig.ArtTemplates.GetIcon(image.AsString().Value);
+            SetIcon(Path.GetFullPath(icon));
         }
     }
 

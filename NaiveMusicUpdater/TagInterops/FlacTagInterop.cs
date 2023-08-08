@@ -20,7 +20,7 @@ public class FlacTagInterop : MultipleInterop
         {
             IPicture? pic = null;
             if (!value.IsBlank && Config.ArtTemplates != null)
-                pic = Config.ArtTemplates.FirstArt(value.AsList().Values).picture;
+                pic = Config.ArtTemplates.GetProcessed(value.AsString().Value);
 
             if (pic == null && Tag.Pictures.Length > 0)
             {

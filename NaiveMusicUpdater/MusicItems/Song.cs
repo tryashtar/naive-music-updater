@@ -24,12 +24,14 @@ public class Song : IMusicItem
         var set_exports = RootLibrary.LibraryConfig.FieldExports.Where(x => !x.embedded).Select(x => x.export).ToList();
         var embed_exports = RootLibrary.LibraryConfig.FieldExports.Where(x => x.embedded).Select(x => x.export)
             .ToList();
+        Metadata? metadata = null;
         if (set_exports.Count > 0)
         {
-            var meta = this.GetMetadata(MetadataField.All);
+            metadata = this.GetMetadata(MetadataField.All);
+            MusicItemExtensions.HandleArt(metadata, RootLibrary.LibraryConfig);
             foreach (var export in set_exports)
             {
-                export.Remember(this, meta);
+                export.Remember(this, metadata);
             }
         }
 
@@ -46,7 +48,11 @@ public class Song : IMusicItem
                 Logger.TabIn();
             }
 
-            var metadata = this.GetMetadata(MetadataField.All);
+            if (metadata == null)
+            {
+                metadata = this.GetMetadata(MetadataField.All);
+                MusicItemExtensions.HandleArt(metadata, RootLibrary.LibraryConfig);
+            }
 #if !DEBUG
             bool reload_file = true;
             using var replay_file = TagLib.File.Create(Location);

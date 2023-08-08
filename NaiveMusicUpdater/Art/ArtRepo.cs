@@ -54,17 +54,17 @@ public class ArtRepo
         data_stream.WriteTo(stream);
         writer.Flush();
     }
-
-    public (IPicture? picture, string? path) FirstArt(IEnumerable<string> paths)
+    
+    public string? FirstArtPath(IEnumerable<string> paths)
     {
         foreach (var path in paths)
         {
-            var pic = GetProcessed(path);
-            if (pic != null)
-                return (pic, path);
+            var template = GetTemplatePath(path);
+            if (template != null)
+                return path;
         }
 
-        return (null, null);
+        return null;
     }
 
     public string? GetIcon(string path)

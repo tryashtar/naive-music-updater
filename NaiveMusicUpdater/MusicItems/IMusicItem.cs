@@ -6,7 +6,9 @@ public interface IMusicItem
 {
     string Location { get; }
     string SimpleName { get; }
+
     MusicFolder? Parent { get; }
+
     // configs that directly apply to this item
     List<IMusicItemConfig> Configs { get; }
     MusicLibrary RootLibrary { get; }
@@ -26,6 +28,16 @@ public static class MusicItemExtensions
         }
 
         return metadata;
+    }
+
+    public static void HandleArt(Metadata metadata, LibraryConfig config)
+    {
+        var image = metadata.Get(MetadataField.Art);
+        if (!image.IsBlank && config.ArtTemplates != null)
+        {
+            var template = config.ArtTemplates.FirstArtPath(image.AsList().Values);
+            metadata.Register(MetadataField.Art, template != null ? new StringValue(template) : BlankValue.Instance);
+        }
     }
 
     // all parent items, starting from root, to the given item
