@@ -6,7 +6,7 @@ public static class RangeFactory
     {
         var str = node.String();
         if (str == "first")
-            return Range.StartAt(Index.Start);
+            return new Range(Index.Start, Index.FromStart(1));
         if (str == "last")
             return Range.StartAt(Index.FromEnd(1));
         if (str == "all")
